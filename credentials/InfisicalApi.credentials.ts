@@ -15,7 +15,8 @@ export class InfisicalApi implements ICredentialType {
 			name: 'apiUrl',
 			type: 'string',
 			default: 'https://app.infisical.com/api',
-			description: 'The URL of your Infisical instance API (e.g., https://app.infisical.com/api for Cloud or your self-hosted URL)',
+			description:
+				'The URL of your Infisical instance API (e.g., https://app.infisical.com/api for Cloud or your self-hosted URL)',
 			required: true,
 		},
 		{
@@ -26,7 +27,8 @@ export class InfisicalApi implements ICredentialType {
 				password: true,
 			},
 			default: '',
-			description: 'The API Key for Infisical. You can create one in Project Settings > Service Tokens.',
+			description:
+				'The API Key for Infisical. You can create one in Project Settings > Service Tokens.',
 			required: true,
 		},
 	];
@@ -35,7 +37,7 @@ export class InfisicalApi implements ICredentialType {
 		type: 'generic',
 		properties: {
 			headers: {
-				'Authorization': '=Bearer {{$credentials.apiKey}}',
+				Authorization: '=Bearer {{$credentials.apiKey}}',
 			},
 		},
 	};
