@@ -17,4 +17,3 @@ module.exports = {
     'n8n-nodes-base/node-param-display-name-wrong-for-dynamic-multi-options': 'off',
   },
 };
-
