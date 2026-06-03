@@ -39,7 +39,7 @@ export class Infisical implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Infisical',
 		name: 'infisical',
-		icon: 'file:infisical.svg',
+		icon: 'file:infisical.png',
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',

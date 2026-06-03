@@ -6,6 +6,7 @@ import {
 export class InfisicalApi implements ICredentialType {
 	name = 'infisicalApi';
 	displayName = 'Infisical API';
+	icon = 'file:infisical.png' as const;
 	documentationUrl = 'https://infisical.com/docs/documentation/platform/identities/universal-auth';
 	properties: INodeProperties[] = [
 		{
