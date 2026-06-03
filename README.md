@@ -41,12 +41,13 @@ Universal Auth uses a Machine Identity's Client ID and Client Secret to obtain a
 
 **Credential fields:**
 
-| Field | Description |
-| --- | --- |
-| API URL | Base URL of your Infisical API (default: `https://app.infisical.com/api`) |
-| Authentication Type | Select **Universal Auth (Machine Identity)** |
-| Client ID | The Machine Identity's Client ID |
-| Client Secret | The Machine Identity's Client Secret |
+| Field | Required | Description |
+| --- | --- | --- |
+| API URL | Yes | Base URL of your Infisical API (default: `https://app.infisical.com/api`) |
+| Authentication Type | Yes | Select **Universal Auth (Machine Identity)** |
+| Client ID | Yes | The Machine Identity's Client ID |
+| Client Secret | Yes | The Machine Identity's Client Secret |
+| Organization Slug | No | Scope the access token to a specific organization. Leave blank to use the organization the machine identity belongs to. To restrict access to a specific project, assign the identity to that project in Organization Settings → Machine Identities → your identity → Project Access. |
 
 ### Service Token (Legacy)
 
@@ -59,11 +60,11 @@ Service Tokens are deprecated by Infisical and may be removed in future versions
 
 **Credential fields:**
 
-| Field | Description |
-| --- | --- |
-| API URL | Base URL of your Infisical API (default: `https://app.infisical.com/api`) |
-| Authentication Type | Select **Service Token (Legacy)** |
-| Service Token | Your Infisical Service Token |
+| Field | Required | Description |
+| --- | --- | --- |
+| API URL | Yes | Base URL of your Infisical API (default: `https://app.infisical.com/api`) |
+| Authentication Type | Yes | Select **Service Token (Legacy)** |
+| Service Token | Yes | Your Infisical Service Token |
 
 > For self-hosted Infisical, set API URL to your instance (e.g., `https://infisical.example.com/api`).
 
@@ -75,15 +76,15 @@ Service Tokens are deprecated by Infisical and may be removed in future versions
 
 All Secret operations require: **Project ID**, **Environment**, **Secret Path** (default: `/`).
 
-| Operation | Description | API |
-| --- | --- | --- |
-| **Get** | Fetch a single secret by key | `GET /v3/secrets/raw/{key}` |
-| **Get Many** | List all secrets in a path | `GET /v3/secrets/raw` |
-| **Create** | Create a single secret | `POST /v3/secrets/raw/{key}` |
-| **Create Many** | Create multiple secrets in one request | `POST /v4/secrets/batch` |
-| **Update** | Update a single secret | `PATCH /v4/secrets/{key}` |
-| **Update Many** | Update multiple secrets in one request | `PATCH /v4/secrets/batch` |
-| **Delete** | Delete a single secret by key | `DELETE /v3/secrets/raw/{key}` |
+| Operation | Description | Method | API endpoint |
+| --- | --- | --- | --- |
+| **Get** | Fetch a single secret by key | `GET` | `/v4/secrets/{key}` |
+| **Get Many** | List all secrets in a path | `GET` | `/v4/secrets` |
+| **Create** | Create a single secret | `POST` | `/v4/secrets/{key}` |
+| **Create Many** | Create multiple secrets in one request | `POST` | `/v3/secrets/batch/raw` |
+| **Update** | Update a single secret | `PATCH` | `/v4/secrets/{key}` |
+| **Update Many** | Update multiple secrets in one request | `PATCH` | `/v3/secrets/batch/raw` |
+| **Delete** | Delete a single secret by key | `DELETE` | `/v4/secrets/{key}` |
 
 #### Get
 
@@ -115,7 +116,7 @@ Per-secret optional fields: Secret Comment, Skip Multiline Encoding
 
 | Field | Description |
 | --- | --- |
-| Secret Path Override | Use a different path than the top-level Secret Path |
+| Secret Path Override | Use a different path than the top-level Secret Path for this batch |
 
 Returns each created secret as a separate output item. If a secret protection policy is active, returns an approval object instead.
 
@@ -146,7 +147,7 @@ Per-secret optional fields: Secret Value, New Secret Name, Secret Comment, Skip 
 | Field | Description |
 | --- | --- |
 | Mode | `failOnNotFound` (default) — error if secret missing; `upsert` — create if missing; `ignore` — skip missing secrets |
-| Secret Path Override | Use a different path than the top-level Secret Path |
+| Secret Path Override | Use a different path than the top-level Secret Path for this batch |
 
 Returns each updated secret as a separate output item.
 
@@ -154,11 +155,22 @@ Returns each updated secret as a separate output item.
 
 Required: **Secret Key**
 
+The Delete request sends `projectId`, `environment`, and `secretPath` in the JSON request body (not as URL query parameters), as required by the v4 API.
+
 ### Workspace
 
 | Operation | Description |
 | --- | --- |
 | **Get Many** | List all workspaces accessible with the configured credentials |
+
+---
+
+## API behaviour notes
+
+- **Single-secret operations** (Get, Get Many, Create, Update, Delete) use **Infisical API v4** (`/api/v4/secrets/…`).
+- **Batch operations** (Create Many, Update Many) use **Infisical API v3** (`/api/v3/secrets/batch/raw`), which is Infisical's current batch endpoint.
+- Single-secret ops pass the project identifier as `projectId` in the request. Batch ops pass it as `workspaceId`, as required by the respective API versions.
+- When a **secret protection policy** is active on the project, create/update/delete endpoints return an approval object (`{ approval: { id, status, … } }`) instead of the secret directly.
 
 ---
 
@@ -211,7 +223,7 @@ Required: **Secret Key**
 | --- | --- |
 | n8n | v1.0.0+ |
 | Infisical | Cloud and Community Edition |
-| Infisical API | v3 (single-secret ops), v4 (update + batch ops) |
+| Infisical API | v4 (get, create, update, delete), v3 (batch ops) |
 | n8n Nodes API | v1 |
 
 ---

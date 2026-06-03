@@ -582,9 +582,9 @@ export class Infisical implements INodeType {
 
 						const response = await this.helpers.httpRequest({
 							method: 'GET',
-							url: `${apiUrl}/v3/secrets/raw/${encodeURIComponent(secretKey)}`,
+							url: `${apiUrl}/v4/secrets/${encodeURIComponent(secretKey)}`,
 							headers: baseHeaders,
-							qs: { workspaceId, environment, secretPath },
+							qs: { projectId: workspaceId, environment, secretPath },
 						});
 
 						returnData.push({ json: response as IDataObject, pairedItem: { item: i } });
@@ -593,9 +593,9 @@ export class Infisical implements INodeType {
 					} else if (operation === 'getAll') {
 						const response = await this.helpers.httpRequest({
 							method: 'GET',
-							url: `${apiUrl}/v3/secrets/raw`,
+							url: `${apiUrl}/v4/secrets`,
 							headers: baseHeaders,
-							qs: { workspaceId, environment, secretPath },
+							qs: { projectId: workspaceId, environment, secretPath },
 						});
 
 						const secrets = (response as IDataObject).secrets as IDataObject[];
@@ -610,9 +610,8 @@ export class Infisical implements INodeType {
 						const createOptions = this.getNodeParameter('createOptions', i, {}) as IDataObject;
 
 						const body: IDataObject = {
-							workspaceId,
+							projectId: workspaceId,
 							environment,
-							secretName: secretKey,
 							secretValue,
 							secretPath,
 							type: createOptions.type ?? 'shared',
@@ -625,7 +624,7 @@ export class Infisical implements INodeType {
 
 						const response = await this.helpers.httpRequest({
 							method: 'POST',
-							url: `${apiUrl}/v3/secrets/raw/${encodeURIComponent(secretKey)}`,
+							url: `${apiUrl}/v4/secrets/${encodeURIComponent(secretKey)}`,
 							headers: baseHeaders,
 							body: JSON.stringify(body),
 						});
@@ -667,16 +666,22 @@ export class Infisical implements INodeType {
 					} else if (operation === 'delete') {
 						const secretKey = this.getNodeParameter('secretKey', i) as string;
 
+						const deleteBody: IDataObject = {
+							projectId: workspaceId,
+							environment,
+							secretPath,
+						};
+
 						const response = await this.helpers.httpRequest({
 							method: 'DELETE',
-							url: `${apiUrl}/v3/secrets/raw/${encodeURIComponent(secretKey)}`,
+							url: `${apiUrl}/v4/secrets/${encodeURIComponent(secretKey)}`,
 							headers: baseHeaders,
-							qs: { workspaceId, environment, secretPath },
+							body: JSON.stringify(deleteBody),
 						});
 
 						returnData.push({ json: response as IDataObject, pairedItem: { item: i } });
 
-					// ── createMany (v4 batch POST) ────────────────────────────────────────
+					// ── createMany (v3 batch POST) ────────────────────────────────────────
 					} else if (operation === 'createMany') {
 						const secretsParam = this.getNodeParameter('secrets', i, {}) as IDataObject;
 						const secretItems = (secretsParam.values as IDataObject[]) ?? [];
@@ -703,7 +708,7 @@ export class Infisical implements INodeType {
 						});
 
 						const body: IDataObject = {
-							projectId: workspaceId,
+							workspaceId,
 							environment,
 							secretPath: effectivePath,
 							secrets,
@@ -711,7 +716,7 @@ export class Infisical implements INodeType {
 
 						const response = await this.helpers.httpRequest({
 							method: 'POST',
-							url: `${apiUrl}/v4/secrets/batch`,
+							url: `${apiUrl}/v3/secrets/batch/raw`,
 							headers: baseHeaders,
 							body: JSON.stringify(body),
 						});
@@ -726,7 +731,7 @@ export class Infisical implements INodeType {
 							returnData.push({ json: responseData, pairedItem: { item: i } });
 						}
 
-					// ── updateMany (v4 batch PATCH) ───────────────────────────────────────
+					// ── updateMany (v3 batch PATCH) ───────────────────────────────────────
 					} else if (operation === 'updateMany') {
 						const secretsToUpdateParam = this.getNodeParameter('secretsToUpdate', i, {}) as IDataObject;
 						const secretItems = (secretsToUpdateParam.values as IDataObject[]) ?? [];
@@ -756,7 +761,7 @@ export class Infisical implements INodeType {
 						});
 
 						const body: IDataObject = {
-							projectId: workspaceId,
+							workspaceId,
 							environment,
 							secretPath: effectivePath,
 							secrets,
@@ -766,7 +771,7 @@ export class Infisical implements INodeType {
 
 						const response = await this.helpers.httpRequest({
 							method: 'PATCH',
-							url: `${apiUrl}/v4/secrets/batch`,
+							url: `${apiUrl}/v3/secrets/batch/raw`,
 							headers: baseHeaders,
 							body: JSON.stringify(body),
 						});
