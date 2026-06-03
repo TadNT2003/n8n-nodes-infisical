@@ -12,6 +12,7 @@ import {
 	NodeOperationError,
 	ensureError,
 } from 'n8n-workflow';
+import { executeSecretOperation } from '../../utils/secretOperations';
 
 async function getInfisicalToken(
 	helpers: IExecuteFunctions['helpers'],
@@ -72,7 +73,7 @@ export class Infisical implements INodeType {
 				noDataExpression: true,
 				options: [
 					{ name: 'Secret', value: 'secret' },
-					{ name: 'Workspace', value: 'workspace' },
+					{ name: 'Project', value: 'project' },
 				],
 				default: 'secret',
 			},
@@ -137,19 +138,19 @@ export class Infisical implements INodeType {
 				default: 'get',
 			},
 
-			// ─── Workspace operations ────────────────────────────────────────────────
+			// ─── Project operations ────────────────────────────────────────────────
 			{
 				displayName: 'Operation',
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
-				displayOptions: { show: { resource: ['workspace'] } },
+				displayOptions: { show: { resource: ['project'] } },
 				options: [
 					{
 						name: 'Get Many',
 						value: 'getAll',
-						description: 'List all accessible workspaces',
-						action: 'Get many workspaces',
+						description: 'List all accessible projects',
+						action: 'Get many projects',
 					},
 				],
 				default: 'getAll',
@@ -158,12 +159,12 @@ export class Infisical implements INodeType {
 			// ─── Shared secret fields ────────────────────────────────────────────────
 			{
 				displayName: 'Project ID',
-				name: 'workspaceId',
+				name: 'projectId',
 				type: 'string',
 				required: true,
 				displayOptions: { show: { resource: ['secret'] } },
 				default: '',
-				description: 'The ID of the Infisical project (workspace)',
+				description: 'The ID of the Infisical project',
 			},
 			{
 				displayName: 'Environment',
@@ -643,268 +644,11 @@ export class Infisical implements INodeType {
 			try {
 				// ── Secret resource ─────────────────────────────────────────────────────
 				if (resource === 'secret') {
-					const workspaceId = this.getNodeParameter('workspaceId', i) as string;
-					const environment = this.getNodeParameter('environment', i) as string;
-					const secretPath = this.getNodeParameter('secretPath', i) as string;
+					const results = await executeSecretOperation(this, apiUrl, baseHeaders, operation, i);
+					returnData.push(...results);
 
-					// ── get ───────────────────────────────────────────────────────────────
-					if (operation === 'get') {
-						const secretKey = this.getNodeParameter('secretKey', i) as string;
-
-						const response = await this.helpers.httpRequest({
-							method: 'GET',
-							url: `${apiUrl}/v4/secrets/${encodeURIComponent(secretKey)}`,
-							headers: baseHeaders,
-							qs: { projectId: workspaceId, environment, secretPath },
-						});
-
-						returnData.push({ json: response as IDataObject, pairedItem: { item: i } });
-
-					// ── getAll ────────────────────────────────────────────────────────────
-					} else if (operation === 'getAll') {
-						const response = await this.helpers.httpRequest({
-							method: 'GET',
-							url: `${apiUrl}/v4/secrets`,
-							headers: baseHeaders,
-							qs: { projectId: workspaceId, environment, secretPath },
-						});
-
-						const secrets = (response as IDataObject).secrets as IDataObject[];
-						for (const secret of secrets) {
-							returnData.push({ json: secret, pairedItem: { item: i } });
-						}
-
-					// ── create ────────────────────────────────────────────────────────────
-					} else if (operation === 'create') {
-						const secretKey = this.getNodeParameter('secretKey', i) as string;
-						const secretValue = this.getNodeParameter('secretValue', i) as string;
-						const createOptions = this.getNodeParameter('createOptions', i, {}) as IDataObject;
-
-						const body: IDataObject = {
-							projectId: workspaceId,
-							environment,
-							secretValue,
-							secretPath,
-							type: createOptions.type ?? 'shared',
-						};
-
-						if (createOptions.secretComment) body.secretComment = createOptions.secretComment;
-						if (createOptions.skipMultilineEncoding) {
-							body.skipMultilineEncoding = createOptions.skipMultilineEncoding;
-						}
-
-						const response = await this.helpers.httpRequest({
-							method: 'POST',
-							url: `${apiUrl}/v4/secrets/${encodeURIComponent(secretKey)}`,
-							headers: baseHeaders,
-							body: JSON.stringify(body),
-						});
-
-						returnData.push({ json: response as IDataObject, pairedItem: { item: i } });
-
-					// ── update (v4) ───────────────────────────────────────────────────────
-					} else if (operation === 'update') {
-						const secretKey = this.getNodeParameter('secretKey', i) as string;
-						const updateOptions = this.getNodeParameter('updateOptions', i, {}) as IDataObject;
-
-						const body: IDataObject = {
-							projectId: workspaceId,
-							environment,
-							secretPath,
-						};
-
-						// Spread only non-empty optional fields
-						if (updateOptions.secretValue !== undefined && updateOptions.secretValue !== '') {
-							body.secretValue = updateOptions.secretValue;
-						}
-						if (updateOptions.newSecretName) body.newSecretName = updateOptions.newSecretName;
-						if (updateOptions.secretComment !== undefined) body.secretComment = updateOptions.secretComment;
-						if (updateOptions.type) body.type = updateOptions.type;
-						if (updateOptions.skipMultilineEncoding) {
-							body.skipMultilineEncoding = updateOptions.skipMultilineEncoding;
-						}
-
-						const response = await this.helpers.httpRequest({
-							method: 'PATCH',
-							url: `${apiUrl}/v4/secrets/${encodeURIComponent(secretKey)}`,
-							headers: baseHeaders,
-							body: JSON.stringify(body),
-						});
-
-						returnData.push({ json: response as IDataObject, pairedItem: { item: i } });
-
-					// ── delete ────────────────────────────────────────────────────────────
-					} else if (operation === 'delete') {
-						const secretKey = this.getNodeParameter('secretKey', i) as string;
-
-						const deleteBody: IDataObject = {
-							projectId: workspaceId,
-							environment,
-							secretPath,
-						};
-
-						const response = await this.helpers.httpRequest({
-							method: 'DELETE',
-							url: `${apiUrl}/v4/secrets/${encodeURIComponent(secretKey)}`,
-							headers: baseHeaders,
-							body: JSON.stringify(deleteBody),
-						});
-
-						returnData.push({ json: response as IDataObject, pairedItem: { item: i } });
-
-					// ── createMany (v3 batch POST) ────────────────────────────────────────
-					} else if (operation === 'createMany') {
-						const secretsParam = this.getNodeParameter('secrets', i, {}) as IDataObject;
-						const secretItems = (secretsParam.values as IDataObject[]) ?? [];
-
-						if (secretItems.length === 0) {
-							throw new NodeOperationError(
-								this.getNode(),
-								'At least one secret must be added in the Secrets list',
-								{ itemIndex: i },
-							);
-						}
-
-						const createManyOptions = this.getNodeParameter('createManyOptions', i, {}) as IDataObject;
-						const effectivePath = (createManyOptions.secretPath as string) || secretPath;
-
-						const secrets = secretItems.map((item) => {
-							const s: IDataObject = {
-								secretKey: item.secretKey,
-								secretValue: item.secretValue,
-							};
-							if (item.secretComment) s.secretComment = item.secretComment;
-							if (item.skipMultilineEncoding) s.skipMultilineEncoding = item.skipMultilineEncoding;
-							return s;
-						});
-
-						const body: IDataObject = {
-							projectId: workspaceId,
-							environment,
-							secretPath: effectivePath,
-							secrets,
-						};
-
-						const response = await this.helpers.httpRequest({
-							method: 'POST',
-							url: `${apiUrl}/v4/secrets/batch`,
-							headers: baseHeaders,
-							body: JSON.stringify(body),
-						});
-
-						const responseData = response as IDataObject;
-						if (Array.isArray(responseData.secrets)) {
-							for (const secret of responseData.secrets as IDataObject[]) {
-								returnData.push({ json: secret, pairedItem: { item: i } });
-							}
-						} else {
-							// Approval / policy-gated response
-							returnData.push({ json: responseData, pairedItem: { item: i } });
-						}
-
-					// ── updateMany (v3 batch PATCH) ───────────────────────────────────────
-					} else if (operation === 'updateMany') {
-						const secretsToUpdateParam = this.getNodeParameter('secretsToUpdate', i, {}) as IDataObject;
-						const secretItems = (secretsToUpdateParam.values as IDataObject[]) ?? [];
-
-						if (secretItems.length === 0) {
-							throw new NodeOperationError(
-								this.getNode(),
-								'At least one secret must be added in the Secrets list',
-								{ itemIndex: i },
-							);
-						}
-
-						const updateManyOptions = this.getNodeParameter('updateManyOptions', i, {}) as IDataObject;
-						const effectivePath = (updateManyOptions.secretPath as string) || secretPath;
-
-						const secrets = secretItems.map((item) => {
-							const s: IDataObject = { secretKey: item.secretKey };
-							if (item.secretValue !== undefined && item.secretValue !== '') {
-								s.secretValue = item.secretValue;
-							}
-							if (item.newSecretName) s.newSecretName = item.newSecretName;
-							if (item.secretComment !== undefined && item.secretComment !== '') {
-								s.secretComment = item.secretComment;
-							}
-							if (item.skipMultilineEncoding) s.skipMultilineEncoding = item.skipMultilineEncoding;
-							return s;
-						});
-
-						const body: IDataObject = {
-							projectId: workspaceId,
-							environment,
-							secretPath: effectivePath,
-							secrets,
-						};
-
-						if (updateManyOptions.mode) body.mode = updateManyOptions.mode;
-
-						const response = await this.helpers.httpRequest({
-							method: 'PATCH',
-							url: `${apiUrl}/v4/secrets/batch`,
-							headers: baseHeaders,
-							body: JSON.stringify(body),
-						});
-
-						const responseData = response as IDataObject;
-						if (Array.isArray(responseData.secrets)) {
-							for (const secret of responseData.secrets as IDataObject[]) {
-								returnData.push({ json: secret, pairedItem: { item: i } });
-							}
-						} else {
-							// Approval / policy-gated response
-							returnData.push({ json: responseData, pairedItem: { item: i } });
-						}
-
-					// ── deleteMany (v4 batch DELETE) ──────────────────────────────────────
-					} else if (operation === 'deleteMany') {
-						const secretsToDeleteParam = this.getNodeParameter('secretsToDelete', i, {}) as IDataObject;
-						const secretItems = (secretsToDeleteParam.values as IDataObject[]) ?? [];
-
-						if (secretItems.length === 0) {
-							throw new NodeOperationError(
-								this.getNode(),
-								'At least one secret must be added in the Secrets list',
-								{ itemIndex: i },
-							);
-						}
-
-						const deleteManyOptions = this.getNodeParameter('deleteManyOptions', i, {}) as IDataObject;
-						const effectivePath = (deleteManyOptions.secretPath as string) || secretPath;
-
-						const secrets = secretItems.map((item) => ({
-							secretKey: item.secretKey,
-							type: (item.type as string) || 'shared',
-						}));
-
-						const body: IDataObject = {
-							projectId: workspaceId,
-							environment,
-							secretPath: effectivePath,
-							secrets,
-						};
-
-						const response = await this.helpers.httpRequest({
-							method: 'DELETE',
-							url: `${apiUrl}/v4/secrets/batch`,
-							headers: baseHeaders,
-							body: JSON.stringify(body),
-						});
-
-						const responseData = response as IDataObject;
-						if (Array.isArray(responseData.secrets)) {
-							for (const secret of responseData.secrets as IDataObject[]) {
-								returnData.push({ json: secret, pairedItem: { item: i } });
-							}
-						} else {
-							// Approval / policy-gated response
-							returnData.push({ json: responseData, pairedItem: { item: i } });
-						}
-					}
-
-				// ── Workspace resource ──────────────────────────────────────────────────
-				} else if (resource === 'workspace') {
+				// ── Project resource ──────────────────────────────────────────────────
+				} else if (resource === 'project') {
 					if (operation === 'getAll') {
 						const response = await this.helpers.httpRequest({
 							method: 'GET',
@@ -912,9 +656,9 @@ export class Infisical implements INodeType {
 							headers: baseHeaders,
 						});
 
-						const workspaces = (response as IDataObject).workspaces as IDataObject[];
-						for (const workspace of workspaces) {
-							returnData.push({ json: workspace, pairedItem: { item: i } });
+						const projects = (response as IDataObject).workspaces as IDataObject[];
+						for (const project of projects) {
+							returnData.push({ json: project, pairedItem: { item: i } });
 						}
 					}
 				}
