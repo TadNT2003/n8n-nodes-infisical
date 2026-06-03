@@ -1,4 +1,4 @@
-# n8n-nodes-infisical
+# @tadnt2003/n8n-nodes-infisical
 
 An n8n community node for integrating [Infisical](https://infisical.com/) — the open-source secrets management platform — into your n8n workflows.
 
@@ -20,7 +20,7 @@ An n8n community node for integrating [Infisical](https://infisical.com/) — th
 
 Follow the [community nodes installation guide](https://docs.n8n.io/integrations/community-nodes/installation/) in the n8n documentation.
 
-Package name: `n8n-nodes-infisical`
+Package name: `@tadnt2003/n8n-nodes-infisical`
 
 ---
 
