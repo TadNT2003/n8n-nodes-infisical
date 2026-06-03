@@ -13,6 +13,7 @@ import {
 	ensureError,
 } from 'n8n-workflow';
 import { executeSecretOperation } from '../../utils/secretOperations';
+import { executeProjectOperation } from '../../utils/projectOperations';
 
 async function getInfisicalToken(
 	helpers: IExecuteFunctions['helpers'],
@@ -147,13 +148,137 @@ export class Infisical implements INodeType {
 				displayOptions: { show: { resource: ['project'] } },
 				options: [
 					{
+						name: 'Get',
+						value: 'get',
+						description: 'Get a project by ID',
+						action: 'Get a project',
+					},
+					{
+						name: 'Get By Slug',
+						value: 'getBySlug',
+						description: 'Get a project by slug',
+						action: 'Get a project by slug',
+					},
+					{
 						name: 'Get Many',
 						value: 'getAll',
 						description: 'List all accessible projects',
 						action: 'Get many projects',
 					},
+					{
+						name: 'Get Secret Snapshots',
+						value: 'getSecretSnapshots',
+						description: 'List secret snapshots for a project environment',
+						action: 'Get secret snapshots',
+					},
+					{
+						name: 'Get User By Username',
+						value: 'getUserByUsername',
+						description: 'Get a project member by username',
+						action: 'Get user by username',
+					},
+					{
+						name: 'Get User Memberships',
+						value: 'getUserMemberships',
+						description: 'List all user memberships in a project',
+						action: 'Get user memberships',
+					},
 				],
 				default: 'getAll',
+			},
+
+			// ─── Project fields ───────────────────────────────
+			{
+				displayName: 'Project ID',
+				name: 'projectId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['get', 'getSecretSnapshots', 'getUserMemberships', 'getUserByUsername'],
+					},
+				},
+				default: '',
+				description: 'The ID of the Infisical project',
+			},
+			{
+				displayName: 'Slug',
+				name: 'slug',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['getBySlug'],
+					},
+				},
+				default: '',
+				description: 'The slug of the Infisical project',
+			},
+			{
+				displayName: 'Environment',
+				name: 'snapshotEnvironment',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['getSecretSnapshots'],
+					},
+				},
+				default: 'dev',
+				description: 'The environment slug to retrieve snapshots for (e.g., dev, staging, prod)',
+			},
+			{
+				displayName: 'Username',
+				name: 'username',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['getUserByUsername'],
+					},
+				},
+				default: '',
+				description: 'The username of the project member to retrieve',
+			},
+			{
+				displayName: 'Additional Fields',
+				name: 'snapshotOptions',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['getSecretSnapshots'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Limit',
+						name: 'limit',
+						type: 'number',
+						default: 20,
+						description: 'Maximum number of snapshots to return',
+					},
+					{
+						displayName: 'Offset',
+						name: 'offset',
+						type: 'number',
+						default: 0,
+						description: 'Number of snapshots to skip (pagination)',
+					},
+					{
+						displayName: 'Secret Path',
+						name: 'secretPath',
+						type: 'string',
+						default: '/',
+						description: 'Folder path to filter snapshots (default: /)',
+					},
+				],
 			},
 
 			// ─── Shared secret fields ────────────────────────────────────────────────
@@ -649,18 +774,8 @@ export class Infisical implements INodeType {
 
 				// ── Project resource ──────────────────────────────────────────────────
 				} else if (resource === 'project') {
-					if (operation === 'getAll') {
-						const response = await this.helpers.httpRequest({
-							method: 'GET',
-							url: `${apiUrl}/v1/workspace`,
-							headers: baseHeaders,
-						});
-
-						const projects = (response as IDataObject).workspaces as IDataObject[];
-						for (const project of projects) {
-							returnData.push({ json: project, pairedItem: { item: i } });
-						}
-					}
+					const results = await executeProjectOperation(this, apiUrl, baseHeaders, operation, i);
+					returnData.push(...results);
 				}
 			} catch (error) {
 				const e = ensureError(error);
