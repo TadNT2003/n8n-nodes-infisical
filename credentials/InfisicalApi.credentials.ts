@@ -68,6 +68,20 @@ export class InfisicalApi implements ICredentialType {
 			description: 'The Client Secret of your Infisical Machine Identity (Universal Auth)',
 		},
 		{
+			displayName: 'Organization Slug',
+			name: 'organizationSlug',
+			type: 'string',
+			displayOptions: {
+				show: {
+					authType: ['universalAuth'],
+				},
+			},
+			default: '',
+			description:
+				'Optional. Scope the access token to a specific organization. Leave blank to use the organization the machine identity was created in. ' +
+				'To restrict this credential to a specific project, assign the machine identity to that project with the appropriate role in Infisical (Organization Settings → Machine Identities → your identity → Project Access).',
+		},
+		{
 			displayName: 'Service Token',
 			name: 'apiKey',
 			type: 'string',

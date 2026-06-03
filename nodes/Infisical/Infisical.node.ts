@@ -23,11 +23,18 @@ async function getInfisicalToken(
 	if (authType === 'universalAuth') {
 		const clientId = credentials.clientId as string;
 		const clientSecret = credentials.clientSecret as string;
+		const parts = [
+			`clientId=${encodeURIComponent(clientId)}`,
+			`clientSecret=${encodeURIComponent(clientSecret)}`,
+		];
+		if (credentials.organizationSlug) {
+			parts.push(`organizationSlug=${encodeURIComponent(credentials.organizationSlug as string)}`);
+		}
 		const tokenResponse = await helpers.httpRequest({
 			method: 'POST',
 			url: `${apiUrl}/v1/auth/universal-auth/login`,
 			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-			body: `clientId=${encodeURIComponent(clientId)}&clientSecret=${encodeURIComponent(clientSecret)}`,
+			body: parts.join('&'),
 		});
 		return { apiUrl, accessToken: tokenResponse.accessToken as string };
 	}
@@ -507,13 +514,17 @@ export class Infisical implements INodeType {
 					let accessToken: string;
 
 					if (authType === 'universalAuth') {
+						const loginForm: IDataObject = {
+							clientId: creds.clientId,
+							clientSecret: creds.clientSecret,
+						};
+						if (creds.organizationSlug) {
+							loginForm.organizationSlug = creds.organizationSlug;
+						}
 						const tokenResponse = await this.helpers.request({
 							method: 'POST',
 							uri: `${apiUrl}/v1/auth/universal-auth/login`,
-							form: {
-								clientId: creds.clientId,
-								clientSecret: creds.clientSecret,
-							},
+							form: loginForm,
 							json: true,
 						});
 						accessToken = tokenResponse.accessToken as string;
