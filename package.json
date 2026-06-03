@@ -1,6 +1,6 @@
 {
   "name": "@tadnt2003/n8n-nodes-infisical",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "n8n community node for Infisical - Secret management platform",
   "keywords": [
     "n8n-community-node-package",
