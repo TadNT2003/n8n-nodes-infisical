@@ -104,6 +104,12 @@ export class Infisical implements INodeType {
 						action: 'Delete a secret',
 					},
 					{
+						name: 'Delete Many',
+						value: 'deleteMany',
+						description: 'Delete multiple secrets in one request',
+						action: 'Delete many secrets',
+					},
+					{
 						name: 'Get',
 						value: 'get',
 						description: 'Get a single secret by key',
@@ -150,7 +156,6 @@ export class Infisical implements INodeType {
 			},
 
 			// ─── Shared secret fields ────────────────────────────────────────────────
-
 			{
 				displayName: 'Project ID',
 				name: 'workspaceId',
@@ -497,6 +502,72 @@ export class Infisical implements INodeType {
 					},
 				],
 			},
+
+			// ─── Delete Many: secrets fixedCollection ─────────────────────────────────
+			{
+				displayName: 'Secrets',
+				name: 'secretsToDelete',
+				type: 'fixedCollection',
+				typeOptions: { multipleValues: true },
+				required: true,
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['secret'],
+						operation: ['deleteMany'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Secret',
+						name: 'values',
+						values: [
+							{
+								displayName: 'Secret Key',
+								name: 'secretKey',
+								type: 'string',
+								required: true,
+								default: '',
+								description: 'The name of the secret to delete',
+							},
+							{
+								displayName: 'Type',
+								name: 'type',
+								type: 'options',
+								options: [
+									{ name: 'Shared', value: 'shared' },
+									{ name: 'Personal', value: 'personal' },
+								],
+								default: 'shared',
+								description: 'Whether to delete the shared or personal variant of the secret',
+							},
+						],
+					},
+				],
+			},
+			{
+				displayName: 'Additional Fields',
+				name: 'deleteManyOptions',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['secret'],
+						operation: ['deleteMany'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Secret Path Override',
+						name: 'secretPath',
+						type: 'string',
+						default: '/',
+						description:
+							'Override the top-level Secret Path for this batch request',
+					},
+				],
+			},
 		],
 	};
 
@@ -708,7 +779,7 @@ export class Infisical implements INodeType {
 						});
 
 						const body: IDataObject = {
-							workspaceId,
+							projectId: workspaceId,
 							environment,
 							secretPath: effectivePath,
 							secrets,
@@ -716,7 +787,7 @@ export class Infisical implements INodeType {
 
 						const response = await this.helpers.httpRequest({
 							method: 'POST',
-							url: `${apiUrl}/v3/secrets/batch/raw`,
+							url: `${apiUrl}/v4/secrets/batch`,
 							headers: baseHeaders,
 							body: JSON.stringify(body),
 						});
@@ -761,7 +832,7 @@ export class Infisical implements INodeType {
 						});
 
 						const body: IDataObject = {
-							workspaceId,
+							projectId: workspaceId,
 							environment,
 							secretPath: effectivePath,
 							secrets,
@@ -771,7 +842,52 @@ export class Infisical implements INodeType {
 
 						const response = await this.helpers.httpRequest({
 							method: 'PATCH',
-							url: `${apiUrl}/v3/secrets/batch/raw`,
+							url: `${apiUrl}/v4/secrets/batch`,
+							headers: baseHeaders,
+							body: JSON.stringify(body),
+						});
+
+						const responseData = response as IDataObject;
+						if (Array.isArray(responseData.secrets)) {
+							for (const secret of responseData.secrets as IDataObject[]) {
+								returnData.push({ json: secret, pairedItem: { item: i } });
+							}
+						} else {
+							// Approval / policy-gated response
+							returnData.push({ json: responseData, pairedItem: { item: i } });
+						}
+
+					// ── deleteMany (v4 batch DELETE) ──────────────────────────────────────
+					} else if (operation === 'deleteMany') {
+						const secretsToDeleteParam = this.getNodeParameter('secretsToDelete', i, {}) as IDataObject;
+						const secretItems = (secretsToDeleteParam.values as IDataObject[]) ?? [];
+
+						if (secretItems.length === 0) {
+							throw new NodeOperationError(
+								this.getNode(),
+								'At least one secret must be added in the Secrets list',
+								{ itemIndex: i },
+							);
+						}
+
+						const deleteManyOptions = this.getNodeParameter('deleteManyOptions', i, {}) as IDataObject;
+						const effectivePath = (deleteManyOptions.secretPath as string) || secretPath;
+
+						const secrets = secretItems.map((item) => ({
+							secretKey: item.secretKey,
+							type: (item.type as string) || 'shared',
+						}));
+
+						const body: IDataObject = {
+							projectId: workspaceId,
+							environment,
+							secretPath: effectivePath,
+							secrets,
+						};
+
+						const response = await this.helpers.httpRequest({
+							method: 'DELETE',
+							url: `${apiUrl}/v4/secrets/batch`,
 							headers: baseHeaders,
 							body: JSON.stringify(body),
 						});
