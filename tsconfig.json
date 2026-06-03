@@ -6,7 +6,6 @@
     "rootDir": ".",
     "declaration": true,
     "strict": false,
-    "moduleResolution": "node",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
