@@ -608,6 +608,44 @@ export class Infisical implements INodeType {
 					},
 				],
 			},
+			{
+				displayName: 'Secret Metadata',
+				name: 'secretMetadata',
+				type: 'fixedCollection',
+				typeOptions: { multipleValues: true },
+				placeholder: 'Add Metadata Entry',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['secret'],
+						operation: ['create'],
+					},
+				},
+				description: 'Key/value metadata tags to attach to the secret',
+				options: [
+					{
+						displayName: 'Metadata Entry',
+						name: 'values',
+						values: [
+							{
+								displayName: 'Key',
+								name: 'key',
+								type: 'string',
+								required: true,
+								default: '',
+								description: 'Metadata key',
+							},
+							{
+								displayName: 'Value',
+								name: 'value',
+								type: 'string',
+								default: '',
+								description: 'Metadata value',
+							},
+						],
+					},
+				],
+			},
 
 			// ─── Update: all fields optional ─────────────────────────────────────────
 			{
@@ -666,6 +704,44 @@ export class Infisical implements INodeType {
 					},
 				],
 			},
+			{
+				displayName: 'Secret Metadata',
+				name: 'secretMetadata',
+				type: 'fixedCollection',
+				typeOptions: { multipleValues: true },
+				placeholder: 'Add Metadata Entry',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['secret'],
+						operation: ['update'],
+					},
+				},
+				description: 'Key/value metadata tags to attach to the secret',
+				options: [
+					{
+						displayName: 'Metadata Entry',
+						name: 'values',
+						values: [
+							{
+								displayName: 'Key',
+								name: 'key',
+								type: 'string',
+								required: true,
+								default: '',
+								description: 'Metadata key',
+							},
+							{
+								displayName: 'Value',
+								name: 'value',
+								type: 'string',
+								default: '',
+								description: 'Metadata value',
+							},
+						],
+					},
+				],
+			},
 
 			// ─── Create Many: secrets fixedCollection ─────────────────────────────────
 			{
@@ -717,6 +793,38 @@ export class Infisical implements INodeType {
 								default: false,
 								description:
 									'Whether to disable multiline encoding for this secret value',
+							},
+							{
+								displayName: 'Secret Metadata',
+								name: 'secretMetadata',
+								type: 'fixedCollection',
+								typeOptions: { multipleValues: true },
+								placeholder: 'Add Metadata Entry',
+								default: {},
+								description: 'Key/value metadata tags to attach to this secret',
+								options: [
+									{
+										displayName: 'Metadata Entry',
+										name: 'values',
+										values: [
+											{
+												displayName: 'Key',
+												name: 'key',
+												type: 'string',
+												required: true,
+												default: '',
+												description: 'Metadata key',
+											},
+											{
+												displayName: 'Value',
+												name: 'value',
+												type: 'string',
+												default: '',
+												description: 'Metadata value',
+											},
+										],
+									},
+								],
 							},
 						],
 					},
@@ -802,6 +910,38 @@ export class Infisical implements INodeType {
 								default: false,
 								description:
 									'Whether to disable multiline encoding for this secret value',
+							},
+							{
+								displayName: 'Secret Metadata',
+								name: 'secretMetadata',
+								type: 'fixedCollection',
+								typeOptions: { multipleValues: true },
+								placeholder: 'Add Metadata Entry',
+								default: {},
+								description: 'Key/value metadata tags to attach to this secret',
+								options: [
+									{
+										displayName: 'Metadata Entry',
+										name: 'values',
+										values: [
+											{
+												displayName: 'Key',
+												name: 'key',
+												type: 'string',
+												required: true,
+												default: '',
+												description: 'Metadata key',
+											},
+											{
+												displayName: 'Value',
+												name: 'value',
+												type: 'string',
+												default: '',
+												description: 'Metadata value',
+											},
+										],
+									},
+								],
 							},
 						],
 					},

@@ -50,6 +50,7 @@ export async function executeSecretOperation(
 		const secretKey = ctx.getNodeParameter('secretKey', i) as string;
 		const secretValue = ctx.getNodeParameter('secretValue', i) as string;
 		const createOptions = ctx.getNodeParameter('createOptions', i, {}) as IDataObject;
+		const secretMetadataParam = ctx.getNodeParameter('secretMetadata', i, {}) as IDataObject;
 
 		const body: IDataObject = {
 			projectId,
@@ -62,6 +63,11 @@ export async function executeSecretOperation(
 		if (createOptions.secretComment) body.secretComment = createOptions.secretComment;
 		if (createOptions.skipMultilineEncoding) {
 			body.skipMultilineEncoding = createOptions.skipMultilineEncoding;
+		}
+
+		const metadataEntries = (secretMetadataParam.values as IDataObject[]) ?? [];
+		if (metadataEntries.length > 0) {
+			body.secretMetadata = metadataEntries.map((m) => ({ key: m.key, value: m.value }));
 		}
 
 		const response = await ctx.helpers.httpRequest({
@@ -77,6 +83,7 @@ export async function executeSecretOperation(
 	} else if (operation === 'update') {
 		const secretKey = ctx.getNodeParameter('secretKey', i) as string;
 		const updateOptions = ctx.getNodeParameter('updateOptions', i, {}) as IDataObject;
+		const secretMetadataParam = ctx.getNodeParameter('secretMetadata', i, {}) as IDataObject;
 
 		const body: IDataObject = {
 			projectId,
@@ -92,6 +99,11 @@ export async function executeSecretOperation(
 		if (updateOptions.type) body.type = updateOptions.type;
 		if (updateOptions.skipMultilineEncoding) {
 			body.skipMultilineEncoding = updateOptions.skipMultilineEncoding;
+		}
+
+		const metadataEntries = (secretMetadataParam.values as IDataObject[]) ?? [];
+		if (metadataEntries.length > 0) {
+			body.secretMetadata = metadataEntries.map((m) => ({ key: m.key, value: m.value }));
 		}
 
 		const response = await ctx.helpers.httpRequest({
@@ -145,6 +157,11 @@ export async function executeSecretOperation(
 			};
 			if (item.secretComment) s.secretComment = item.secretComment;
 			if (item.skipMultilineEncoding) s.skipMultilineEncoding = item.skipMultilineEncoding;
+			const metaParam = item.secretMetadata as IDataObject | undefined;
+			const metaEntries = (metaParam?.values as IDataObject[] | undefined) ?? [];
+			if (metaEntries.length > 0) {
+				s.secretMetadata = metaEntries.map((m) => ({ key: m.key, value: m.value }));
+			}
 			return s;
 		});
 
@@ -198,6 +215,11 @@ export async function executeSecretOperation(
 				s.secretComment = item.secretComment;
 			}
 			if (item.skipMultilineEncoding) s.skipMultilineEncoding = item.skipMultilineEncoding;
+			const metaParam = item.secretMetadata as IDataObject | undefined;
+			const metaEntries = (metaParam?.values as IDataObject[] | undefined) ?? [];
+			if (metaEntries.length > 0) {
+				s.secretMetadata = metaEntries.map((m) => ({ key: m.key, value: m.value }));
+			}
 			return s;
 		});
 
