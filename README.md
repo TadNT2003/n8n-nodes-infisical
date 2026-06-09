@@ -10,7 +10,6 @@ An n8n community node for integrating [Infisical](https://infisical.com/) — th
 [Installation](#installation)  
 [Credentials](#credentials)  
 [Operations](#operations)  
-[Usage Examples](#usage-examples)  
 [Compatibility](#compatibility)  
 [Resources](#resources)  
 
@@ -39,16 +38,6 @@ Universal Auth uses a Machine Identity's Client ID and Client Secret to obtain a
 5. Assign the identity to your project with appropriate roles
 6. Copy the **Client ID** and **Client Secret**
 
-**Credential fields:**
-
-| Field | Required | Description |
-| --- | --- | --- |
-| API URL | Yes | Base URL of your Infisical API (default: `https://app.infisical.com/api`) |
-| Authentication Type | Yes | Select **Universal Auth (Machine Identity)** |
-| Client ID | Yes | The Machine Identity's Client ID |
-| Client Secret | Yes | The Machine Identity's Client Secret |
-| Organization Slug | No | Scope the access token to a specific organization. Leave blank to use the organization the machine identity belongs to. To restrict access to a specific project, assign the identity to that project in Organization Settings → Machine Identities → your identity → Project Access. |
-
 ### Service Token (Legacy)
 
 Service Tokens are deprecated by Infisical and may be removed in future versions. Use Universal Auth for new integrations.
@@ -57,14 +46,6 @@ Service Tokens are deprecated by Infisical and may be removed in future versions
 2. Go to **Project Settings → Service Tokens**
 3. Create a new Service Token with the required permissions
 4. Copy the token
-
-**Credential fields:**
-
-| Field | Required | Description |
-| --- | --- | --- |
-| API URL | Yes | Base URL of your Infisical API (default: `https://app.infisical.com/api`) |
-| Authentication Type | Yes | Select **Service Token (Legacy)** |
-| Service Token | Yes | Your Infisical Service Token |
 
 > For self-hosted Infisical, set API URL to your instance (e.g., `https://infisical.example.com/api`).
 
@@ -81,10 +62,11 @@ All Secret operations require: **Project ID**, **Environment**, **Secret Path** 
 | **Get** | Fetch a single secret by key | `GET` | `/v4/secrets/{key}` |
 | **Get Many** | List all secrets in a path | `GET` | `/v4/secrets` |
 | **Create** | Create a single secret | `POST` | `/v4/secrets/{key}` |
-| **Create Many** | Create multiple secrets in one request | `POST` | `/v3/secrets/batch/raw` |
+| **Create Many** | Create multiple secrets in one request | `POST` | `/v4/secrets/batch` |
 | **Update** | Update a single secret | `PATCH` | `/v4/secrets/{key}` |
-| **Update Many** | Update multiple secrets in one request | `PATCH` | `/v3/secrets/batch/raw` |
+| **Update Many** | Update multiple secrets in one request | `PATCH` | `/v4/secrets/batch` |
 | **Delete** | Delete a single secret by key | `DELETE` | `/v4/secrets/{key}` |
+| **Delete Many** | Delete multiple secrets in one request | `DELETE` | `/v4/secrets/batch` |
 
 #### Get
 
@@ -106,11 +88,19 @@ Required: **Secret Key**, **Secret Value**
 | Skip Multiline Encoding | Disable multiline encoding for the value |
 | Type | `shared` (default) or `personal` |
 
+**Secret Metadata (optional):** Add one or more key/value metadata tags to attach to the secret.
+
 #### Create Many
 
 Add secrets using the repeatable **Secrets** list. Each entry requires **Secret Key** and **Secret Value**.
 
-Per-secret optional fields: Secret Comment, Skip Multiline Encoding
+Per-secret optional fields:
+
+| Field | Description |
+| --- | --- |
+| Secret Comment | Attach a comment to this secret |
+| Skip Multiline Encoding | Disable multiline encoding for this secret's value |
+| Secret Metadata | Key/value metadata tags for this secret |
 
 **Additional Fields (optional):**
 
@@ -124,9 +114,9 @@ Returns each created secret as a separate output item. If a secret protection po
 
 Required: **Secret Key** (identifies the secret to update)
 
-All update values are optional — set only what needs to change:
+All update values are optional — set only what needs to change.
 
-**Additional Fields:**
+**Additional Fields (optional):**
 
 | Field | Description |
 | --- | --- |
@@ -136,11 +126,21 @@ All update values are optional — set only what needs to change:
 | Type | `shared` or `personal` |
 | Skip Multiline Encoding | Disable multiline encoding for the value |
 
+**Secret Metadata (optional):** Add one or more key/value metadata tags to attach to the secret.
+
 #### Update Many
 
 Add secrets using the repeatable **Secrets** list. Each entry requires **Secret Key** (the current name).
 
-Per-secret optional fields: Secret Value, New Secret Name, Secret Comment, Skip Multiline Encoding
+Per-secret optional fields:
+
+| Field | Description |
+| --- | --- |
+| Secret Value | The new value (leave blank to keep existing) |
+| New Secret Name | Rename this secret |
+| Secret Comment | Update the comment for this secret |
+| Skip Multiline Encoding | Disable multiline encoding for this secret's value |
+| Secret Metadata | Key/value metadata tags for this secret |
 
 **Additional Fields (optional):**
 
@@ -149,71 +149,140 @@ Per-secret optional fields: Secret Value, New Secret Name, Secret Comment, Skip 
 | Mode | `failOnNotFound` (default) — error if secret missing; `upsert` — create if missing; `ignore` — skip missing secrets |
 | Secret Path Override | Use a different path than the top-level Secret Path for this batch |
 
-Returns each updated secret as a separate output item.
+Returns each updated secret as a separate output item. If a secret protection policy is active, returns an approval object instead.
 
 #### Delete
 
 Required: **Secret Key**
 
-The Delete request sends `projectId`, `environment`, and `secretPath` in the JSON request body (not as URL query parameters), as required by the v4 API.
+#### Delete Many
 
-### Workspace
+Add secrets using the repeatable **Secrets** list. Each entry requires **Secret Key** and **Type** (`shared` or `personal`).
 
-| Operation | Description |
+**Additional Fields (optional):**
+
+| Field | Description |
 | --- | --- |
-| **Get Many** | List all workspaces accessible with the configured credentials |
+| Secret Path Override | Use a different path than the top-level Secret Path for this batch |
+
+---
+
+### Project
+
+| Operation | Description | Method | API endpoint |
+| --- | --- | --- | --- |
+| **Get** | Fetch a project by ID | `GET` | `/v1/projects/{id}` |
+| **Get by Slug** | Fetch a project by slug | `GET` | `/v1/projects/slug/{slug}` |
+| **Get Many** | List all accessible projects | `GET` | `/v1/projects` |
+| **Get Secret Snapshots** | List secret snapshots for a project environment | `GET` | `/v1/projects/{id}/secret-snapshots` |
+| **Get User Memberships** | List all user memberships in a project | `GET` | `/v1/projects/{id}/memberships` |
+| **Get User by Username** | Fetch a project member by username | `POST` | `/v1/projects/{id}/memberships/details` |
+
+#### Get Project
+
+Required: **Project ID**
+
+#### Get by Slug
+
+Required: **Project Slug**
+
+#### Get Many Projects
+
+No extra required fields. Returns each project as a separate output item.
+
+#### Get Secret Snapshots
+
+Required: **Project ID**, **Environment**
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Secret Path | Filter snapshots by path (default: `/`) |
+| Offset | Number of results to skip (for pagination) |
+| Limit | Maximum number of results to return |
+
+Returns each snapshot as a separate output item.
+
+#### Get User Memberships
+
+Required: **Project ID**
+
+Returns each membership as a separate output item.
+
+#### Get User by Username
+
+Required: **Project ID**, **Username**
+
+---
+
+### Folder
+
+All Folder operations except **Get Folder by ID** require: **Project ID**, **Environment**, **Folder Path** (default: `/`).
+
+| Operation | Description | Method | API endpoint |
+| --- | --- | --- | --- |
+| **Get Folder by ID** | Fetch a folder by its ID | `GET` | `/v2/folders/{id}` |
+| **List Folders** | List all folders at a path | `GET` | `/v2/folders` |
+| **Create** | Create a new folder | `POST` | `/v2/folders` |
+| **Update** | Rename or update a folder | `PATCH` | `/v2/folders/{id}` |
+| **Delete** | Delete a folder | `DELETE` | `/v2/folders/{id}` |
+
+#### Get Folder by ID
+
+Required: **Folder ID**
+
+#### List Folders
+
+Required: **Project ID**, **Environment**, **Folder Path**
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Recursive | Return all nested subfolders as well |
+| Last Secret Modified | Filter folders by last secret modification time |
+
+Returns each folder as a separate output item.
+
+#### Create Folder
+
+Required: **Project ID**, **Environment**, **Folder Path** (parent path), **Folder Name**
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Description | A description for the folder |
+
+#### Update Folder
+
+Required: **Project ID**, **Environment**, **Folder Path**, **Folder ID**, **Folder Name** (new name)
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Description | A description for the folder |
+
+#### Delete Folder
+
+Required: **Project ID**, **Environment**, **Folder Path**, **Folder ID or Name**
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Force Delete | Delete the folder even if it contains secrets or subfolders |
 
 ---
 
 ## API behaviour notes
 
-- **Single-secret operations** (Get, Get Many, Create, Update, Delete) use **Infisical API v4** (`/api/v4/secrets/…`).
-- **Batch operations** (Create Many, Update Many) use **Infisical API v3** (`/api/v3/secrets/batch/raw`), which is Infisical's current batch endpoint.
-- Single-secret ops pass the project identifier as `projectId` in the request. Batch ops pass it as `workspaceId`, as required by the respective API versions.
+- All operations use **Infisical API v4** for single-secret endpoints (`/api/v4/secrets/…`) and batch secret endpoints (`/api/v4/secrets/batch`).
+- Project operations use **Infisical API v1** (`/api/v1/projects/…`).
+- Folder operations use **Infisical API v2** (`/api/v2/folders/…`).
 - When a **secret protection policy** is active on the project, create/update/delete endpoints return an approval object (`{ approval: { id, status, … } }`) instead of the secret directly.
-
----
-
-## Usage Examples
-
-### Fetch a single secret
-
-1. Add the **Infisical** node
-2. Resource: `Secret` → Operation: `Get`
-3. Fill in **Project ID**, **Environment** (e.g. `prod`), **Secret Path** (e.g. `/`), **Secret Key** (e.g. `DATABASE_URL`)
-4. The secret object is available in the node output
-
-### List all secrets in a folder
-
-1. Resource: `Secret` → Operation: `Get Many`
-2. Fill in **Project ID**, **Environment**, **Secret Path**
-3. Each secret is output as a separate item
-
-### Create a secret
-
-1. Resource: `Secret` → Operation: `Create`
-2. Fill in **Project ID**, **Environment**, **Secret Path**, **Secret Key**, **Secret Value**
-3. Optionally add a comment or set the type via **Additional Fields**
-
-### Bulk-create secrets
-
-1. Resource: `Secret` → Operation: `Create Many`
-2. Fill in **Project ID**, **Environment**, **Secret Path**
-3. Click **Add Secret** to add each key/value pair
-4. Each created secret is returned as an output item
-
-### Update a secret (rename + new value)
-
-1. Resource: `Secret` → Operation: `Update`
-2. Fill in **Project ID**, **Environment**, **Secret Path**, **Secret Key**
-3. Open **Additional Fields** → set **New Secret Name** and/or **Secret Value**
-
-### Bulk-update secrets
-
-1. Resource: `Secret` → Operation: `Update Many`
-2. Fill in **Project ID**, **Environment**, **Secret Path**
-3. Click **Add Secret** and enter the key and any fields to update
-4. In **Additional Fields** → set **Mode** (e.g. `upsert` to create missing secrets)
 
 ---
 
@@ -221,9 +290,9 @@ The Delete request sends `projectId`, `environment`, and `secretPath` in the JSO
 
 | Component | Version |
 | --- | --- |
-| n8n | v1.0.0+ |
+| n8n | v2.21.5 |
 | Infisical | Cloud and Community Edition |
-| Infisical API | v4 (get, create, update, delete), v3 (batch ops) |
+| Infisical API | v4 |
 | n8n Nodes API | v1 |
 
 ---
