@@ -36,7 +36,8 @@
       "dist/credentials/InfisicalApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/Infisical/Infisical.node.js"
+      "dist/nodes/Infisical/Infisical.node.js",
+      "dist/nodes/InfisicalSync/InfisicalSync.node.js"
     ]
   },
   "devDependencies": {
