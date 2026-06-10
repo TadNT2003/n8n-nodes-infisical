@@ -12,8 +12,9 @@
   "license": "MIT",
   "homepage": "https://github.com/TadNT2003/n8n-nodes-infisical",
   "author": {
-    "name": "TadNT2003",
-    "email": "ntdatwows2003@gmail.com"
+    "name": "Nguyen Thanh Dat",
+    "email": "ntdatwows2003@gmail.com",
+    "url": "https://github.com/TadNT2003"
   },
   "repository": {
     "type": "git",
