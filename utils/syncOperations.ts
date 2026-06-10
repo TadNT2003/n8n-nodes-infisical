@@ -8,6 +8,9 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 		{ param: 'privateKey', secretKey: 'privateKey' },
 		{ param: 'delegatedEmail', secretKey: 'delegatedEmail' },
 		{ param: 'scopes', secretKey: 'scopes' },
+		// Fix 7.1: condition-controlling fields needed for delegated auth and HTTP scopes branches
+		{ param: 'inpersonate', secretKey: 'inpersonate' },
+		{ param: 'httpNode', secretKey: 'httpNode' },
 	],
 	googleOAuth2Api: [
 		{ param: 'clientId', secretKey: 'clientId' },
@@ -17,7 +20,7 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 	jiraSoftwareCloudApi: [
 		{ param: 'email', secretKey: 'email' },
 		{ param: 'apiToken', secretKey: 'apiToken' },
-		{ param: 'jiraDomain', secretKey: 'domain' },
+		{ param: 'domain', secretKey: 'domain' },
 	],
 	openAiApi: [
 		{ param: 'apiKey', secretKey: 'apiKey' },
@@ -46,6 +49,10 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 		{ param: 'sshPort', secretKey: 'sshPort' },
 		{ param: 'sshUser', secretKey: 'sshUser' },
 		{ param: 'sshPassword', secretKey: 'sshPassword' },
+		// Fix 7.1: SSH key-auth fields for the sshTunnel conditional branch
+		{ param: 'sshAuthenticateWith', secretKey: 'sshAuthenticateWith' },
+		{ param: 'privateKey', secretKey: 'privateKey' },
+		{ param: 'passphrase', secretKey: 'passphrase' },
 	],
 	postgres: [
 		{ param: 'host', secretKey: 'host' },
@@ -54,11 +61,17 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 		{ param: 'password', secretKey: 'password' },
 		{ param: 'port', secretKey: 'port' },
 		{ param: 'ssl', secretKey: 'ssl' },
+		// Fix 7.1: controls which SSL branch fires; missing caused wrong defaults on create
+		{ param: 'allowUnauthorizedCerts', secretKey: 'allowUnauthorizedCerts' },
 		{ param: 'sshTunnel', secretKey: 'sshTunnel' },
 		{ param: 'sshHost', secretKey: 'sshHost' },
 		{ param: 'sshPort', secretKey: 'sshPort' },
 		{ param: 'sshUser', secretKey: 'sshUser' },
 		{ param: 'sshPassword', secretKey: 'sshPassword' },
+		// Fix 7.1: SSH key-auth fields for the sshTunnel conditional branch
+		{ param: 'sshAuthenticateWith', secretKey: 'sshAuthenticateWith' },
+		{ param: 'privateKey', secretKey: 'privateKey' },
+		{ param: 'passphrase', secretKey: 'passphrase' },
 	],
 	mongoDb: [
 		{ param: 'configurationType', secretKey: 'configurationType' },
@@ -84,7 +97,7 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 		{ param: 'user', secretKey: 'user' },
 		{ param: 'password', secretKey: 'password' },
 		{ param: 'port', secretKey: 'port' },
-		{ param: 'mssqlDomain', secretKey: 'domain' },
+		{ param: 'domain', secretKey: 'domain' },
 	],
 };
 
@@ -93,23 +106,47 @@ function buildSecretPath(rootPath: string, credentialName: string): string {
 	return root === '/' ? `/${credentialName}` : `${root}/${credentialName}`;
 }
 
+// Fix 7.5: removed `typeof value === 'boolean' && value === false` — false is a meaningful value
+// that must be written to Infisical (e.g. ssl:false, sshTunnel:false as condition keys).
 function isEmptyValue(value: unknown): boolean {
 	if (value === null || value === undefined) return true;
 	if (typeof value === 'string' && value.trim() === '') return true;
-	if (typeof value === 'boolean' && value === false) return true;
 	return false;
 }
 
-type PropDef = { type?: string; enum?: unknown[] };
+// Fix 7.7: `default` added so applyDefaultForProp can read the schema's declared default first.
+type PropDef = { type?: string; enum?: unknown[]; default?: unknown };
 type Sub = { required?: string[]; not?: { required?: string[] } };
 type Clause = { allOf?: Sub[]; required?: string[] };
 type SchemaBranch = {
-	if?: { properties?: Record<string, { enum?: unknown[] }> };
+	if?: { properties?: Record<string, { enum?: unknown[]; default?: unknown }> };
 	then?: Clause;
 	else?: Clause;
 };
-// Branch info returned by fetchN8nSchema for post-merge conditional handling
 type CondBranch = { condKey: string; condValues: unknown[]; thenRequired: string[]; elseProhibited: string[] };
+type SchemaInfo = { defaults: IDataObject; props: Record<string, PropDef>; condBranches: CondBranch[] };
+
+// Fix 7.4: handles `number` type (port, connectTimeout, maxConnections, etc.)
+// Fix 7.7: reads schema's own `default` before falling back to enum heuristic
+function applyDefaultForProp(
+	key: string,
+	def: PropDef,
+	defaults: IDataObject,
+	required: Set<string>,
+): void {
+	if (required.has(key) || key in defaults) return;
+	if (Array.isArray(def.enum) && def.enum.length > 0) {
+		defaults[key] = (def.default ?? (key === 'allowedHttpRequestDomains' ? 'all' : def.enum[0])) as string;
+	} else if (def.type === 'boolean') {
+		defaults[key] = false;
+	} else if (def.type === 'string') {
+		defaults[key] = '';
+	} else if (def.type === 'number') {
+		defaults[key] = 0;
+	} else if (def.type === 'json') {
+		defaults[key] = '{}';
+	}
+}
 
 // Coerce a string value from Infisical to the type the n8n schema expects.
 function coerceValue(raw: string, def?: PropDef): string | number | boolean {
@@ -120,25 +157,6 @@ function coerceValue(raw: string, def?: PropDef): string | number | boolean {
 	}
 	if (def.type === 'boolean') return raw === 'true' || raw === '1';
 	return raw;
-}
-
-// Apply a single safe default for a property.
-function applyDefaultForProp(
-	key: string,
-	def: PropDef,
-	defaults: IDataObject,
-	required: Set<string>,
-): void {
-	if (required.has(key) || key in defaults) return;
-	if (Array.isArray(def.enum) && def.enum.length > 0) {
-		defaults[key] = key === 'allowedHttpRequestDomains' ? 'all' : (def.enum[0] as string);
-	} else if (def.type === 'boolean') {
-		defaults[key] = false;
-	} else if (def.type === 'string') {
-		defaults[key] = '';
-	} else if (def.type === 'json') {
-		defaults[key] = '{}';
-	}
 }
 
 async function syncFromInfisical(
@@ -154,7 +172,7 @@ async function syncFromInfisical(
 	const n8nCredentialId = ctx.getNodeParameter('n8nCredentialId', i) as string;
 
 	const n8nCreds = await ctx.getCredentials('n8nApi');
-	const n8nApiUrl = ((n8nCreds.baseUrl as string) || 'http://localhost:5678').replace(/\/$/, '');
+	const n8nApiUrl = ((n8nCreds.baseUrl as string) || 'http://localhost:5678').replace(/\/$/, '').replace(/\/api\/v1$/, '');
 	const n8nApiKey = n8nCreds.apiKey as string;
 
 	const secretPath = buildSecretPath(rootPath, credentialName);
@@ -218,7 +236,7 @@ async function fetchN8nSchema(
 	credentialType: string,
 	n8nHeaders: Record<string, string>,
 	ctx: IExecuteFunctions,
-): Promise<{ defaults: IDataObject; props: Record<string, PropDef>; condBranches: CondBranch[] }> {
+): Promise<SchemaInfo> {
 	const schema = await ctx.helpers.httpRequest({
 		method: 'GET',
 		url: `${n8nApiUrl}/api/v1/credentials/schema/${credentialType}`,
@@ -246,15 +264,17 @@ async function fetchN8nSchema(
 		const { required: thenRequired } = collectClauseFields(branch.then);
 		const { required: elseRequired, notRequired: elseProhibited } = collectClauseFields(branch.else);
 
-		// Record this branch for post-merge conditional handling.
-		condBranches.push({ condKey, condValues, thenRequired, elseProhibited });
+		// Fix 7.6: elseProhibited covers both `not.required` and plain `required` in else blocks,
+		// ensuring post-merge deletion handles any field that must be absent when condition is off.
+		condBranches.push({ condKey, condValues, thenRequired, elseProhibited: [...elseProhibited, ...elseRequired] });
 
 		if (condKey in props) {
 			// Determine the default value for the condition key.
 			const condKeyDef = props[condKey];
 			let condKeyDefault: unknown;
 			if (Array.isArray(condKeyDef?.enum) && condKeyDef!.enum!.length > 0) {
-				condKeyDefault = condKey === 'allowedHttpRequestDomains' ? 'all' : condKeyDef!.enum![0];
+				// Fix 7.7: read schema's own default first, fall back to enum heuristic
+				condKeyDefault = condKeyDef?.default ?? (condKey === 'allowedHttpRequestDomains' ? 'all' : condKeyDef?.enum?.[0]);
 			} else if (condKeyDef?.type === 'boolean') {
 				condKeyDefault = false;
 			}
@@ -296,6 +316,41 @@ async function fetchN8nSchema(
 	return { defaults, props, condBranches };
 }
 
+// Apply conditional branch logic to fullData in-place.
+// Shared by both create and update paths (fix 7.2) to avoid duplication.
+// When a condition fires: fill any missing thenRequired fields with safe defaults.
+// When a condition does not fire: delete elseProhibited fields to satisfy the else block.
+function applyCondBranches(fullData: IDataObject, schemaInfo: SchemaInfo): void {
+	for (const { condKey, condValues, thenRequired, elseProhibited } of schemaInfo.condBranches) {
+		const condVal = fullData[condKey];
+		// When condKey is absent from schema properties it can't appear in the data,
+		// so JSON Schema's `properties` validator skips it → condition fires vacuously.
+		const condKeyInSchema = condKey in schemaInfo.props;
+		if (!condKeyInSchema || condValues.includes(condVal)) {
+			// Condition fires → fill any missing then-required fields with safe defaults.
+			for (const field of thenRequired) {
+				if (field in fullData) continue;
+				const def = schemaInfo.props[field] ?? {};
+				if (def.type === 'number') {
+					fullData[field] = 0;
+				} else if (def.type === 'boolean') {
+					fullData[field] = false;
+				} else if (Array.isArray(def.enum) && def.enum.length > 0) {
+					// Fix 7.7: read schema's own default first
+					fullData[field] = (def.default ?? def.enum[0]) as string;
+				} else {
+					fullData[field] = '';
+				}
+			}
+		} else {
+			// Condition doesn't fire → remove prohibited fields to satisfy else block.
+			for (const field of elseProhibited) {
+				delete fullData[field];
+			}
+		}
+	}
+}
+
 async function autoSyncFromInfisical(
 	ctx: IExecuteFunctions,
 	apiUrl: string,
@@ -307,7 +362,7 @@ async function autoSyncFromInfisical(
 	const rootPath = (ctx.getNodeParameter('rootPath', i, '/') as string) || '/';
 
 	const n8nCreds = await ctx.getCredentials('n8nApi');
-	const n8nApiUrl = ((n8nCreds.baseUrl as string) || 'http://localhost:5678').replace(/\/$/, '');
+	const n8nApiUrl = ((n8nCreds.baseUrl as string) || 'http://localhost:5678').replace(/\/$/, '').replace(/\/api\/v1$/, '');
 	const n8nApiKey = n8nCreds.apiKey as string;
 	const n8nHeaders = { 'X-N8N-API-KEY': n8nApiKey, 'Content-Type': 'application/json' };
 
@@ -346,6 +401,10 @@ async function autoSyncFromInfisical(
 
 	const credByName = new Map(allN8nCreds.map((c) => [c.name as string, c]));
 
+	// Fix 7.3: cache schema results so the same credential type is only fetched once per execution,
+	// avoiding N redundant HTTP calls when multiple folders share the same type.
+	const schemaCache = new Map<string, SchemaInfo>();
+
 	// 3. Process each folder
 	const results: INodeExecutionData[] = [];
 
@@ -378,12 +437,14 @@ async function autoSyncFromInfisical(
 			if (entry) { credentialType = entry.value as string; break; }
 		}
 
-		// Fetch schema for type coercion (and defaults when creating).
-		// Done once per folder so both update and create paths benefit.
-		let schemaInfo: { defaults: IDataObject; props: Record<string, PropDef>; condBranches: CondBranch[] } | undefined;
+		// Fix 7.3: use cached schema when available
+		let schemaInfo: SchemaInfo | undefined;
 		if (credentialType) {
 			try {
-				schemaInfo = await fetchN8nSchema(n8nApiUrl, credentialType, n8nHeaders, ctx);
+				if (!schemaCache.has(credentialType)) {
+					schemaCache.set(credentialType, await fetchN8nSchema(n8nApiUrl, credentialType, n8nHeaders, ctx));
+				}
+				schemaInfo = schemaCache.get(credentialType);
 			} catch {
 				// proceed without schema — no coercion or defaults applied
 			}
@@ -414,12 +475,17 @@ async function autoSyncFromInfisical(
 		const existing = credByName.get(folderName);
 
 		if (existing) {
-			// Update existing credential
+			// Fix 7.2: apply the same fullData build logic as the create path so that condition-key
+			// changes (e.g. ssl:false→true) get their required fields filled and their prohibited
+			// fields removed, preventing spurious 422 errors on update.
+			const fullData: IDataObject = { ...(schemaInfo?.defaults ?? {}), ...credentialData };
+			if (schemaInfo) applyCondBranches(fullData, schemaInfo);
+
 			const updated = await ctx.helpers.httpRequest({
 				method: 'PATCH',
 				url: `${n8nApiUrl}/api/v1/credentials/${existing.id}`,
 				headers: n8nHeaders,
-				body: { data: credentialData },
+				body: { data: fullData },
 			}) as IDataObject;
 			results.push({
 				json: { ...updated, action: 'updated', secretPath, secretCount: secrets.length },
@@ -438,33 +504,7 @@ async function autoSyncFromInfisical(
 			// conditional field rules: fill any still-missing then-required fields,
 			// and remove any fields prohibited by else blocks given actual merged values.
 			const fullData: IDataObject = { ...(schemaInfo?.defaults ?? {}), ...credentialData };
-			for (const { condKey, condValues, thenRequired, elseProhibited } of (schemaInfo?.condBranches ?? [])) {
-				const condVal = fullData[condKey];
-				// When condKey is absent from schema properties it can't appear in the data,
-				// so JSON Schema's `properties` validator skips it → condition fires vacuously.
-				const condKeyInSchema = condKey in schemaInfo!.props;
-				if (!condKeyInSchema || condValues.includes(condVal)) {
-					// Condition fires → fill any missing then-required fields with safe defaults.
-					for (const field of thenRequired) {
-						if (field in fullData) continue;
-						const def = schemaInfo!.props[field] ?? {};
-						if (def.type === 'number') {
-							fullData[field] = 0;
-						} else if (def.type === 'boolean') {
-							fullData[field] = false;
-						} else if (Array.isArray(def.enum) && def.enum.length > 0) {
-							fullData[field] = def.enum[0] as string;
-						} else {
-							fullData[field] = '';
-						}
-					}
-				} else {
-					// Condition doesn't fire → remove prohibited fields to satisfy else block.
-					for (const field of elseProhibited) {
-						delete fullData[field];
-					}
-				}
-			}
+			if (schemaInfo) applyCondBranches(fullData, schemaInfo);
 
 			const created = await ctx.helpers.httpRequest({
 				method: 'POST',

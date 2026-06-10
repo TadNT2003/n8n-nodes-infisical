@@ -108,7 +108,7 @@ export class InfisicalSync implements INodeType {
 				default: '',
 				description:
 					'Name of the credential — maps to the Infisical folder name under Root Path',
-				displayOptions: { show: { operation: ['syncToInfisical', 'syncFromInfisical', 'autoSyncFromInfisical'] } },
+				displayOptions: { show: { operation: ['syncToInfisical', 'syncFromInfisical'] } },
 			},
 
 			// ── Infisical → n8n: target credential ───────────────────────────────
