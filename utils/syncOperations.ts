@@ -124,7 +124,7 @@ type SchemaBranch = {
 	else?: Clause;
 };
 type CondBranch = { condKey: string; condValues: unknown[]; thenRequired: string[]; elseProhibited: string[] };
-type SchemaInfo = { defaults: IDataObject; props: Record<string, PropDef>; condBranches: CondBranch[] };
+type SchemaInfo = { defaults: IDataObject; props: Record<string, PropDef>; condBranches: CondBranch[]; topRequired: Set<string> };
 
 // Fix 7.4: handles `number` type (port, connectTimeout, maxConnections, etc.)
 // Fix 7.7: reads schema's own `default` before falling back to enum heuristic
@@ -157,6 +157,39 @@ function coerceValue(raw: string, def?: PropDef): string | number | boolean {
 	}
 	if (def.type === 'boolean') return raw === 'true' || raw === '1';
 	return raw;
+}
+
+// Validate credential data against the n8n schema's required fields and conditional requirements.
+// For form mode, pass availableFormFields to skip checks for fields the form cannot provide.
+function validateAgainstSchema(
+	data: Record<string, unknown>,
+	schemaInfo: SchemaInfo,
+	availableFormFields?: Set<string>,
+): string[] {
+	const errors: string[] = [];
+
+	for (const field of schemaInfo.topRequired) {
+		if (availableFormFields && !availableFormFields.has(field)) continue;
+		if (isEmptyValue(data[field])) {
+			errors.push(`"${field}" is required but missing or empty`);
+		}
+	}
+
+	for (const { condKey, condValues, thenRequired } of schemaInfo.condBranches) {
+		const condVal = data[condKey];
+		const condKeyInSchema = condKey in schemaInfo.props;
+		if (!condKeyInSchema || condValues.includes(condVal)) {
+			for (const field of thenRequired) {
+				if (availableFormFields && !availableFormFields.has(field)) continue;
+				if (isEmptyValue(data[field])) {
+					const when = condKeyInSchema ? ` when "${condKey}" is "${String(condVal)}"` : '';
+					errors.push(`"${field}" is required${when} but missing or empty`);
+				}
+			}
+		}
+	}
+
+	return errors;
 }
 
 async function syncFromInfisical(
@@ -272,7 +305,7 @@ async function fetchN8nSchema(
 			// Determine the default value for the condition key.
 			const condKeyDef = props[condKey];
 			let condKeyDefault: unknown;
-			if (Array.isArray(condKeyDef?.enum) && condKeyDef!.enum!.length > 0) {
+			if (Array.isArray(condKeyDef?.enum) && condKeyDef?.enum?.length > 0) {
 				// Fix 7.7: read schema's own default first, fall back to enum heuristic
 				condKeyDefault = condKeyDef?.default ?? (condKey === 'allowedHttpRequestDomains' ? 'all' : condKeyDef?.enum?.[0]);
 			} else if (condKeyDef?.type === 'boolean') {
@@ -313,7 +346,7 @@ async function fetchN8nSchema(
 		}
 	}
 
-	return { defaults, props, condBranches };
+	return { defaults, props, condBranches, topRequired: topLevelRequired };
 }
 
 // Apply conditional branch logic to fullData in-place.
@@ -547,15 +580,59 @@ export async function executeSyncOperation(
 	const environment = ctx.getNodeParameter('environment', i) as string;
 	const rootPath = (ctx.getNodeParameter('rootPath', i, '/') as string) || '/';
 	const credentialName = ctx.getNodeParameter('credentialName', i) as string;
-	const credentialType = ctx.getNodeParameter('credentialType', i) as string;
+	const inputMode = ctx.getNodeParameter('inputMode', i, 'form') as string;
+	const credentialType = inputMode === 'json'
+		? (ctx.getNodeParameter('credentialTypeJson', i) as string)
+		: (ctx.getNodeParameter('credentialType', i) as string);
 
-	const fieldMap = CREDENTIAL_FIELD_MAPS[credentialType];
-	if (!fieldMap) {
-		throw new NodeOperationError(
-			ctx.getNode(),
-			`Unsupported credential type: ${credentialType}`,
-			{ itemIndex: i },
-		);
+	// Parse JSON early so it can be used for both validation and secret collection.
+	let parsedJson: Record<string, unknown> | undefined;
+	if (inputMode === 'json') {
+		const rawJson = ctx.getNodeParameter('credentialJson', i, '{}') as string;
+		try {
+			parsedJson = JSON.parse(rawJson) as Record<string, unknown>;
+		} catch {
+			throw new NodeOperationError(ctx.getNode(), 'Credential Fields (JSON) is not valid JSON', { itemIndex: i });
+		}
+	}
+
+	// Validate against the n8n credential schema if n8nApi credentials are available.
+	// Silently skipped when n8nApi is not configured or the schema endpoint is unreachable.
+	let fetchedSchemaProps: Record<string, PropDef> | undefined;
+	try {
+		const n8nCreds = await ctx.getCredentials('n8nApi');
+		const n8nApiUrl = ((n8nCreds.baseUrl as string) || 'http://localhost:5678')
+			.replace(/\/$/, '').replace(/\/api\/v1$/, '');
+		const n8nHeaders = { 'X-N8N-API-KEY': n8nCreds.apiKey as string, 'Content-Type': 'application/json' };
+
+		const schemaInfo = await fetchN8nSchema(n8nApiUrl, credentialType, n8nHeaders, ctx);
+		fetchedSchemaProps = schemaInfo.props;
+
+		const validationData: Record<string, unknown> = {};
+		let availableFormFields: Set<string> | undefined;
+		if (inputMode === 'json') {
+			Object.assign(validationData, parsedJson);
+		} else {
+			const fieldMap = CREDENTIAL_FIELD_MAPS[credentialType];
+			if (fieldMap) {
+				availableFormFields = new Set(fieldMap.map((f) => f.param));
+				for (const { param } of fieldMap) {
+					validationData[param] = ctx.getNodeParameter(param, i, '');
+				}
+			}
+		}
+
+		const errors = validateAgainstSchema(validationData, schemaInfo, availableFormFields);
+		if (errors.length > 0) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				`Credential validation failed for "${credentialType}":\n${errors.map((e) => `• ${e}`).join('\n')}`,
+				{ itemIndex: i },
+			);
+		}
+	} catch (err) {
+		if (err instanceof NodeOperationError) throw err;
+		// n8nApi not configured or schema fetch failed — skip validation
 	}
 
 	const folderPath = rootPath.replace(/\/+$/, '') || '/';
@@ -581,10 +658,26 @@ export async function executeSyncOperation(
 	const secretMetadata: IDataObject[] = [{ key: 'n8n_credential_type', value: credentialType }];
 	const secrets: IDataObject[] = [];
 
-	for (const { param, secretKey } of fieldMap) {
-		const value = ctx.getNodeParameter(param, i, '') as unknown;
-		if (isEmptyValue(value)) continue;
-		secrets.push({ secretKey, secretValue: String(value), secretMetadata });
+	if (inputMode === 'json') {
+		for (const [key, value] of Object.entries(parsedJson ?? {})) {
+			if (isEmptyValue(value)) continue;
+			if (fetchedSchemaProps && !(key in fetchedSchemaProps)) continue;
+			secrets.push({ secretKey: key, secretValue: String(value), secretMetadata });
+		}
+	} else {
+		const fieldMap = CREDENTIAL_FIELD_MAPS[credentialType];
+		if (!fieldMap) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				`Unsupported credential type: ${credentialType}`,
+				{ itemIndex: i },
+			);
+		}
+		for (const { param, secretKey } of fieldMap) {
+			const value = ctx.getNodeParameter(param, i, '') as unknown;
+			if (isEmptyValue(value)) continue;
+			secrets.push({ secretKey, secretValue: String(value), secretMetadata });
+		}
 	}
 
 	if (secrets.length === 0) {

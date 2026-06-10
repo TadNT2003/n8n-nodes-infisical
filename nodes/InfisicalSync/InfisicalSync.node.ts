@@ -121,6 +121,30 @@ export class InfisicalSync implements INodeType {
 				description: 'ID of the n8n credential to update (visible in the credential URL)',
 				displayOptions: { show: { operation: ['syncFromInfisical'] } },
 			},
+
+			// ── Input mode (syncToInfisical only) ─────────────────────────────────
+			{
+				displayName: 'Input Mode',
+				name: 'inputMode',
+				type: 'options',
+				noDataExpression: true,
+				default: 'form',
+				options: [
+					{
+						name: 'Form',
+						value: 'form',
+						description: 'Fill in individual fields for the selected credential type',
+					},
+					{
+						name: 'JSON',
+						value: 'json',
+						description: 'Paste all credential fields as a JSON object',
+					},
+				],
+				displayOptions: { show: { operation: ['syncToInfisical'] } },
+			},
+
+			// ── Credential type: form mode (dropdown of supported types) ──────────
 			{
 				displayName: 'Credential Type',
 				name: 'credentialType',
@@ -128,7 +152,7 @@ export class InfisicalSync implements INodeType {
 				required: true,
 				default: 'openAiApi',
 				description: 'The n8n credential type to sync',
-				displayOptions: { show: { operation: ['syncToInfisical'] } },
+				displayOptions: { show: { operation: ['syncToInfisical'], inputMode: ['form'] } },
 				options: [
 					{ name: 'Anthropic', value: 'anthropicApi' },
 					{ name: 'Cohere', value: 'cohereApi' },
@@ -149,6 +173,30 @@ export class InfisicalSync implements INodeType {
 				],
 			},
 
+			// ── Credential type: json mode (free-text, any type) ──────────────────
+			{
+				displayName: 'Credential Type',
+				name: 'credentialTypeJson',
+				type: 'string',
+				required: true,
+				default: '',
+				placeholder: 'e.g. openAiApi, postgresApi',
+				description: 'The n8n credential type name — stored as n8n_credential_type metadata on every secret',
+				displayOptions: { show: { operation: ['syncToInfisical'], inputMode: ['json'] } },
+			},
+
+			// ── Credential fields: json mode ──────────────────────────────────────
+			{
+				displayName: 'Credential Fields (JSON)',
+				name: 'credentialJson',
+				type: 'string',
+				typeOptions: { rows: 8 },
+				required: true,
+				default: '{}',
+				description: 'JSON object mapping each credential field name to its value',
+				displayOptions: { show: { operation: ['syncToInfisical'], inputMode: ['json'] } },
+			},
+
 			// ── LLM: shared apiKey ────────────────────────────────────────────────
 			{
 				displayName: 'API Key',
@@ -159,6 +207,7 @@ export class InfisicalSync implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
+						inputMode: ['form'],
 						credentialType: [
 							'openAiApi',
 							'anthropicApi',
@@ -177,7 +226,7 @@ export class InfisicalSync implements INodeType {
 				default: '',
 				description: 'Optional OpenAI organization ID',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], credentialType: ['openAiApi'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['openAiApi'] },
 				},
 			},
 			{
@@ -189,6 +238,7 @@ export class InfisicalSync implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
+						inputMode: ['form'],
 						credentialType: ['openAiApi', 'anthropicApi'],
 					},
 				},
@@ -203,7 +253,7 @@ export class InfisicalSync implements INodeType {
 				default: '',
 				description: 'PEM-encoded private key from the service account JSON',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], credentialType: ['googleApi'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleApi'] },
 				},
 			},
 			{
@@ -213,7 +263,7 @@ export class InfisicalSync implements INodeType {
 				default: '',
 				description: 'Optional email to impersonate via domain-wide delegation',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], credentialType: ['googleApi'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleApi'] },
 				},
 			},
 			{
@@ -223,7 +273,7 @@ export class InfisicalSync implements INodeType {
 				default: '',
 				description: 'Comma-separated list of OAuth scopes',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], credentialType: ['googleApi'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleApi'] },
 				},
 			},
 
@@ -234,7 +284,7 @@ export class InfisicalSync implements INodeType {
 				type: 'string',
 				default: '',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], credentialType: ['googleOAuth2Api'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleOAuth2Api'] },
 				},
 			},
 			{
@@ -244,7 +294,7 @@ export class InfisicalSync implements INodeType {
 				typeOptions: { password: true },
 				default: '',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], credentialType: ['googleOAuth2Api'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleOAuth2Api'] },
 				},
 			},
 			{
@@ -254,7 +304,7 @@ export class InfisicalSync implements INodeType {
 				default: '',
 				description: 'Space-separated list of OAuth scopes to request',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], credentialType: ['googleOAuth2Api'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleOAuth2Api'] },
 				},
 			},
 
@@ -267,6 +317,7 @@ export class InfisicalSync implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
+						inputMode: ['form'],
 						credentialType: ['googleApi', 'jiraSoftwareCloudApi'],
 					},
 				},
@@ -280,7 +331,7 @@ export class InfisicalSync implements INodeType {
 				typeOptions: { password: true },
 				default: '',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], credentialType: ['jiraSoftwareCloudApi'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['jiraSoftwareCloudApi'] },
 				},
 			},
 			{
@@ -290,7 +341,7 @@ export class InfisicalSync implements INodeType {
 				default: '',
 				placeholder: 'yourcompany.atlassian.net',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], credentialType: ['jiraSoftwareCloudApi'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['jiraSoftwareCloudApi'] },
 				},
 			},
 
@@ -302,7 +353,7 @@ export class InfisicalSync implements INodeType {
 				typeOptions: { password: true },
 				default: '',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], credentialType: ['discordBotApi'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['discordBotApi'] },
 				},
 			},
 			{
@@ -311,7 +362,7 @@ export class InfisicalSync implements INodeType {
 				type: 'string',
 				default: '',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], credentialType: ['discordWebhookApi'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['discordWebhookApi'] },
 				},
 			},
 
@@ -324,6 +375,7 @@ export class InfisicalSync implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
+						inputMode: ['form'],
 						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis'],
 					},
 				},
@@ -334,7 +386,7 @@ export class InfisicalSync implements INodeType {
 				type: 'string',
 				default: 'localhost',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], credentialType: ['microsoftSql'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['microsoftSql'] },
 				},
 			},
 			{
@@ -345,6 +397,7 @@ export class InfisicalSync implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
+						inputMode: ['form'],
 						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql'],
 					},
 				},
@@ -357,6 +410,7 @@ export class InfisicalSync implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
+						inputMode: ['form'],
 						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql'],
 					},
 				},
@@ -370,6 +424,7 @@ export class InfisicalSync implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
+						inputMode: ['form'],
 						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql'],
 					},
 				},
@@ -383,6 +438,7 @@ export class InfisicalSync implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
+						inputMode: ['form'],
 						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql'],
 					},
 				},
@@ -399,7 +455,7 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Connection String', value: 'connectionString' },
 				],
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], credentialType: ['mongoDb'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['mongoDb'] },
 				},
 			},
 			{
@@ -412,6 +468,7 @@ export class InfisicalSync implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
+						inputMode: ['form'],
 						credentialType: ['mongoDb'],
 						configurationType: ['connectionString'],
 					},
@@ -426,7 +483,7 @@ export class InfisicalSync implements INodeType {
 				default: '',
 				description: 'Optional Windows authentication domain',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], credentialType: ['microsoftSql'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['microsoftSql'] },
 				},
 			},
 
@@ -439,6 +496,7 @@ export class InfisicalSync implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
+						inputMode: ['form'],
 						credentialType: ['mySql', 'mongoDb', 'redis'],
 					},
 				},
@@ -454,7 +512,7 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Require', value: 'require' },
 				],
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], credentialType: ['postgres'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['postgres'] },
 				},
 			},
 
@@ -467,6 +525,7 @@ export class InfisicalSync implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
+						inputMode: ['form'],
 						credentialType: ['mySql', 'postgres'],
 					},
 				},
@@ -479,6 +538,7 @@ export class InfisicalSync implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
+						inputMode: ['form'],
 						credentialType: ['mySql', 'postgres'],
 						sshTunnel: [true],
 					},
@@ -492,6 +552,7 @@ export class InfisicalSync implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
+						inputMode: ['form'],
 						credentialType: ['mySql', 'postgres'],
 						sshTunnel: [true],
 					},
@@ -505,6 +566,7 @@ export class InfisicalSync implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
+						inputMode: ['form'],
 						credentialType: ['mySql', 'postgres'],
 						sshTunnel: [true],
 					},
@@ -519,6 +581,7 @@ export class InfisicalSync implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
+						inputMode: ['form'],
 						credentialType: ['mySql', 'postgres'],
 						sshTunnel: [true],
 					},
