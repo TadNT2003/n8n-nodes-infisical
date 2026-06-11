@@ -17,6 +17,7 @@ Hướng dẫn toàn diện về module sync (`utils/syncOperations.ts`): nó l�
 5. [Xử Lý Bộ Kiểm Tra: Thuật Toán Đầy Đủ](#5-xử-lý-bộ-kiểm-tra-thuật-toán-đầy-đủ)
 6. [Tham Khảo Credential Được Hỗ Trợ và Ánh Xạ Trường](#6-tham-khảo-credential-được-hỗ-trợ-và-ánh-xạ-trường)
 7. [Thêm Loại Credential Mới](#7-thêm-loại-credential-mới)
+8. [syncToInfisical: Chế Độ Nhập JSON và Xác Thực](#8-synctoinfisical-chế-độ-nhập-json-và-xác-thực)
 
 ---
 
@@ -26,7 +27,7 @@ Ba thao tác, hai chiều:
 
 | Thao tác | Chiều | Mô tả |
 | --- | --- | --- |
-| `syncToInfisical` | n8n → Infisical | Đọc form credential n8n đã được điền và upsert từng trường dưới dạng secret trong một thư mục Infisical có tên. Gắn metadata `n8n_credential_type` vào mỗi secret để tự động phát hiện sau này. |
+| `syncToInfisical` | n8n → Infisical | Đọc từ form credential n8n **hoặc một đối tượng JSON** và upsert từng trường dưới dạng secret trong một thư mục Infisical có tên. Gắn metadata `n8n_credential_type` vào mỗi secret để tự động phát hiện sau này. Khi `n8nApi` được cấu hình, xác thực dữ liệu đầu vào theo credential schema trước khi ghi. |
 | `syncFromInfisical` | Infisical → n8n | Đọc tất cả secrets từ một thư mục có tên, sau đó PATCH một credential n8n cụ thể theo ID. |
 | `autoSyncFromInfisical` | Infisical → n8n | Phát hiện tất cả các thư mục con dưới một đường dẫn gốc, đọc secrets của từng thư mục, và tạo hoặc cập nhật các credential n8n phù hợp theo tên. Đây là thao tác phức tạp nhất. |
 
@@ -665,3 +666,45 @@ Bao gồm tất cả các trường boolean/enum kiểm soát điều kiện nga
 2. **autoSyncFromInfisical**: Với thư mục trong Infisical, chạy `autoSyncFromInfisical`. Xác minh credential được tạo trong n8n không có lỗi 400/422 và tất cả giá trị trường khớp.
 
 3. **Round-trip**: Xóa credential, chạy lại `autoSyncFromInfisical`, xác minh credential được tạo lại đúng cách.
+
+---
+
+## 8. syncToInfisical: Chế Độ Nhập JSON và Xác Thực
+
+### 8.1 Các chế độ nhập
+
+`syncToInfisical` hỗ trợ hai chế độ nhập được chọn qua tham số **Input Mode** trên node.
+
+#### Chế độ form (mặc định)
+
+Hiển thị các trường riêng lẻ cho loại credential được chọn. Hỗ trợ 16 loại trong `CREDENTIAL_FIELD_MAPS`. Giá trị trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo field map.
+
+#### Chế độ JSON
+
+Nhận **Credential Type** dạng văn bản tự do (bất kỳ loại nào được đăng ký trong n8n — không giới hạn ở 16 loại được định sẵn) và một textarea JSON chứa tất cả giá trị trường credential. Tên trường phải là tên thuộc tính trong schema n8n (ví dụ: `domain` cho Jira, không phải nhãn UI `Jira Domain`).
+
+Giá trị là đối tượng hoặc mảng được tuần tự hóa bằng `JSON.stringify`. Giá trị nguyên thủy dùng `String()`.
+
+### 8.2 Xác thực schema
+
+Khi `n8nApi` được cấu hình, xác thực chạy theo credential schema của n8n **trước khi bất kỳ thao tác ghi Infisical nào xảy ra** (bao gồm cả tạo thư mục). Hàm `fetchN8nSchema` được tái sử dụng từ `autoSyncFromInfisical`:
+
+1. Lấy `GET /api/v1/credentials/schema/{credentialType}` bằng credential `n8nApi`
+2. Kiểm tra tất cả trường trong `topRequired` có mặt và không rỗng
+3. Với mỗi nhánh `allOf`, nếu điều kiện kích hoạt dựa trên giá trị đầu vào thực tế, kiểm tra tất cả trường `thenRequired` có mặt và không rỗng
+
+**Phạm vi chế độ form**: xác thực được giới hạn trong các trường khai báo trong `CREDENTIAL_FIELD_MAPS` cho loại được chọn. Các trường required trong schema không có trong form sẽ không bị đánh dấu là thiếu — form không thể cung cấp chúng.
+
+Lỗi xác thực được hiển thị dưới dạng `NodeOperationError` với danh sách dấu đầu dòng, hiển thị trong bảng lỗi thực thi của n8n:
+
+```text
+Credential validation failed for "postgres":
+• "host" is required but missing or empty
+• "sshHost" is required when "sshTunnel" is "true" but missing or empty
+```
+
+Nếu `n8nApi` không được cấu hình hoặc endpoint schema không thể truy cập, xác thực sẽ bị bỏ qua âm thầm và thao tác tiếp tục bình thường.
+
+### 8.3 Xử lý trường không xác định (chế độ JSON)
+
+Khi schema được lấy thành công, bất kỳ khóa JSON nào không được khai báo trong `schema.properties` sẽ **bị loại bỏ âm thầm** trước khi ghi vào Infisical — không gây lỗi xác thực và không được lưu trữ. Nếu không có schema (n8nApi chưa cấu hình), tất cả các khóa được ghi nguyên vẹn.

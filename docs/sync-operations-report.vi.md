@@ -14,7 +14,7 @@ Ba thao tác được cung cấp:
 
 | Thao tác | Chiều | Mô tả |
 | --- | --- | --- |
-| `syncToInfisical` | n8n → Infisical | Đọc từ form credential n8n, ghi vào thư mục secret Infisical |
+| `syncToInfisical` | n8n → Infisical | Đọc từ form credential n8n **hoặc một đối tượng JSON**, ghi vào thư mục secret Infisical. Hỗ trợ hai chế độ nhập: **form** (16 loại được định sẵn) và **JSON** (bất kỳ loại credential nào). Khi `n8nApi` được cấu hình, xác thực dữ liệu đầu vào theo credential schema trước khi ghi. |
 | `syncFromInfisical` | Infisical → n8n | Đọc một thư mục cụ thể theo tên, cập nhật credential n8n đích theo ID |
 | `autoSyncFromInfisical` | Infisical → n8n | Tự động phát hiện tất cả thư mục credential dưới một đường dẫn gốc, tạo hoặc cập nhật credential n8n tương ứng |
 
@@ -203,8 +203,8 @@ Nếu map tồn tại cho một loại, chỉ các trường được khai báo 
 
 | Loại | Khóa Infisical | Tham số n8n | Lý do |
 | --- | --- | --- | --- |
-| `jiraSoftwareCloudApi` | `domain` | `jiraDomain` | n8n sử dụng tên tham số `jiraDomain` |
-| `microsoftSql` | `domain` | `mssqlDomain` | n8n sử dụng `mssqlDomain`, không phải `domain` |
+| `jiraSoftwareCloudApi` | `domain` | `domain` | Nhãn UI là "Jira Domain" nhưng thuộc tính schema là `domain` — đã xác minh qua `GET /api/v1/credentials/schema/jiraSoftwareCloudApi` |
+| `microsoftSql` | `domain` | `domain` | Nhãn UI là "Windows Domain" nhưng thuộc tính schema là `domain` |
 | `mongoDb` | `tls` | `tls` | Phiên bản trước sử dụng sai `ssl`; schema MongoDB sử dụng `tls` |
 | `postgres` | `ssl` | `ssl` | Phiên bản trước sử dụng sai `sslMode`; schema sử dụng `ssl` |
 
@@ -263,9 +263,10 @@ Với các nhánh có condKey vắng mặt trong `schema.properties`, tất cả
 
 ```typescript
 {
-  defaults:    IDataObject,           // giá trị cơ bản an toàn cho tất cả trường tùy chọn không bị loại trừ
+  defaults:    IDataObject,            // giá trị cơ bản an toàn cho tất cả trường tùy chọn không bị loại trừ
   props:       Record<string,PropDef>, // các thuộc tính schema để tra cứu ép kiểu
-  condBranches: CondBranch[]          // dữ liệu nhánh để điều chỉnh post-merge
+  condBranches: CondBranch[],          // dữ liệu nhánh để điều chỉnh post-merge
+  topRequired: Set<string>             // các trường required ở cấp cao nhất từ schema.required
 }
 ```
 
@@ -292,7 +293,47 @@ else:
 
 ---
 
-## 7. Các Cải Tiến Được Đề Xuất
+## 7. Chế Độ Nhập và Xác Thực của `syncToInfisical`
+
+### 7.1 Các chế độ nhập
+
+`syncToInfisical` hỗ trợ hai chế độ nhập được chọn qua tham số **Input Mode** trên node.
+
+#### Chế độ form (mặc định)
+
+Người dùng chọn loại credential từ dropdown gồm 16 loại được định sẵn và điền từng trường riêng lẻ. Các trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo `CREDENTIAL_FIELD_MAPS`. Chỉ hỗ trợ 16 loại có entry trong `CREDENTIAL_FIELD_MAPS`.
+
+#### Chế độ JSON
+
+Người dùng nhập **Credential Type** dạng văn bản tự do (bất kỳ loại nào được đăng ký trong n8n — không giới hạn ở 16 loại được định sẵn) và một đối tượng JSON chứa các giá trị trường credential. Tên trường trong JSON phải là tên thuộc tính trong schema n8n (ví dụ: `domain` cho Jira, không phải nhãn UI `Jira Domain`). Giá trị là đối tượng hoặc mảng được tuần tự hóa bằng `JSON.stringify`; giá trị nguyên thủy dùng `String()`.
+
+### 7.2 Xác thực schema (cả hai chế độ)
+
+Khi `n8nApi` được cấu hình, cả hai chế độ đều xác thực dữ liệu đầu vào theo credential schema của n8n **trước khi bất kỳ thao tác ghi Infisical nào xảy ra** (bao gồm cả tạo thư mục). Hàm `fetchN8nSchema` được tái sử dụng từ `autoSyncFromInfisical`:
+
+1. Lấy `GET /api/v1/credentials/schema/{credentialType}` bằng credential `n8nApi`
+2. Kiểm tra tất cả trường trong `topRequired` có mặt và không rỗng
+3. Với mỗi nhánh `allOf`, nếu điều kiện kích hoạt dựa trên giá trị đầu vào thực tế, kiểm tra tất cả trường `thenRequired` có mặt và không rỗng
+
+**Phạm vi chế độ form**: xác thực được giới hạn trong các trường khai báo trong `CREDENTIAL_FIELD_MAPS`. Các trường required trong schema không có trong form sẽ không bị đánh dấu là thiếu.
+
+Lỗi xác thực được hiển thị dưới dạng `NodeOperationError` với danh sách dấu đầu dòng:
+
+```text
+Credential validation failed for "postgres":
+• "host" is required but missing or empty
+• "sshHost" is required when "sshTunnel" is "true" but missing or empty
+```
+
+Nếu `n8nApi` không được cấu hình hoặc endpoint schema không thể truy cập, xác thực sẽ bị bỏ qua âm thầm.
+
+### 7.3 Xử lý trường không xác định (chế độ JSON)
+
+Khi schema được lấy thành công, bất kỳ khóa JSON nào không được khai báo trong `schema.properties` sẽ **bị loại bỏ âm thầm** trước khi ghi vào Infisical — không gây lỗi xác thực và không được lưu trữ. Nếu không có schema (n8nApi chưa cấu hình), tất cả các khóa được ghi nguyên vẹn.
+
+---
+
+## 8. Các Cải Tiến Được Đề Xuất
 
 ### 7.1 Thiếu ánh xạ condKey trong `CREDENTIAL_FIELD_MAPS`
 

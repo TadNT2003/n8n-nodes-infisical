@@ -99,6 +99,42 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 		{ param: 'port', secretKey: 'port' },
 		{ param: 'domain', secretKey: 'domain' },
 	],
+	googleSheetsOAuth2Api: [
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		// condition-controlling field: drives the allowedDomains conditional branch
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
+	googleDriveOAuth2Api: [
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
+	googleDocsOAuth2Api: [
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
+	n8nApi: [
+		{ param: 'apiKey', secretKey: 'apiKey' },
+		{ param: 'baseUrl', secretKey: 'baseUrl' },
+		// condition-controlling field: drives the allowedDomains conditional branch
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
+	infisicalApi: [
+		{ param: 'apiUrl', secretKey: 'apiUrl' },
+		// condition-controlling field: universalAuth vs serviceToken branches
+		{ param: 'authType', secretKey: 'authType' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		{ param: 'organizationSlug', secretKey: 'organizationSlug' },
+		// service token value (only active when authType === 'serviceToken')
+		{ param: 'apiKey', secretKey: 'apiKey' },
+	],
 };
 
 function buildSecretPath(rootPath: string, credentialName: string): string {
@@ -662,7 +698,8 @@ export async function executeSyncOperation(
 		for (const [key, value] of Object.entries(parsedJson ?? {})) {
 			if (isEmptyValue(value)) continue;
 			if (fetchedSchemaProps && !(key in fetchedSchemaProps)) continue;
-			secrets.push({ secretKey: key, secretValue: String(value), secretMetadata });
+			const secretValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+			secrets.push({ secretKey: key, secretValue, secretMetadata });
 		}
 	} else {
 		const fieldMap = CREDENTIAL_FIELD_MAPS[credentialType];

@@ -19,6 +19,7 @@ types.
 5. [Dealing with the Validator: Full Algorithm](#5-dealing-with-the-validator-full-algorithm)
 6. [Supported Credentials and Field Mapping Reference](#6-supported-credentials-and-field-mapping-reference)
 7. [Adding a New Credential Type](#7-adding-a-new-credential-type)
+8. [syncToInfisical: JSON Input Mode and Validation](#8-synctoinfisical-json-input-mode-and-validation)
 
 ---
 
@@ -28,7 +29,7 @@ Three operations, two directions:
 
 | Operation | Direction | What it does |
 | --- | --- | --- |
-| `syncToInfisical` | n8n → Infisical | Reads a filled-in n8n credential form and upserts each field as a secret in a named Infisical folder. Attaches `n8n_credential_type` metadata to every secret for later auto-discovery. |
+| `syncToInfisical` | n8n → Infisical | Reads from an n8n credential **form** or a **JSON object** and upserts each field as a secret in a named Infisical folder. Attaches `n8n_credential_type` metadata to every secret for later auto-discovery. When `n8nApi` is configured, validates input against the credential schema before writing. |
 | `syncFromInfisical` | Infisical → n8n | Reads all secrets from a named folder, then PATCHes a specific n8n credential by ID. |
 | `autoSyncFromInfisical` | Infisical → n8n | Discovers all subfolders under a root path, reads each folder's secrets, and creates or updates matching n8n credentials by name. This is the most complex operation. |
 
@@ -753,3 +754,58 @@ branch fires.
 
 3. **Round-trip**: Delete the credential, re-run `autoSyncFromInfisical`, verify the credential is
    recreated correctly.
+
+---
+
+## 8. syncToInfisical: JSON Input Mode and Validation
+
+### 8.1 Input modes
+
+`syncToInfisical` supports two input modes selected via the **Input Mode** node parameter.
+
+#### Form mode (default)
+
+Displays individual fields for the selected credential type. Supports the 16 types in
+`CREDENTIAL_FIELD_MAPS`. Field values are read via `ctx.getNodeParameter(param, i, '')` and mapped
+to Infisical secret keys per the field map.
+
+#### JSON mode
+
+Accepts a free-text **Credential Type** (any type registered in n8n — not limited to the 16
+hardcoded types) and a JSON textarea for all credential field values. Field names must be n8n
+schema property names (e.g. `domain` for Jira, not the UI label `Jira Domain`).
+
+Object and array values are serialised with `JSON.stringify` before being written to Infisical.
+Primitive values use `String()`.
+
+### 8.2 Schema validation
+
+When `n8nApi` credentials are configured, validation runs against the n8n credential schema
+**before any Infisical write occurs** (folder creation included). The same `fetchN8nSchema`
+function used by `autoSyncFromInfisical` is reused:
+
+1. `GET /api/v1/credentials/schema/{credentialType}` is fetched using the `n8nApi` credential
+2. Top-level required fields are checked for presence and non-emptiness
+3. For each `allOf` conditional branch, if the condition fires based on the actual input values,
+   all `thenRequired` fields are checked for presence and non-emptiness
+
+**Form mode scoping**: validation is limited to fields declared in `CREDENTIAL_FIELD_MAPS` for
+the selected type. Required schema fields not present in the form are not flagged — the form
+physically cannot provide them.
+
+Validation errors are surfaced as `NodeOperationError` with a bullet-listed message:
+
+```text
+Credential validation failed for "postgres":
+• "host" is required but missing or empty
+• "sshHost" is required when "sshTunnel" is "true" but missing or empty
+```
+
+If `n8nApi` is not configured or the schema endpoint is unreachable, validation is silently
+skipped and the operation proceeds without it.
+
+### 8.3 Unknown field handling (JSON mode)
+
+When a schema is successfully fetched, any JSON key not declared in `schema.properties` is
+**silently dropped** before writing to Infisical — it does not cause a validation error and is
+not stored. If no schema is available (n8nApi not configured), all keys are written as-is.

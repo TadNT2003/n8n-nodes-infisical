@@ -158,15 +158,20 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Cohere', value: 'cohereApi' },
 					{ name: 'Discord Bot', value: 'discordBotApi' },
 					{ name: 'Discord Webhook', value: 'discordWebhookApi' },
+					{ name: 'Google Docs (OAuth2)', value: 'googleDocsOAuth2Api' },
+					{ name: 'Google Drive (OAuth2)', value: 'googleDriveOAuth2Api' },
 					{ name: 'Google OAuth2', value: 'googleOAuth2Api' },
 					{ name: 'Google Service Account', value: 'googleApi' },
+					{ name: 'Google Sheets (OAuth2)', value: 'googleSheetsOAuth2Api' },
 					{ name: 'Groq', value: 'groqApi' },
 					{ name: 'HuggingFace', value: 'huggingFaceApi' },
+					{ name: 'Infisical', value: 'infisicalApi' },
 					{ name: 'Jira Software Cloud', value: 'jiraSoftwareCloudApi' },
 					{ name: 'Microsoft SQL Server', value: 'microsoftSql' },
 					{ name: 'Mistral', value: 'mistralCloudApi' },
 					{ name: 'MongoDB', value: 'mongoDb' },
 					{ name: 'MySQL', value: 'mySql' },
+					{ name: 'n8n', value: 'n8nApi' },
 					{ name: 'OpenAI', value: 'openAiApi' },
 					{ name: 'PostgreSQL', value: 'postgres' },
 					{ name: 'Redis', value: 'redis' },
@@ -215,6 +220,8 @@ export class InfisicalSync implements INodeType {
 							'cohereApi',
 							'huggingFaceApi',
 							'mistralCloudApi',
+							'n8nApi',
+							'infisicalApi',
 						],
 					},
 				},
@@ -284,7 +291,17 @@ export class InfisicalSync implements INodeType {
 				type: 'string',
 				default: '',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleOAuth2Api'] },
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: [
+							'googleOAuth2Api',
+							'googleSheetsOAuth2Api',
+							'googleDriveOAuth2Api',
+							'googleDocsOAuth2Api',
+							'infisicalApi',
+						],
+					},
 				},
 			},
 			{
@@ -294,7 +311,17 @@ export class InfisicalSync implements INodeType {
 				typeOptions: { password: true },
 				default: '',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleOAuth2Api'] },
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: [
+							'googleOAuth2Api',
+							'googleSheetsOAuth2Api',
+							'googleDriveOAuth2Api',
+							'googleDocsOAuth2Api',
+							'infisicalApi',
+						],
+					},
 				},
 			},
 			{
@@ -305,6 +332,101 @@ export class InfisicalSync implements INodeType {
 				description: 'Space-separated list of OAuth scopes to request',
 				displayOptions: {
 					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleOAuth2Api'] },
+				},
+			},
+
+			// ── Google Service OAuth2 (Sheets / Drive / Docs) + n8n ─────────────
+			{
+				displayName: 'Allowed HTTP Request Domains',
+				name: 'allowedHttpRequestDomains',
+				type: 'options',
+				default: 'all',
+				options: [
+					{ name: 'All Domains', value: 'all' },
+					{ name: 'Specific Domains', value: 'domains' },
+					{ name: 'None', value: 'none' },
+				],
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: [
+							'googleSheetsOAuth2Api',
+							'googleDriveOAuth2Api',
+							'googleDocsOAuth2Api',
+							'n8nApi',
+						],
+					},
+				},
+			},
+			{
+				displayName: 'Allowed Domains',
+				name: 'allowedDomains',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. api.example.com,cdn.example.com',
+				description: 'Comma-separated list of domains; only used when Allowed HTTP Request Domains is set to Specific Domains',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: [
+							'googleSheetsOAuth2Api',
+							'googleDriveOAuth2Api',
+							'googleDocsOAuth2Api',
+							'n8nApi',
+						],
+						allowedHttpRequestDomains: ['domains'],
+					},
+				},
+			},
+
+			// ── n8n API ───────────────────────────────────────────────────────────
+			{
+				displayName: 'Base URL',
+				name: 'baseUrl',
+				type: 'string',
+				default: '',
+				placeholder: 'http://localhost:5678',
+				description: 'Base URL of the n8n instance (without /api/v1)',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['n8nApi'] },
+				},
+			},
+
+			// ── Infisical ─────────────────────────────────────────────────────────
+			{
+				displayName: 'API URL',
+				name: 'apiUrl',
+				type: 'string',
+				default: 'https://app.infisical.com/api',
+				placeholder: 'https://app.infisical.com/api',
+				description: 'Base URL of the Infisical API',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['infisicalApi'] },
+				},
+			},
+			{
+				displayName: 'Authentication Type',
+				name: 'authType',
+				type: 'options',
+				default: 'universalAuth',
+				options: [
+					{ name: 'Universal Auth (Machine Identity)', value: 'universalAuth' },
+					{ name: 'Service Token (Legacy)', value: 'serviceToken' },
+				],
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['infisicalApi'] },
+				},
+			},
+			{
+				displayName: 'Organization Slug',
+				name: 'organizationSlug',
+				type: 'string',
+				default: '',
+				description: 'Optional — scope the access token to a specific organization',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['infisicalApi'] },
 				},
 			},
 

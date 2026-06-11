@@ -16,7 +16,7 @@ Three operations are exposed:
 
 | Operation | Direction | Description |
 | --- | --- | --- |
-| `syncToInfisical` | n8n → Infisical | Reads from an n8n credential form, writes to an Infisical secret folder |
+| `syncToInfisical` | n8n → Infisical | Reads from an n8n credential form **or a JSON object**, writes to an Infisical secret folder. Supports two input modes: **form** (16 hardcoded types) and **JSON** (any credential type). When `n8nApi` is configured, validates input against the credential schema before writing. |
 | `syncFromInfisical` | Infisical → n8n | Reads a specific named folder, updates a target n8n credential by ID |
 | `autoSyncFromInfisical` | Infisical → n8n | Discovers all credential folders under a root path, creates or updates n8n credentials automatically |
 
@@ -242,8 +242,8 @@ map entry, all secrets are passed through as-is (the fallback path for unmapped 
 
 | Type | Infisical key | n8n param | Reason |
 | --- | --- | --- | --- |
-| `jiraSoftwareCloudApi` | `domain` | `jiraDomain` | n8n uses the `jiraDomain` param name |
-| `microsoftSql` | `domain` | `mssqlDomain` | n8n uses `mssqlDomain`, not `domain` |
+| `jiraSoftwareCloudApi` | `domain` | `domain` | UI label is "Jira Domain" but the schema property is `domain` — verified against `GET /api/v1/credentials/schema/jiraSoftwareCloudApi` |
+| `microsoftSql` | `domain` | `domain` | UI label is "Windows Domain" but the schema property is `domain` |
 | `mongoDb` | `tls` | `tls` | Earlier version incorrectly used `ssl`; MongoDB schema uses `tls` |
 | `postgres` | `ssl` | `ssl` | Earlier version incorrectly used `sslMode`; schema uses `ssl` |
 
@@ -305,9 +305,10 @@ guaranteed needed. Any that weren't already defaulted get a safe fallback empty 
 
 ```typescript
 {
-  defaults:    IDataObject,          // safe base values for all non-excluded optional fields
+  defaults:    IDataObject,            // safe base values for all non-excluded optional fields
   props:       Record<string,PropDef>, // schema properties for coercion lookups
-  condBranches: CondBranch[]         // branch data for post-merge adjustment
+  condBranches: CondBranch[],          // branch data for post-merge adjustment
+  topRequired: Set<string>             // top-level required fields from schema.required
 }
 ```
 
@@ -339,7 +340,63 @@ essential required fields like `serverUrl` for Google OAuth2.
 
 ---
 
-## 7. Suggested Improvements
+## 7. `syncToInfisical` Input Modes and Validation
+
+### 7.1 Input modes
+
+`syncToInfisical` supports two input modes selected via the **Input Mode** node parameter.
+
+#### Form mode (default)
+
+The user selects a credential type from a dropdown of 16 hardcoded types and fills in individual
+fields. Fields are read via `ctx.getNodeParameter(param, i, '')` and mapped to Infisical secret
+keys using `CREDENTIAL_FIELD_MAPS`. Only the 16 types with a `CREDENTIAL_FIELD_MAPS` entry are
+supported.
+
+#### JSON mode
+
+The user provides a free-text **Credential Type** (any type registered in n8n) and a JSON object
+containing the credential field values. There is no dropdown restriction — any valid n8n credential
+type can be used. Field names in the JSON object should match the n8n schema property names (not UI
+labels). Nested object values are serialised with `JSON.stringify`; primitives use `String()`.
+
+### 7.2 Schema validation (both modes)
+
+When `n8nApi` credentials are configured, both input modes validate against the n8n credential
+schema before any Infisical write occurs:
+
+1. Fetch `GET /api/v1/credentials/schema/{credentialType}` using the `n8nApi` credential
+2. Check all `topRequired` fields are non-empty
+3. For each `condBranch`, if the condition fires (based on the actual input values), check all
+   `thenRequired` fields are non-empty
+
+For form mode, validation is scoped to fields present in `CREDENTIAL_FIELD_MAPS` — required fields
+not in the form are not flagged as missing (the form physically cannot supply them).
+
+Validation errors are thrown as `NodeOperationError` with a bullet-listed message, visible in the
+n8n execution error panel:
+
+```
+Credential validation failed for "postgres":
+• "host" is required but missing or empty
+• "sshHost" is required when "sshTunnel" is "true" but missing or empty
+```
+
+If `n8nApi` is not configured or the schema endpoint is unreachable, validation is silently skipped
+and the operation proceeds without it.
+
+### 7.3 Unknown field handling (JSON mode)
+
+When a schema is successfully fetched, any key in the JSON input that is **not declared in
+`schema.properties`** is silently dropped before writing to Infisical. This prevents junk fields
+from being stored but does not cause a validation error.
+
+If `n8nApi` is not configured (no schema available), all keys in the JSON object are written
+as-is.
+
+---
+
+## 8. Suggested Improvements
 
 ### 7.1 Missing condKey mappings in `CREDENTIAL_FIELD_MAPS`
 
