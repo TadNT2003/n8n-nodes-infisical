@@ -155,7 +155,11 @@ export class InfisicalSync implements INodeType {
 				displayOptions: { show: { operation: ['syncToInfisical'], inputMode: ['form'] } },
 				options: [
 					{ name: 'Anthropic', value: 'anthropicApi' },
+					{ name: 'Basic Auth', value: 'httpBasicAuth' },
+					{ name: 'Bearer Auth', value: 'httpBearerAuth' },
 					{ name: 'Cohere', value: 'cohereApi' },
+					{ name: 'Custom Auth', value: 'httpCustomAuth' },
+					{ name: 'Digest Auth', value: 'httpDigestAuth' },
 					{ name: 'Discord Bot', value: 'discordBotApi' },
 					{ name: 'Discord Webhook', value: 'discordWebhookApi' },
 					{ name: 'Google Docs (OAuth2)', value: 'googleDocsOAuth2Api' },
@@ -164,17 +168,23 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Google Service Account', value: 'googleApi' },
 					{ name: 'Google Sheets (OAuth2)', value: 'googleSheetsOAuth2Api' },
 					{ name: 'Groq', value: 'groqApi' },
+					{ name: 'Header Auth', value: 'httpHeaderAuth' },
 					{ name: 'HuggingFace', value: 'huggingFaceApi' },
 					{ name: 'Infisical', value: 'infisicalApi' },
 					{ name: 'Jira Software Cloud', value: 'jiraSoftwareCloudApi' },
+					{ name: 'JWT Auth', value: 'jwtAuth' },
 					{ name: 'Microsoft SQL Server', value: 'microsoftSql' },
 					{ name: 'Mistral', value: 'mistralCloudApi' },
 					{ name: 'MongoDB', value: 'mongoDb' },
 					{ name: 'MySQL', value: 'mySql' },
 					{ name: 'n8n', value: 'n8nApi' },
+					{ name: 'OAuth1 API', value: 'oAuth1Api' },
+					{ name: 'OAuth2 API', value: 'oAuth2Api' },
 					{ name: 'OpenAI', value: 'openAiApi' },
 					{ name: 'PostgreSQL', value: 'postgres' },
+					{ name: 'Query Auth', value: 'httpQueryAuth' },
 					{ name: 'Redis', value: 'redis' },
+					{ name: 'SSL Certificates', value: 'httpSslAuth' },
 				],
 			},
 
@@ -260,7 +270,7 @@ export class InfisicalSync implements INodeType {
 				default: '',
 				description: 'PEM-encoded private key from the service account JSON',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleApi'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleApi', 'jwtAuth'] },
 				},
 			},
 			{
@@ -300,6 +310,7 @@ export class InfisicalSync implements INodeType {
 							'googleDriveOAuth2Api',
 							'googleDocsOAuth2Api',
 							'infisicalApi',
+							'oAuth2Api',
 						],
 					},
 				},
@@ -320,6 +331,7 @@ export class InfisicalSync implements INodeType {
 							'googleDriveOAuth2Api',
 							'googleDocsOAuth2Api',
 							'infisicalApi',
+							'oAuth2Api',
 						],
 					},
 				},
@@ -331,7 +343,7 @@ export class InfisicalSync implements INodeType {
 				default: '',
 				description: 'Space-separated list of OAuth scopes to request',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleOAuth2Api'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleOAuth2Api', 'oAuth2Api'] },
 				},
 			},
 
@@ -355,6 +367,14 @@ export class InfisicalSync implements INodeType {
 							'googleDriveOAuth2Api',
 							'googleDocsOAuth2Api',
 							'n8nApi',
+							'httpBearerAuth',
+							'httpBasicAuth',
+							'httpDigestAuth',
+							'httpHeaderAuth',
+							'httpQueryAuth',
+							'httpCustomAuth',
+							'oAuth1Api',
+							'oAuth2Api',
 						],
 					},
 				},
@@ -375,6 +395,14 @@ export class InfisicalSync implements INodeType {
 							'googleDriveOAuth2Api',
 							'googleDocsOAuth2Api',
 							'n8nApi',
+							'httpBearerAuth',
+							'httpBasicAuth',
+							'httpDigestAuth',
+							'httpHeaderAuth',
+							'httpQueryAuth',
+							'httpCustomAuth',
+							'oAuth1Api',
+							'oAuth2Api',
 						],
 						allowedHttpRequestDomains: ['domains'],
 					},
@@ -520,7 +548,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth'],
 					},
 				},
 			},
@@ -533,7 +561,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth'],
 					},
 				},
 			},
@@ -707,6 +735,289 @@ export class InfisicalSync implements INodeType {
 						credentialType: ['mySql', 'postgres'],
 						sshTunnel: [true],
 					},
+				},
+			},
+
+			// ── Bearer Auth ──────────────────────────────────────────────────────────
+			{
+				displayName: 'Token',
+				name: 'token',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['httpBearerAuth'] },
+				},
+			},
+
+			// ── Header / Query Auth ──────────────────────────────────────────────────
+			{
+				displayName: 'Name',
+				name: 'name',
+				type: 'string',
+				default: '',
+				description: 'Header name (e.g. Authorization) or query parameter name',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['httpHeaderAuth', 'httpQueryAuth'],
+					},
+				},
+			},
+			{
+				displayName: 'Value',
+				name: 'value',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['httpHeaderAuth', 'httpQueryAuth'],
+					},
+				},
+			},
+
+			// ── Custom Auth ───────────────────────────────────────────────────────────
+			{
+				displayName: 'Auth JSON',
+				name: 'json',
+				type: 'string',
+				typeOptions: { rows: 4 },
+				default: '',
+				placeholder: '{ "headers": { "Authorization": "Bearer token" } }',
+				description: 'JSON object specifying headers, body, and/or query parameters for authentication',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['httpCustomAuth'] },
+				},
+			},
+
+			// ── SSL Certificates ─────────────────────────────────────────────────────
+			{
+				displayName: 'CA Certificate',
+				name: 'ca',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				description: 'PEM-encoded Certificate Authority certificate',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['httpSslAuth'] },
+				},
+			},
+			{
+				displayName: 'Client Certificate',
+				name: 'cert',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['httpSslAuth'] },
+				},
+			},
+			{
+				displayName: 'Private Key',
+				name: 'key',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['httpSslAuth'] },
+				},
+			},
+			{
+				displayName: 'Passphrase',
+				name: 'passphrase',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				description: 'Optional passphrase for the SSL private key',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['httpSslAuth'] },
+				},
+			},
+
+			// ── OAuth1 / OAuth2 shared ────────────────────────────────────────────────
+			{
+				displayName: 'Authorization URL',
+				name: 'authUrl',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['oAuth1Api', 'oAuth2Api'],
+					},
+				},
+			},
+			{
+				displayName: 'Access Token URL',
+				name: 'accessTokenUrl',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['oAuth1Api', 'oAuth2Api'],
+					},
+				},
+			},
+
+			// ── OAuth1 ───────────────────────────────────────────────────────────────
+			{
+				displayName: 'Consumer Key',
+				name: 'consumerKey',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth1Api'] },
+				},
+			},
+			{
+				displayName: 'Consumer Secret',
+				name: 'consumerSecret',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth1Api'] },
+				},
+			},
+			{
+				displayName: 'Request Token URL',
+				name: 'requestTokenUrl',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth1Api'] },
+				},
+			},
+			{
+				displayName: 'Signature Method',
+				name: 'signatureMethod',
+				type: 'options',
+				default: 'HMAC-SHA1',
+				options: [
+					{ name: 'HMAC-SHA1', value: 'HMAC-SHA1' },
+					{ name: 'HMAC-SHA256', value: 'HMAC-SHA256' },
+					{ name: 'HMAC-SHA512', value: 'HMAC-SHA512' },
+				],
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth1Api'] },
+				},
+			},
+
+			// ── OAuth2 ────────────────────────────────────────────────────────────────
+			{
+				displayName: 'Grant Type',
+				name: 'grantType',
+				type: 'options',
+				default: 'authorizationCode',
+				options: [
+					{ name: 'Authorization Code', value: 'authorizationCode' },
+					{ name: 'Client Credentials', value: 'clientCredentials' },
+					{ name: 'PKCE', value: 'pkce' },
+				],
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth2Api'] },
+				},
+			},
+			{
+				displayName: 'Auth URI Query Parameters',
+				name: 'authQueryParameters',
+				type: 'string',
+				default: '',
+				placeholder: 'access_type=offline',
+				description: 'Additional query parameters appended to the authorization URL (authorization code / PKCE flows only)',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth2Api'] },
+				},
+			},
+			{
+				displayName: 'Authentication',
+				name: 'authentication',
+				type: 'options',
+				default: 'header',
+				options: [
+					{ name: 'Body', value: 'body' },
+					{ name: 'Header', value: 'header' },
+				],
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth2Api'] },
+				},
+			},
+
+			// ── JWT Auth ─────────────────────────────────────────────────────────────
+			{
+				displayName: 'Key Type',
+				name: 'keyType',
+				type: 'options',
+				default: 'passphrase',
+				options: [
+					{ name: 'Passphrase', value: 'passphrase' },
+					{ name: 'PEM Key', value: 'pemKey' },
+				],
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['jwtAuth'] },
+				},
+			},
+			{
+				displayName: 'Secret',
+				name: 'secret',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				description: 'JWT signing secret (passphrase key type)',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['jwtAuth'],
+						keyType: ['passphrase'],
+					},
+				},
+			},
+			{
+				displayName: 'Public Key',
+				name: 'publicKey',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				description: 'PEM-encoded public key (PEM key type)',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['jwtAuth'],
+						keyType: ['pemKey'],
+					},
+				},
+			},
+			{
+				displayName: 'Algorithm',
+				name: 'algorithm',
+				type: 'options',
+				default: 'HS256',
+				options: [
+					{ name: 'HS256', value: 'HS256' },
+					{ name: 'HS384', value: 'HS384' },
+					{ name: 'HS512', value: 'HS512' },
+					{ name: 'RS256', value: 'RS256' },
+					{ name: 'RS384', value: 'RS384' },
+					{ name: 'RS512', value: 'RS512' },
+					{ name: 'ES256', value: 'ES256' },
+					{ name: 'ES384', value: 'ES384' },
+					{ name: 'ES512', value: 'ES512' },
+					{ name: 'PS256', value: 'PS256' },
+					{ name: 'PS384', value: 'PS384' },
+					{ name: 'PS512', value: 'PS512' },
+					{ name: 'none', value: 'none' },
+				],
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['jwtAuth'] },
 				},
 			},
 		],

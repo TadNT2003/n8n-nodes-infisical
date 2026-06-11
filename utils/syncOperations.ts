@@ -135,6 +135,78 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 		// service token value (only active when authType === 'serviceToken')
 		{ param: 'apiKey', secretKey: 'apiKey' },
 	],
+	// ── Generic HTTP auth types ────────────────────────────────────────────────
+	httpBearerAuth: [
+		{ param: 'token', secretKey: 'token' },
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
+	httpBasicAuth: [
+		{ param: 'user', secretKey: 'user' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
+	httpDigestAuth: [
+		{ param: 'user', secretKey: 'user' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
+	httpHeaderAuth: [
+		{ param: 'name', secretKey: 'name' },
+		{ param: 'value', secretKey: 'value' },
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
+	httpQueryAuth: [
+		{ param: 'name', secretKey: 'name' },
+		{ param: 'value', secretKey: 'value' },
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
+	httpCustomAuth: [
+		{ param: 'json', secretKey: 'json' },
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
+	httpSslAuth: [
+		{ param: 'ca', secretKey: 'ca' },
+		{ param: 'cert', secretKey: 'cert' },
+		{ param: 'key', secretKey: 'key' },
+		{ param: 'passphrase', secretKey: 'passphrase' },
+	],
+	oAuth1Api: [
+		{ param: 'signatureMethod', secretKey: 'signatureMethod' },
+		{ param: 'consumerKey', secretKey: 'consumerKey' },
+		{ param: 'consumerSecret', secretKey: 'consumerSecret' },
+		{ param: 'requestTokenUrl', secretKey: 'requestTokenUrl' },
+		{ param: 'authUrl', secretKey: 'authUrl' },
+		{ param: 'accessTokenUrl', secretKey: 'accessTokenUrl' },
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
+	oAuth2Api: [
+		// condition-controlling: grantType drives authUrl/authQueryParameters branch
+		{ param: 'grantType', secretKey: 'grantType' },
+		{ param: 'authUrl', secretKey: 'authUrl' },
+		{ param: 'accessTokenUrl', secretKey: 'accessTokenUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		{ param: 'scope', secretKey: 'scope' },
+		{ param: 'authQueryParameters', secretKey: 'authQueryParameters' },
+		{ param: 'authentication', secretKey: 'authentication' },
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
+	jwtAuth: [
+		// condition-controlling: keyType drives secret vs privateKey/publicKey branches
+		{ param: 'keyType', secretKey: 'keyType' },
+		{ param: 'secret', secretKey: 'secret' },
+		{ param: 'privateKey', secretKey: 'privateKey' },
+		{ param: 'publicKey', secretKey: 'publicKey' },
+		{ param: 'algorithm', secretKey: 'algorithm' },
+	],
 };
 
 function buildSecretPath(rootPath: string, credentialName: string): string {
