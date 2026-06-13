@@ -1,9 +1,16 @@
-const { src, dest } = require('gulp');
+const { src, dest, parallel } = require('gulp');
 
-function buildIcons() {
+function buildNodeIcons() {
   return src('nodes/**/*.{png,svg}')
     .pipe(dest('dist/nodes'));
 }
 
-exports.build = buildIcons;
-exports.default = buildIcons;
+// Credentials resolve 'file:' icons relative to their own compiled directory
+// (dist/credentials/), so the PNG must also be copied there.
+function buildCredentialIcons() {
+  return src('nodes/Infisical/*.{png,svg}')
+    .pipe(dest('dist/credentials'));
+}
+
+exports.build = parallel(buildNodeIcons, buildCredentialIcons);
+exports.default = parallel(buildNodeIcons, buildCredentialIcons);

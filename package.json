@@ -1,6 +1,6 @@
 {
   "name": "@tadnt2003/n8n-nodes-infisical",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "n8n community node for Infisical - Secret management platform",
   "keywords": [
     "n8n-community-node-package",
@@ -12,8 +12,9 @@
   "license": "MIT",
   "homepage": "https://github.com/TadNT2003/n8n-nodes-infisical",
   "author": {
-    "name": "TadNT2003",
-    "email": "ntdatwows2003@gmail.com"
+    "name": "Nguyen Thanh Dat",
+    "email": "ntdatwows2003@gmail.com",
+    "url": "https://github.com/TadNT2003"
   },
   "repository": {
     "type": "git",
@@ -36,7 +37,8 @@
       "dist/credentials/InfisicalApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/Infisical/Infisical.node.js"
+      "dist/nodes/Infisical/Infisical.node.js",
+      "dist/nodes/InfisicalSync/InfisicalSync.node.js"
     ]
   },
   "devDependencies": {
