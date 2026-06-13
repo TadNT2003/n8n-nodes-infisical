@@ -1,0 +1,21 @@
+name: PR to main branch check
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-source-branch:
+    name: Require PR from dev
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if source branch is not dev
+        if: github.head_ref != 'dev'
+        run: |
+          echo "PRs to main must come from the 'dev' branch."
+          echo "This PR is from '${{ github.head_ref }}'."
+          exit 1
+
+      - name: Source branch is dev
+        run: echo "Source branch check passed."
