@@ -14,7 +14,7 @@ Ba thao tác được cung cấp:
 
 | Thao tác | Chiều | Mô tả |
 | --- | --- | --- |
-| `syncToInfisical` | n8n → Infisical | Đọc từ form credential n8n **hoặc một đối tượng JSON**, ghi vào thư mục secret Infisical. Hỗ trợ hai chế độ nhập: **form** (16 loại được định sẵn) và **JSON** (bất kỳ loại credential nào). Khi `n8nApi` được cấu hình, xác thực dữ liệu đầu vào theo credential schema trước khi ghi. |
+| `syncToInfisical` | n8n → Infisical | Đọc từ form credential n8n **hoặc một đối tượng JSON**, ghi vào thư mục secret Infisical. Hỗ trợ hai chế độ nhập: **form** (31 loại được định sẵn) và **JSON** (bất kỳ loại credential nào). Khi `n8nApi` được cấu hình, xác thực dữ liệu đầu vào theo credential schema trước khi ghi. |
 | `syncFromInfisical` | Infisical → n8n | Đọc một thư mục cụ thể theo tên, cập nhật credential n8n đích theo ID |
 | `autoSyncFromInfisical` | Infisical → n8n | Tự động phát hiện tất cả thư mục credential dưới một đường dẫn gốc, tạo hoặc cập nhật credential n8n tương ứng |
 
@@ -187,6 +187,101 @@ Chỉ `allowedDomains` bị loại trừ — `allowedHttpRequestDomains` mặc �
 
 ---
 
+### 3.8 Các loại xác thực HTTP chung (bearer, basic, digest, header, query, custom)
+
+Sáu loại này có cùng cấu trúc schema: các trường credential required và một nhánh điều kiện `allOf`.
+
+**Một nhánh điều kiện**:
+
+| Điều kiện | Then | Else |
+| --- | --- | --- |
+| `allowedHttpRequestDomains = 'domains'` | `allowedDomains` required | `allowedDomains` **cấm** |
+
+`allowedHttpRequestDomains` mặc định là `'all'`. Điều kiện không kích hoạt theo mặc định, vì vậy `allowedDomains` bị loại trừ khỏi defaults và phải vắng mặt cho các trường hợp thông thường.
+
+Các trường required theo loại:
+
+| Loại | Trường required |
+| --- | --- |
+| `httpBearerAuth` | `token` |
+| `httpBasicAuth`, `httpDigestAuth` | `user`, `password` |
+| `httpHeaderAuth`, `httpQueryAuth` | `name`, `value` |
+| `httpCustomAuth` | `json` |
+
+**Giá trị mặc định được tạo**:
+```json
+{ "allowedHttpRequestDomains": "all" }
+```
+
+---
+
+### 3.9 SSL Certificates (`httpSslAuth`)
+
+**Không có nhánh điều kiện**. Schema phẳng với bốn trường tùy chọn: `ca`, `cert`, `key`, `passphrase`. Không có mảng `required` cấp cao nhất.
+
+**Giá trị mặc định được tạo**: `{}` (không cần defaults)
+
+---
+
+### 3.10 OAuth1 API (`oAuth1Api`)
+
+**Một nhánh điều kiện**:
+
+| Điều kiện | Then | Else |
+| --- | --- | --- |
+| `allowedHttpRequestDomains = 'domains'` | `allowedDomains` required | `allowedDomains` **cấm** |
+
+Các trường required: `consumerKey`, `consumerSecret`, `requestTokenUrl`, `authUrl`, `accessTokenUrl`.
+
+`signatureMethod` là enum mặc định là `HMAC-SHA1`.
+
+**Giá trị mặc định được tạo**:
+```json
+{ "signatureMethod": "HMAC-SHA1", "allowedHttpRequestDomains": "all" }
+```
+
+---
+
+### 3.11 OAuth2 API (`oAuth2Api`)
+
+**Hai nhánh điều kiện**:
+
+| Điều kiện | Then requires | Else prohibits |
+| --- | --- | --- |
+| `grantType ∈ ['authorizationCode', 'pkce']` | `authUrl` | `authUrl` |
+| `allowedHttpRequestDomains = 'domains'` | `allowedDomains` | `allowedDomains` |
+
+`grantType` mặc định là `authorizationCode`. Nhánh đầu **kích hoạt theo mặc định**, vì vậy `authUrl` có mặt trong defaults. Nếu Infisical cung cấp `grantType: 'clientCredentials'`, bước post-merge sẽ xóa `authUrl` trước khi gọi n8n.
+
+Các trường required: `accessTokenUrl`, `clientId`, `clientSecret`, `scope`. `authentication` là enum mặc định là `header`.
+
+**Giá trị mặc định được tạo**:
+```json
+{ "grantType": "authorizationCode", "authUrl": "", "authQueryParameters": "", "authentication": "header", "allowedHttpRequestDomains": "all" }
+```
+
+---
+
+### 3.12 JWT Auth (`jwtAuth`)
+
+**Hai nhánh điều kiện**:
+
+| Điều kiện | Then requires | Else prohibits |
+| --- | --- | --- |
+| `keyType = 'passphrase'` | `secret` | `secret` |
+| `keyType = 'pemKey'` | `privateKey`, `publicKey` | `privateKey`, `publicKey` |
+
+`keyType` mặc định là `passphrase`. Nhánh đầu kích hoạt theo mặc định, vì vậy `secret` có trong defaults. Nhánh thứ hai không kích hoạt theo mặc định, vì vậy `privateKey` và `publicKey` bị loại trừ khỏi defaults.
+
+`algorithm` là enum mặc định là `HS256`.
+
+**Giá trị mặc định được tạo**:
+```json
+{ "keyType": "passphrase", "secret": "", "algorithm": "HS256" }
+```
+
+---
+
 ## 4. Hệ Thống Ánh Xạ Trường (`CREDENTIAL_FIELD_MAPS`)
 
 ### 4.1 Mục đích
@@ -301,7 +396,7 @@ else:
 
 #### Chế độ form (mặc định)
 
-Người dùng chọn loại credential từ dropdown gồm 16 loại được định sẵn và điền từng trường riêng lẻ. Các trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo `CREDENTIAL_FIELD_MAPS`. Chỉ hỗ trợ 16 loại có entry trong `CREDENTIAL_FIELD_MAPS`.
+Người dùng chọn loại credential từ dropdown gồm 31 loại được định sẵn và điền từng trường riêng lẻ. Các trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo `CREDENTIAL_FIELD_MAPS`. Chỉ hỗ trợ 31 loại có entry trong `CREDENTIAL_FIELD_MAPS`.
 
 #### Chế độ JSON
 
@@ -440,3 +535,11 @@ defaults[key] = def.default
 | `postgres` | 2 nhánh (đảo ngược mặc định) | `ssl` luôn + 7 trường SSH | không | hoạt động |
 | `mongoDb` | 3 nhánh (loại trừ lẫn nhau) | `connectionString` XOR `host/user/pass/port`, 4 trường TLS | không | hoạt động |
 | `googleOAuth2Api` | 4 nhánh (2 vacuous) | tất cả 6 trường then luôn required | có | hoạt động |
+| `googleSheetsOAuth2Api` / `googleDriveOAuth2Api` / `googleDocsOAuth2Api` | 1 nhánh | `allowedDomains` | không | hoạt động |
+| `n8nApi` | 1 nhánh | `allowedDomains` | không | hoạt động |
+| `infisicalApi` | 2 nhánh | `clientId`, `clientSecret`, `organizationSlug` XOR `apiKey` | không | hoạt động |
+| `httpBearerAuth` / `httpBasicAuth` / `httpDigestAuth` / `httpHeaderAuth` / `httpQueryAuth` / `httpCustomAuth` | 1 nhánh | `allowedDomains` | không | hoạt động |
+| `httpSslAuth` | phẳng | không | không | hoạt động |
+| `oAuth1Api` | 1 nhánh | `allowedDomains` | không | hoạt động |
+| `oAuth2Api` | 2 nhánh | `authUrl` (theo grantType), `allowedDomains` | không | hoạt động |
+| `jwtAuth` | 2 nhánh (loại trừ lẫn nhau) | `secret` XOR `privateKey`/`publicKey` | không | hoạt động |

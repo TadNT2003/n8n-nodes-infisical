@@ -16,7 +16,7 @@ Three operations are exposed:
 
 | Operation | Direction | Description |
 | --- | --- | --- |
-| `syncToInfisical` | n8n → Infisical | Reads from an n8n credential form **or a JSON object**, writes to an Infisical secret folder. Supports two input modes: **form** (16 hardcoded types) and **JSON** (any credential type). When `n8nApi` is configured, validates input against the credential schema before writing. |
+| `syncToInfisical` | n8n → Infisical | Reads from an n8n credential form **or a JSON object**, writes to an Infisical secret folder. Supports two input modes: **form** (31 hardcoded types) and **JSON** (any credential type). When `n8nApi` is configured, validates input against the credential schema before writing. |
 | `syncFromInfisical` | Infisical → n8n | Reads a specific named folder, updates a target n8n credential by ID |
 | `autoSyncFromInfisical` | Infisical → n8n | Discovers all credential folders under a root path, creates or updates n8n credentials automatically |
 
@@ -223,6 +223,101 @@ fields are excluded and must be absent unless the condition is activated from In
 
 ---
 
+### 3.8 Generic HTTP auth types (bearer, basic, digest, header, query, custom)
+
+These six types share the same schema structure: required credential fields and one `allOf` conditional branch.
+
+**One conditional branch**:
+
+| Condition | Then | Else |
+| --- | --- | --- |
+| `allowedHttpRequestDomains = 'domains'` | `allowedDomains` required | `allowedDomains` **prohibited** |
+
+`allowedHttpRequestDomains` defaults to `'all'`. The condition does not fire by default, so `allowedDomains` is excluded from defaults and must be absent for standard uses.
+
+Required fields by type:
+
+| Type | Required fields |
+| --- | --- |
+| `httpBearerAuth` | `token` |
+| `httpBasicAuth`, `httpDigestAuth` | `user`, `password` |
+| `httpHeaderAuth`, `httpQueryAuth` | `name`, `value` |
+| `httpCustomAuth` | `json` |
+
+**Generated defaults**:
+```json
+{ "allowedHttpRequestDomains": "all" }
+```
+
+---
+
+### 3.9 SSL Certificates (`httpSslAuth`)
+
+**No conditional branches**. Flat schema with four optional fields: `ca`, `cert`, `key`, `passphrase`. No top-level `required` array.
+
+**Generated defaults**: `{}` (no defaults needed)
+
+---
+
+### 3.10 OAuth1 API (`oAuth1Api`)
+
+**One conditional branch**:
+
+| Condition | Then | Else |
+| --- | --- | --- |
+| `allowedHttpRequestDomains = 'domains'` | `allowedDomains` required | `allowedDomains` **prohibited** |
+
+Required fields: `consumerKey`, `consumerSecret`, `requestTokenUrl`, `authUrl`, `accessTokenUrl`.
+
+`signatureMethod` is an enum defaulting to `HMAC-SHA1`.
+
+**Generated defaults**:
+```json
+{ "signatureMethod": "HMAC-SHA1", "allowedHttpRequestDomains": "all" }
+```
+
+---
+
+### 3.11 OAuth2 API (`oAuth2Api`)
+
+**Two conditional branches**:
+
+| Condition | Then requires | Else prohibits |
+| --- | --- | --- |
+| `grantType ∈ ['authorizationCode', 'pkce']` | `authUrl` | `authUrl` |
+| `allowedHttpRequestDomains = 'domains'` | `allowedDomains` | `allowedDomains` |
+
+`grantType` defaults to `authorizationCode`. The first branch **fires by default**, so `authUrl` starts in defaults. If Infisical provides `grantType: 'clientCredentials'`, the post-merge step deletes `authUrl` before calling n8n.
+
+Required fields: `accessTokenUrl`, `clientId`, `clientSecret`, `scope`. `authentication` is an enum defaulting to `header`.
+
+**Generated defaults**:
+```json
+{ "grantType": "authorizationCode", "authUrl": "", "authQueryParameters": "", "authentication": "header", "allowedHttpRequestDomains": "all" }
+```
+
+---
+
+### 3.12 JWT Auth (`jwtAuth`)
+
+**Two conditional branches**:
+
+| Condition | Then requires | Else prohibits |
+| --- | --- | --- |
+| `keyType = 'passphrase'` | `secret` | `secret` |
+| `keyType = 'pemKey'` | `privateKey`, `publicKey` | `privateKey`, `publicKey` |
+
+`keyType` defaults to `passphrase`. The first branch fires by default, so `secret` is in defaults. The second branch does not fire by default, so `privateKey` and `publicKey` are excluded from defaults and must be absent when `keyType` is not `'pemKey'`.
+
+`algorithm` is an enum defaulting to `HS256`.
+
+**Generated defaults**:
+```json
+{ "keyType": "passphrase", "secret": "", "algorithm": "HS256" }
+```
+
+---
+
 ## 4. The Field Mapping System (`CREDENTIAL_FIELD_MAPS`)
 
 ### 4.1 Purpose
@@ -348,9 +443,9 @@ essential required fields like `serverUrl` for Google OAuth2.
 
 #### Form mode (default)
 
-The user selects a credential type from a dropdown of 16 hardcoded types and fills in individual
+The user selects a credential type from a dropdown of 31 hardcoded types and fills in individual
 fields. Fields are read via `ctx.getNodeParameter(param, i, '')` and mapped to Infisical secret
-keys using `CREDENTIAL_FIELD_MAPS`. Only the 16 types with a `CREDENTIAL_FIELD_MAPS` entry are
+keys using `CREDENTIAL_FIELD_MAPS`. Only the 31 types with a `CREDENTIAL_FIELD_MAPS` entry are
 supported.
 
 #### JSON mode
@@ -529,3 +624,11 @@ defaults[key] = def.default
 | `postgres` | 2 branches (inverted default) | `ssl` always + 7 SSH fields | no | working |
 | `mongoDb` | 3 branches (mutual exclusion) | `connectionString` XOR `host/user/pass/port`, 4 TLS fields | no | working |
 | `googleOAuth2Api` | 4 branches (2 vacuous) | all 6 then-fields always required | yes | working |
+| `googleSheetsOAuth2Api` / `googleDriveOAuth2Api` / `googleDocsOAuth2Api` | 1 branch | `allowedDomains` | no | working |
+| `n8nApi` | 1 branch | `allowedDomains` | no | working |
+| `infisicalApi` | 2 branches | `clientId`, `clientSecret`, `organizationSlug` XOR `apiKey` | no | working |
+| `httpBearerAuth` / `httpBasicAuth` / `httpDigestAuth` / `httpHeaderAuth` / `httpQueryAuth` / `httpCustomAuth` | 1 branch | `allowedDomains` | no | working |
+| `httpSslAuth` | flat | none | no | working |
+| `oAuth1Api` | 1 branch | `allowedDomains` | no | working |
+| `oAuth2Api` | 2 branches | `authUrl` (grantType-driven), `allowedDomains` | no | working |
+| `jwtAuth` | 2 branches (mutual exclusion) | `secret` XOR `privateKey`/`publicKey` | no | working |

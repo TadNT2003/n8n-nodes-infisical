@@ -703,6 +703,133 @@ All `param` names were verified against the actual schema from `GET /api/v1/cred
 
 ---
 
+### Google OAuth2 (Sheets / Drive / Docs)
+
+These three types share identical schema structure.
+
+| n8n type | n8n `param` | Infisical `secretKey` | Type | Notes |
+| --- | --- | --- | --- | --- |
+| `googleSheetsOAuth2Api` | `clientId` | `clientId` | string | |
+| `googleSheetsOAuth2Api` | `clientSecret` | `clientSecret` | string | |
+| `googleSheetsOAuth2Api` | `allowedHttpRequestDomains` | same | string (enum) | condition key: controls `allowedDomains` branch |
+| `googleSheetsOAuth2Api` | `allowedDomains` | same | string | only when `allowedHttpRequestDomains: 'domains'` |
+| `googleDriveOAuth2Api` | (same 4 fields) | | | |
+| `googleDocsOAuth2Api` | (same 4 fields) | | | |
+
+---
+
+### n8n API / Infisical API
+
+| n8n type | n8n `param` | Infisical `secretKey` | Type | Notes |
+| --- | --- | --- | --- | --- |
+| `n8nApi` | `apiKey` | `apiKey` | string | required |
+| `n8nApi` | `baseUrl` | `baseUrl` | string | required |
+| `n8nApi` | `allowedHttpRequestDomains` | same | string (enum) | condition key: controls `allowedDomains` branch |
+| `n8nApi` | `allowedDomains` | same | string | only when `allowedHttpRequestDomains: 'domains'` |
+| `infisicalApi` | `apiUrl` | `apiUrl` | string | required |
+| `infisicalApi` | `authType` | `authType` | string (enum) | condition key: `'universalAuth'` or `'serviceToken'` |
+| `infisicalApi` | `clientId` | `clientId` | string | only when `authType: 'universalAuth'` |
+| `infisicalApi` | `clientSecret` | `clientSecret` | string | only when `authType: 'universalAuth'` |
+| `infisicalApi` | `organizationSlug` | `organizationSlug` | string | optional, universalAuth only |
+| `infisicalApi` | `apiKey` | `apiKey` | string | only when `authType: 'serviceToken'` |
+
+---
+
+### Generic HTTP Auth
+
+#### Bearer Auth (`httpBearerAuth`)
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `token` | `token` | string | required |
+| `allowedHttpRequestDomains` | same | string (enum) | condition key: controls `allowedDomains` branch |
+| `allowedDomains` | same | string | only when `allowedHttpRequestDomains: 'domains'` |
+
+#### Basic Auth (`httpBasicAuth`)
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `user` | `user` | string | required |
+| `password` | `password` | string | required |
+| `allowedHttpRequestDomains` | same | string (enum) | condition key |
+| `allowedDomains` | same | string | only when `allowedHttpRequestDomains: 'domains'` |
+
+#### Digest Auth (`httpDigestAuth`)
+
+Same fields as Basic Auth: `user`, `password`, `allowedHttpRequestDomains`, `allowedDomains`.
+
+#### Header Auth (`httpHeaderAuth`)
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `name` | `name` | string | required — header name (e.g. `Authorization`) |
+| `value` | `value` | string | required |
+| `allowedHttpRequestDomains` | same | string (enum) | condition key |
+| `allowedDomains` | same | string | only when `allowedHttpRequestDomains: 'domains'` |
+
+#### Query Auth (`httpQueryAuth`)
+
+Same fields as Header Auth: `name`, `value`, `allowedHttpRequestDomains`, `allowedDomains`.
+
+#### Custom Auth (`httpCustomAuth`)
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `json` | `json` | string (json) | required — serialised auth config object |
+| `allowedHttpRequestDomains` | same | string (enum) | condition key |
+| `allowedDomains` | same | string | only when `allowedHttpRequestDomains: 'domains'` |
+
+#### SSL Certificates (`httpSslAuth`)
+
+| n8n `param` | Infisical `secretKey` | Type | Notes |
+| --- | --- | --- | --- |
+| `ca` | `ca` | string | CA certificate |
+| `cert` | `cert` | string | client certificate |
+| `key` | `key` | string | private key |
+| `passphrase` | `passphrase` | string | key passphrase |
+
+No conditional branches. All fields are optional in the schema.
+
+#### OAuth1 API (`oAuth1Api`)
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `signatureMethod` | same | string (enum) | `HMAC-SHA1` (default), `HMAC-SHA256`, `HMAC-SHA512` |
+| `consumerKey` | same | string | required |
+| `consumerSecret` | same | string | required |
+| `requestTokenUrl` | same | string | required |
+| `authUrl` | same | string | required |
+| `accessTokenUrl` | same | string | required |
+| `allowedHttpRequestDomains` | same | string (enum) | condition key |
+| `allowedDomains` | same | string | only when `allowedHttpRequestDomains: 'domains'` |
+
+#### OAuth2 API (`oAuth2Api`)
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `grantType` | same | string (enum) | condition key: `authorizationCode` (default), `clientCredentials`, `pkce` |
+| `authUrl` | same | string | only when `grantType ≠ 'clientCredentials'` |
+| `accessTokenUrl` | same | string | required |
+| `clientId` | same | string | required |
+| `clientSecret` | same | string | required |
+| `scope` | same | string | required |
+| `authQueryParameters` | same | string | optional auth URI query parameters |
+| `authentication` | same | string (enum) | `header` (default) or `body` |
+| `allowedHttpRequestDomains` | same | string (enum) | condition key |
+| `allowedDomains` | same | string | only when `allowedHttpRequestDomains: 'domains'` |
+
+#### JWT Auth (`jwtAuth`)
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `keyType` | same | string (enum) | condition key: `passphrase` (default) or `pemKey` |
+| `secret` | same | string | only when `keyType: 'passphrase'` |
+| `privateKey` | same | string | only when `keyType: 'pemKey'` |
+| `publicKey` | same | string | only when `keyType: 'pemKey'` |
+| `algorithm` | same | string (enum) | HS256 (default), HS384, HS512, RS256, RS384, RS512, ES256, ES384, ES512, PS256, PS384, PS512, none |
+
+---
+
 ## 7. Adding a New Credential Type
 
 ### Step 1: Get the schema
@@ -765,7 +892,7 @@ branch fires.
 
 #### Form mode (default)
 
-Displays individual fields for the selected credential type. Supports the 16 types in
+Displays individual fields for the selected credential type. Supports the 31 types in
 `CREDENTIAL_FIELD_MAPS`. Field values are read via `ctx.getNodeParameter(param, i, '')` and mapped
 to Infisical secret keys per the field map.
 

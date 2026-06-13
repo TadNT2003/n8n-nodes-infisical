@@ -277,6 +277,54 @@ Required: **Project ID**, **Environment**, **Folder Path**, **Folder ID or Name*
 
 ---
 
+## InfisicalSync
+
+The **InfisicalSync** node provides bidirectional sync between n8n credentials and Infisical secrets. It requires an **InfisicalApi** credential (to authenticate to Infisical) and optionally an **n8nApi** credential (to read and write n8n credentials via the REST API).
+
+### Sync Operations
+
+| Operation | Direction | Description |
+| --- | --- | --- |
+| **Sync to Infisical** | n8n → Infisical | Push an n8n credential as a folder of secrets in Infisical. Each field becomes a secret; a `n8n_credential_type` metadata tag is attached to every secret for auto-discovery. Supports **Form** mode (select credential type from a dropdown and fill individual fields) and **JSON** mode (paste any credential type as a raw JSON object). When an n8nApi credential is configured, the input is validated against the n8n schema before any Infisical write occurs. |
+| **Sync from Infisical** | Infisical → n8n | Pull all secrets from a named Infisical folder and update an existing n8n credential by ID. |
+| **Auto Sync from Infisical** | Infisical → n8n | Discover all subfolders under a root Infisical path, read the `n8n_credential_type` metadata tag from each folder's secrets, then create or update the matching n8n credentials automatically. Uses the n8n REST API and validates credential data against each type's JSON Schema before saving. |
+
+### Supported Credential Types (Form Mode)
+
+Form mode supports **31 credential types**. JSON mode accepts any type registered in n8n.
+
+#### AI / LLM
+
+`anthropicApi`, `openAiApi`, `groqApi`, `cohereApi`, `huggingFaceApi`, `mistralCloudApi`
+
+#### Productivity / Project Management
+
+`jiraSoftwareCloudApi`
+
+#### Messaging / Webhooks
+
+`discordBotApi`, `discordWebhookApi`
+
+#### Google
+
+`googleApi`, `googleOAuth2Api`, `googleSheetsOAuth2Api`, `googleDriveOAuth2Api`, `googleDocsOAuth2Api`
+
+#### Databases
+
+`mySql`, `postgres`, `mongoDb`, `microsoftSql`, `redis`
+
+#### Infrastructure
+
+`n8nApi`, `infisicalApi`
+
+#### Generic HTTP Auth
+
+`httpBearerAuth`, `httpBasicAuth`, `httpDigestAuth`, `httpHeaderAuth`, `httpQueryAuth`, `httpCustomAuth`, `httpSslAuth`, `oAuth1Api`, `oAuth2Api`, `jwtAuth`
+
+> **Note**: `httpMultipleHeadersAuth` is not supported in form mode because its `headers` field is a `fixedCollection` that cannot be serialised to flat Infisical key-value secrets. Use JSON mode for that type.
+
+---
+
 ## API behaviour notes
 
 - All operations use **Infisical API v4** for single-secret endpoints (`/api/v4/secrets/…`) and batch secret endpoints (`/api/v4/secrets/batch`).

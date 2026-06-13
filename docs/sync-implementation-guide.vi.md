@@ -625,6 +625,133 @@ Tất cả tên `param` đã được xác minh theo schema thực tế từ `GE
 
 ---
 
+### Google OAuth2 (Sheets / Drive / Docs)
+
+Ba loại này có cấu trúc schema giống hệt nhau.
+
+| Loại n8n | `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
+| --- | --- | --- | --- | --- |
+| `googleSheetsOAuth2Api` | `clientId` | `clientId` | string | |
+| `googleSheetsOAuth2Api` | `clientSecret` | `clientSecret` | string | |
+| `googleSheetsOAuth2Api` | `allowedHttpRequestDomains` | tương tự | string (enum) | khóa điều kiện: kiểm soát nhánh `allowedDomains` |
+| `googleSheetsOAuth2Api` | `allowedDomains` | tương tự | string | chỉ khi `allowedHttpRequestDomains: 'domains'` |
+| `googleDriveOAuth2Api` | (4 trường tương tự) | | | |
+| `googleDocsOAuth2Api` | (4 trường tương tự) | | | |
+
+---
+
+### n8n API / Infisical API
+
+| Loại n8n | `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
+| --- | --- | --- | --- | --- |
+| `n8nApi` | `apiKey` | `apiKey` | string | required |
+| `n8nApi` | `baseUrl` | `baseUrl` | string | required |
+| `n8nApi` | `allowedHttpRequestDomains` | tương tự | string (enum) | khóa điều kiện: kiểm soát nhánh `allowedDomains` |
+| `n8nApi` | `allowedDomains` | tương tự | string | chỉ khi `allowedHttpRequestDomains: 'domains'` |
+| `infisicalApi` | `apiUrl` | `apiUrl` | string | required |
+| `infisicalApi` | `authType` | `authType` | string (enum) | khóa điều kiện: `'universalAuth'` hoặc `'serviceToken'` |
+| `infisicalApi` | `clientId` | `clientId` | string | chỉ khi `authType: 'universalAuth'` |
+| `infisicalApi` | `clientSecret` | `clientSecret` | string | chỉ khi `authType: 'universalAuth'` |
+| `infisicalApi` | `organizationSlug` | `organizationSlug` | string | tùy chọn, chỉ universalAuth |
+| `infisicalApi` | `apiKey` | `apiKey` | string | chỉ khi `authType: 'serviceToken'` |
+
+---
+
+### Xác Thực HTTP Chung
+
+#### Bearer Auth (`httpBearerAuth`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `token` | `token` | string | required |
+| `allowedHttpRequestDomains` | tương tự | string (enum) | khóa điều kiện: kiểm soát nhánh `allowedDomains` |
+| `allowedDomains` | tương tự | string | chỉ khi `allowedHttpRequestDomains: 'domains'` |
+
+#### Basic Auth (`httpBasicAuth`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `user` | `user` | string | required |
+| `password` | `password` | string | required |
+| `allowedHttpRequestDomains` | tương tự | string (enum) | khóa điều kiện |
+| `allowedDomains` | tương tự | string | chỉ khi `allowedHttpRequestDomains: 'domains'` |
+
+#### Digest Auth (`httpDigestAuth`)
+
+Các trường giống Basic Auth: `user`, `password`, `allowedHttpRequestDomains`, `allowedDomains`.
+
+#### Header Auth (`httpHeaderAuth`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `name` | `name` | string | required — tên header (ví dụ: `Authorization`) |
+| `value` | `value` | string | required |
+| `allowedHttpRequestDomains` | tương tự | string (enum) | khóa điều kiện |
+| `allowedDomains` | tương tự | string | chỉ khi `allowedHttpRequestDomains: 'domains'` |
+
+#### Query Auth (`httpQueryAuth`)
+
+Các trường giống Header Auth: `name`, `value`, `allowedHttpRequestDomains`, `allowedDomains`.
+
+#### Custom Auth (`httpCustomAuth`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `json` | `json` | string (json) | required — đối tượng cấu hình xác thực được tuần tự hóa |
+| `allowedHttpRequestDomains` | tương tự | string (enum) | khóa điều kiện |
+| `allowedDomains` | tương tự | string | chỉ khi `allowedHttpRequestDomains: 'domains'` |
+
+#### SSL Certificates (`httpSslAuth`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `ca` | `ca` | string | chứng chỉ CA |
+| `cert` | `cert` | string | chứng chỉ client |
+| `key` | `key` | string | khóa riêng tư |
+| `passphrase` | `passphrase` | string | passphrase của khóa |
+
+Không có nhánh điều kiện. Tất cả trường đều tùy chọn trong schema.
+
+#### OAuth1 API (`oAuth1Api`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `signatureMethod` | tương tự | string (enum) | `HMAC-SHA1` (mặc định), `HMAC-SHA256`, `HMAC-SHA512` |
+| `consumerKey` | tương tự | string | required |
+| `consumerSecret` | tương tự | string | required |
+| `requestTokenUrl` | tương tự | string | required |
+| `authUrl` | tương tự | string | required |
+| `accessTokenUrl` | tương tự | string | required |
+| `allowedHttpRequestDomains` | tương tự | string (enum) | khóa điều kiện |
+| `allowedDomains` | tương tự | string | chỉ khi `allowedHttpRequestDomains: 'domains'` |
+
+#### OAuth2 API (`oAuth2Api`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `grantType` | tương tự | string (enum) | khóa điều kiện: `authorizationCode` (mặc định), `clientCredentials`, `pkce` |
+| `authUrl` | tương tự | string | chỉ khi `grantType ≠ 'clientCredentials'` |
+| `accessTokenUrl` | tương tự | string | required |
+| `clientId` | tương tự | string | required |
+| `clientSecret` | tương tự | string | required |
+| `scope` | tương tự | string | required |
+| `authQueryParameters` | tương tự | string | tham số query URI xác thực tùy chọn |
+| `authentication` | tương tự | string (enum) | `header` (mặc định) hoặc `body` |
+| `allowedHttpRequestDomains` | tương tự | string (enum) | khóa điều kiện |
+| `allowedDomains` | tương tự | string | chỉ khi `allowedHttpRequestDomains: 'domains'` |
+
+#### JWT Auth (`jwtAuth`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `keyType` | tương tự | string (enum) | khóa điều kiện: `passphrase` (mặc định) hoặc `pemKey` |
+| `secret` | tương tự | string | chỉ khi `keyType: 'passphrase'` |
+| `privateKey` | tương tự | string | chỉ khi `keyType: 'pemKey'` |
+| `publicKey` | tương tự | string | chỉ khi `keyType: 'pemKey'` |
+| `algorithm` | tương tự | string (enum) | HS256 (mặc định), HS384, HS512, RS256, RS384, RS512, ES256, ES384, ES512, PS256, PS384, PS512, none |
+
+---
+
 ## 7. Thêm Loại Credential Mới
 
 ### Bước 1: Lấy schema
@@ -677,7 +804,7 @@ Bao gồm tất cả các trường boolean/enum kiểm soát điều kiện nga
 
 #### Chế độ form (mặc định)
 
-Hiển thị các trường riêng lẻ cho loại credential được chọn. Hỗ trợ 16 loại trong `CREDENTIAL_FIELD_MAPS`. Giá trị trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo field map.
+Hiển thị các trường riêng lẻ cho loại credential được chọn. Hỗ trợ 31 loại trong `CREDENTIAL_FIELD_MAPS`. Giá trị trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo field map.
 
 #### Chế độ JSON
 
