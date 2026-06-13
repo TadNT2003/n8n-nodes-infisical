@@ -209,9 +209,14 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 	],
 };
 
+function toSlug(name: string): string {
+	return name.trim().replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+}
+
 function buildSecretPath(rootPath: string, credentialName: string): string {
 	const root = rootPath.replace(/\/+$/, '') || '/';
-	return root === '/' ? `/${credentialName}` : `${root}/${credentialName}`;
+	const slug = toSlug(credentialName);
+	return root === '/' ? `/${slug}` : `${root}/${slug}`;
 }
 
 // Fix 7.5: removed `typeof value === 'boolean' && value === false` — false is a meaningful value
@@ -752,7 +757,7 @@ export async function executeSyncOperation(
 			method: 'POST',
 			url: `${apiUrl}/v2/folders`,
 			headers: baseHeaders,
-			body: { projectId, environment, name: credentialName, path: folderPath },
+			body: { projectId, environment, name: toSlug(credentialName), path: folderPath },
 		});
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number }; statusCode?: number; message?: string };
