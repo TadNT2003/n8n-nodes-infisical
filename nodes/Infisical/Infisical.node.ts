@@ -12,28 +12,10 @@ import {
 	NodeOperationError,
 	ensureError,
 } from 'n8n-workflow';
-
-async function getInfisicalToken(
-	helpers: IExecuteFunctions['helpers'],
-	credentials: IDataObject,
-): Promise<{ apiUrl: string; accessToken: string }> {
-	const apiUrl = (credentials.apiUrl as string).replace(/\/$/, '');
-	const authType = (credentials.authType as string) || 'serviceToken';
-
-	if (authType === 'universalAuth') {
-		const clientId = credentials.clientId as string;
-		const clientSecret = credentials.clientSecret as string;
-		const tokenResponse = await helpers.httpRequest({
-			method: 'POST',
-			url: `${apiUrl}/v1/auth/universal-auth/login`,
-			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-			body: `clientId=${encodeURIComponent(clientId)}&clientSecret=${encodeURIComponent(clientSecret)}`,
-		});
-		return { apiUrl, accessToken: tokenResponse.accessToken as string };
-	}
-
-	return { apiUrl, accessToken: credentials.apiKey as string };
-}
+import { executeSecretOperation } from '../../utils/secretOperations';
+import { executeProjectOperation } from '../../utils/projectOperations';
+import { executeFolderOperation } from '../../utils/folderOperations';
+import { getInfisicalToken } from '../../utils/auth';
 
 export class Infisical implements INodeType {
 	description: INodeTypeDescription = {
@@ -64,8 +46,9 @@ export class Infisical implements INodeType {
 				type: 'options',
 				noDataExpression: true,
 				options: [
+					{ name: 'Folder', value: 'folder' },
+					{ name: 'Project', value: 'project' },
 					{ name: 'Secret', value: 'secret' },
-					{ name: 'Workspace', value: 'workspace' },
 				],
 				default: 'secret',
 			},
@@ -97,6 +80,12 @@ export class Infisical implements INodeType {
 						action: 'Delete a secret',
 					},
 					{
+						name: 'Delete Many',
+						value: 'deleteMany',
+						description: 'Delete multiple secrets in one request',
+						action: 'Delete many secrets',
+					},
+					{
 						name: 'Get',
 						value: 'get',
 						description: 'Get a single secret by key',
@@ -124,34 +113,381 @@ export class Infisical implements INodeType {
 				default: 'get',
 			},
 
-			// ─── Workspace operations ────────────────────────────────────────────────
+			// ─── Project operations ────────────────────────────────────────────────
 			{
 				displayName: 'Operation',
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
-				displayOptions: { show: { resource: ['workspace'] } },
+				displayOptions: { show: { resource: ['project'] } },
 				options: [
+					{
+						name: 'Get',
+						value: 'get',
+						description: 'Get a project by ID',
+						action: 'Get a project',
+					},
+					{
+						name: 'Get By Slug',
+						value: 'getBySlug',
+						description: 'Get a project by slug',
+						action: 'Get a project by slug',
+					},
 					{
 						name: 'Get Many',
 						value: 'getAll',
-						description: 'List all accessible workspaces',
-						action: 'Get many workspaces',
+						description: 'List all accessible projects',
+						action: 'Get many projects',
+					},
+					{
+						name: 'Get Secret Snapshots',
+						value: 'getSecretSnapshots',
+						description: 'List secret snapshots for a project environment',
+						action: 'Get secret snapshots',
+					},
+					{
+						name: 'Get User By Username',
+						value: 'getUserByUsername',
+						description: 'Get a project member by username',
+						action: 'Get user by username',
+					},
+					{
+						name: 'Get User Memberships',
+						value: 'getUserMemberships',
+						description: 'List all user memberships in a project',
+						action: 'Get user memberships',
 					},
 				],
 				default: 'getAll',
 			},
 
-			// ─── Shared secret fields ────────────────────────────────────────────────
-
+			// ─── Project fields ───────────────────────────────
 			{
 				displayName: 'Project ID',
-				name: 'workspaceId',
+				name: 'projectId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['get', 'getSecretSnapshots', 'getUserMemberships', 'getUserByUsername'],
+					},
+				},
+				default: '',
+				description: 'The ID of the Infisical project',
+			},
+			{
+				displayName: 'Slug',
+				name: 'slug',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['getBySlug'],
+					},
+				},
+				default: '',
+				description: 'The slug of the Infisical project',
+			},
+			{
+				displayName: 'Environment',
+				name: 'snapshotEnvironment',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['getSecretSnapshots'],
+					},
+				},
+				default: 'dev',
+				description: 'The environment slug to retrieve snapshots for (e.g., dev, staging, prod)',
+			},
+			{
+				displayName: 'Username',
+				name: 'username',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['getUserByUsername'],
+					},
+				},
+				default: '',
+				description: 'The username of the project member to retrieve',
+			},
+			{
+				displayName: 'Additional Fields',
+				name: 'snapshotOptions',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['getSecretSnapshots'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Limit',
+						name: 'limit',
+						type: 'number',
+						default: 20,
+						description: 'Maximum number of snapshots to return',
+					},
+					{
+						displayName: 'Offset',
+						name: 'offset',
+						type: 'number',
+						default: 0,
+						description: 'Number of snapshots to skip (pagination)',
+					},
+					{
+						displayName: 'Secret Path',
+						name: 'secretPath',
+						type: 'string',
+						default: '/',
+						description: 'Folder path to filter snapshots (default: /)',
+					},
+				],
+			},
+
+
+			// ─── Folder operations ──────────────────────────────────────────────────
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: { show: { resource: ['folder'] } },
+				options: [
+					{
+						name: 'Create',
+						value: 'createFolder',
+						description: 'Create a new folder',
+						action: 'Create a folder',
+					},
+					{
+						name: 'Delete',
+						value: 'deleteFolder',
+						description: 'Delete a folder by ID or name',
+						action: 'Delete a folder',
+					},
+					{
+						name: 'Get',
+						value: 'getFolderById',
+						description: 'Get a folder by ID',
+						action: 'Get a folder',
+					},
+					{
+						name: 'List',
+						value: 'listFolders',
+						description: 'List all folders at a path',
+						action: 'List folders',
+					},
+					{
+						name: 'Update',
+						value: 'updateFolder',
+						description: 'Update the name or description of a folder',
+						action: 'Update a folder',
+					},
+				],
+				default: 'listFolders',
+			},
+
+			// ─── Folder fields ──────────────────────────────────────────────────────
+			{
+				displayName: 'Project ID',
+				name: 'projectId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['folder'],
+						operation: ['listFolders', 'createFolder', 'updateFolder', 'deleteFolder'],
+					},
+				},
+				default: '',
+				description: 'The ID of the Infisical project',
+			},
+			{
+				displayName: 'Environment',
+				name: 'environment',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['folder'],
+						operation: ['listFolders', 'createFolder', 'updateFolder', 'deleteFolder'],
+					},
+				},
+				default: 'dev',
+				description: 'The environment slug (e.g., dev, staging, prod)',
+			},
+			{
+				displayName: 'Folder Path',
+				name: 'folderPath',
+				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['folder'],
+						operation: ['listFolders', 'createFolder', 'updateFolder', 'deleteFolder'],
+					},
+				},
+				default: '/',
+				description: 'The path to list from or the parent path for create/update/delete (default: /)',
+			},
+			{
+				displayName: 'Folder ID',
+				name: 'folderId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['folder'],
+						operation: ['getFolderById', 'updateFolder'],
+					},
+				},
+				default: '',
+				description: 'The ID of the folder',
+			},
+			{
+				displayName: 'Folder ID or Name',
+				name: 'folderIdOrName',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['folder'],
+						operation: ['deleteFolder'],
+					},
+				},
+				default: '',
+				description: 'The ID or name of the folder to delete',
+			},
+			{
+				displayName: 'Folder Name',
+				name: 'folderName',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['folder'],
+						operation: ['createFolder', 'updateFolder'],
+					},
+				},
+				default: '',
+				description: 'The name of the folder',
+			},
+			{
+				displayName: 'Additional Fields',
+				name: 'listFolderOptions',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['folder'],
+						operation: ['listFolders'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Last Secret Modified',
+						name: 'lastSecretModified',
+						type: 'string',
+						default: '',
+						description: 'Filter folders modified after this ISO 8601 datetime',
+					},
+					{
+						displayName: 'Recursive',
+						name: 'recursive',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to include subdirectories in the listing',
+					},
+				],
+			},
+			{
+				displayName: 'Additional Fields',
+				name: 'createFolderOptions',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['folder'],
+						operation: ['createFolder'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Description',
+						name: 'description',
+						type: 'string',
+						default: '',
+						description: 'An optional label for the folder',
+					},
+				],
+			},
+			{
+				displayName: 'Additional Fields',
+				name: 'updateFolderOptions',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['folder'],
+						operation: ['updateFolder'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Description',
+						name: 'description',
+						type: 'string',
+						default: '',
+						description: 'An updated label for the folder',
+					},
+				],
+			},
+			{
+				displayName: 'Additional Fields',
+				name: 'deleteFolderOptions',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['folder'],
+						operation: ['deleteFolder'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Force Delete',
+						name: 'forceDelete',
+						type: 'boolean',
+						default: false,
+						description:
+							'Whether to force delete the folder even if it contains secrets or sub-folders',
+					},
+				],
+			},
+
+			// ─── Shared secret fields ────────────────────────────────────────────────
+			{
+				displayName: 'Project ID',
+				name: 'projectId',
 				type: 'string',
 				required: true,
 				displayOptions: { show: { resource: ['secret'] } },
 				default: '',
-				description: 'The ID of the Infisical project (workspace)',
+				description: 'The ID of the Infisical project',
 			},
 			{
 				displayName: 'Environment',
@@ -244,6 +580,44 @@ export class Infisical implements INodeType {
 					},
 				],
 			},
+			{
+				displayName: 'Secret Metadata',
+				name: 'secretMetadata',
+				type: 'fixedCollection',
+				typeOptions: { multipleValues: true },
+				placeholder: 'Add Metadata Entry',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['secret'],
+						operation: ['create'],
+					},
+				},
+				description: 'Key/value metadata tags to attach to the secret',
+				options: [
+					{
+						displayName: 'Metadata Entry',
+						name: 'values',
+						values: [
+							{
+								displayName: 'Key',
+								name: 'key',
+								type: 'string',
+								required: true,
+								default: '',
+								description: 'Metadata key',
+							},
+							{
+								displayName: 'Value',
+								name: 'value',
+								type: 'string',
+								default: '',
+								description: 'Metadata value',
+							},
+						],
+					},
+				],
+			},
 
 			// ─── Update: all fields optional ─────────────────────────────────────────
 			{
@@ -302,6 +676,44 @@ export class Infisical implements INodeType {
 					},
 				],
 			},
+			{
+				displayName: 'Secret Metadata',
+				name: 'secretMetadata',
+				type: 'fixedCollection',
+				typeOptions: { multipleValues: true },
+				placeholder: 'Add Metadata Entry',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['secret'],
+						operation: ['update'],
+					},
+				},
+				description: 'Key/value metadata tags to attach to the secret',
+				options: [
+					{
+						displayName: 'Metadata Entry',
+						name: 'values',
+						values: [
+							{
+								displayName: 'Key',
+								name: 'key',
+								type: 'string',
+								required: true,
+								default: '',
+								description: 'Metadata key',
+							},
+							{
+								displayName: 'Value',
+								name: 'value',
+								type: 'string',
+								default: '',
+								description: 'Metadata value',
+							},
+						],
+					},
+				],
+			},
 
 			// ─── Create Many: secrets fixedCollection ─────────────────────────────────
 			{
@@ -353,6 +765,38 @@ export class Infisical implements INodeType {
 								default: false,
 								description:
 									'Whether to disable multiline encoding for this secret value',
+							},
+							{
+								displayName: 'Secret Metadata',
+								name: 'secretMetadata',
+								type: 'fixedCollection',
+								typeOptions: { multipleValues: true },
+								placeholder: 'Add Metadata Entry',
+								default: {},
+								description: 'Key/value metadata tags to attach to this secret',
+								options: [
+									{
+										displayName: 'Metadata Entry',
+										name: 'values',
+										values: [
+											{
+												displayName: 'Key',
+												name: 'key',
+												type: 'string',
+												required: true,
+												default: '',
+												description: 'Metadata key',
+											},
+											{
+												displayName: 'Value',
+												name: 'value',
+												type: 'string',
+												default: '',
+												description: 'Metadata value',
+											},
+										],
+									},
+								],
 							},
 						],
 					},
@@ -439,6 +883,38 @@ export class Infisical implements INodeType {
 								description:
 									'Whether to disable multiline encoding for this secret value',
 							},
+							{
+								displayName: 'Secret Metadata',
+								name: 'secretMetadata',
+								type: 'fixedCollection',
+								typeOptions: { multipleValues: true },
+								placeholder: 'Add Metadata Entry',
+								default: {},
+								description: 'Key/value metadata tags to attach to this secret',
+								options: [
+									{
+										displayName: 'Metadata Entry',
+										name: 'values',
+										values: [
+											{
+												displayName: 'Key',
+												name: 'key',
+												type: 'string',
+												required: true,
+												default: '',
+												description: 'Metadata key',
+											},
+											{
+												displayName: 'Value',
+												name: 'value',
+												type: 'string',
+												default: '',
+												description: 'Metadata value',
+											},
+										],
+									},
+								],
+							},
 						],
 					},
 				],
@@ -490,6 +966,72 @@ export class Infisical implements INodeType {
 					},
 				],
 			},
+
+			// ─── Delete Many: secrets fixedCollection ─────────────────────────────────
+			{
+				displayName: 'Secrets',
+				name: 'secretsToDelete',
+				type: 'fixedCollection',
+				typeOptions: { multipleValues: true },
+				required: true,
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['secret'],
+						operation: ['deleteMany'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Secret',
+						name: 'values',
+						values: [
+							{
+								displayName: 'Secret Key',
+								name: 'secretKey',
+								type: 'string',
+								required: true,
+								default: '',
+								description: 'The name of the secret to delete',
+							},
+							{
+								displayName: 'Type',
+								name: 'type',
+								type: 'options',
+								options: [
+									{ name: 'Shared', value: 'shared' },
+									{ name: 'Personal', value: 'personal' },
+								],
+								default: 'shared',
+								description: 'Whether to delete the shared or personal variant of the secret',
+							},
+						],
+					},
+				],
+			},
+			{
+				displayName: 'Additional Fields',
+				name: 'deleteManyOptions',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['secret'],
+						operation: ['deleteMany'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Secret Path Override',
+						name: 'secretPath',
+						type: 'string',
+						default: '/',
+						description:
+							'Override the top-level Secret Path for this batch request',
+					},
+				],
+			},
 		],
 	};
 
@@ -507,13 +1049,17 @@ export class Infisical implements INodeType {
 					let accessToken: string;
 
 					if (authType === 'universalAuth') {
+						const loginForm: IDataObject = {
+							clientId: creds.clientId,
+							clientSecret: creds.clientSecret,
+						};
+						if (creds.organizationSlug) {
+							loginForm.organizationSlug = creds.organizationSlug;
+						}
 						const tokenResponse = await this.helpers.request({
 							method: 'POST',
 							uri: `${apiUrl}/v1/auth/universal-auth/login`,
-							form: {
-								clientId: creds.clientId,
-								clientSecret: creds.clientSecret,
-							},
+							form: loginForm,
 							json: true,
 						});
 						accessToken = tokenResponse.accessToken as string;
@@ -561,230 +1107,18 @@ export class Infisical implements INodeType {
 			try {
 				// ── Secret resource ─────────────────────────────────────────────────────
 				if (resource === 'secret') {
-					const workspaceId = this.getNodeParameter('workspaceId', i) as string;
-					const environment = this.getNodeParameter('environment', i) as string;
-					const secretPath = this.getNodeParameter('secretPath', i) as string;
+					const results = await executeSecretOperation(this, apiUrl, baseHeaders, operation, i);
+					returnData.push(...results);
 
-					// ── get ───────────────────────────────────────────────────────────────
-					if (operation === 'get') {
-						const secretKey = this.getNodeParameter('secretKey', i) as string;
+				// ── Project resource ──────────────────────────────────────────────────
+				} else if (resource === 'project') {
+					const results = await executeProjectOperation(this, apiUrl, baseHeaders, operation, i);
+					returnData.push(...results);
 
-						const response = await this.helpers.httpRequest({
-							method: 'GET',
-							url: `${apiUrl}/v3/secrets/raw/${encodeURIComponent(secretKey)}`,
-							headers: baseHeaders,
-							qs: { workspaceId, environment, secretPath },
-						});
-
-						returnData.push({ json: response as IDataObject, pairedItem: { item: i } });
-
-					// ── getAll ────────────────────────────────────────────────────────────
-					} else if (operation === 'getAll') {
-						const response = await this.helpers.httpRequest({
-							method: 'GET',
-							url: `${apiUrl}/v3/secrets/raw`,
-							headers: baseHeaders,
-							qs: { workspaceId, environment, secretPath },
-						});
-
-						const secrets = (response as IDataObject).secrets as IDataObject[];
-						for (const secret of secrets) {
-							returnData.push({ json: secret, pairedItem: { item: i } });
-						}
-
-					// ── create ────────────────────────────────────────────────────────────
-					} else if (operation === 'create') {
-						const secretKey = this.getNodeParameter('secretKey', i) as string;
-						const secretValue = this.getNodeParameter('secretValue', i) as string;
-						const createOptions = this.getNodeParameter('createOptions', i, {}) as IDataObject;
-
-						const body: IDataObject = {
-							workspaceId,
-							environment,
-							secretName: secretKey,
-							secretValue,
-							secretPath,
-							type: createOptions.type ?? 'shared',
-						};
-
-						if (createOptions.secretComment) body.secretComment = createOptions.secretComment;
-						if (createOptions.skipMultilineEncoding) {
-							body.skipMultilineEncoding = createOptions.skipMultilineEncoding;
-						}
-
-						const response = await this.helpers.httpRequest({
-							method: 'POST',
-							url: `${apiUrl}/v3/secrets/raw/${encodeURIComponent(secretKey)}`,
-							headers: baseHeaders,
-							body: JSON.stringify(body),
-						});
-
-						returnData.push({ json: response as IDataObject, pairedItem: { item: i } });
-
-					// ── update (v4) ───────────────────────────────────────────────────────
-					} else if (operation === 'update') {
-						const secretKey = this.getNodeParameter('secretKey', i) as string;
-						const updateOptions = this.getNodeParameter('updateOptions', i, {}) as IDataObject;
-
-						const body: IDataObject = {
-							projectId: workspaceId,
-							environment,
-							secretPath,
-						};
-
-						// Spread only non-empty optional fields
-						if (updateOptions.secretValue !== undefined && updateOptions.secretValue !== '') {
-							body.secretValue = updateOptions.secretValue;
-						}
-						if (updateOptions.newSecretName) body.newSecretName = updateOptions.newSecretName;
-						if (updateOptions.secretComment !== undefined) body.secretComment = updateOptions.secretComment;
-						if (updateOptions.type) body.type = updateOptions.type;
-						if (updateOptions.skipMultilineEncoding) {
-							body.skipMultilineEncoding = updateOptions.skipMultilineEncoding;
-						}
-
-						const response = await this.helpers.httpRequest({
-							method: 'PATCH',
-							url: `${apiUrl}/v4/secrets/${encodeURIComponent(secretKey)}`,
-							headers: baseHeaders,
-							body: JSON.stringify(body),
-						});
-
-						returnData.push({ json: response as IDataObject, pairedItem: { item: i } });
-
-					// ── delete ────────────────────────────────────────────────────────────
-					} else if (operation === 'delete') {
-						const secretKey = this.getNodeParameter('secretKey', i) as string;
-
-						const response = await this.helpers.httpRequest({
-							method: 'DELETE',
-							url: `${apiUrl}/v3/secrets/raw/${encodeURIComponent(secretKey)}`,
-							headers: baseHeaders,
-							qs: { workspaceId, environment, secretPath },
-						});
-
-						returnData.push({ json: response as IDataObject, pairedItem: { item: i } });
-
-					// ── createMany (v4 batch POST) ────────────────────────────────────────
-					} else if (operation === 'createMany') {
-						const secretsParam = this.getNodeParameter('secrets', i, {}) as IDataObject;
-						const secretItems = (secretsParam.values as IDataObject[]) ?? [];
-
-						if (secretItems.length === 0) {
-							throw new NodeOperationError(
-								this.getNode(),
-								'At least one secret must be added in the Secrets list',
-								{ itemIndex: i },
-							);
-						}
-
-						const createManyOptions = this.getNodeParameter('createManyOptions', i, {}) as IDataObject;
-						const effectivePath = (createManyOptions.secretPath as string) || secretPath;
-
-						const secrets = secretItems.map((item) => {
-							const s: IDataObject = {
-								secretKey: item.secretKey,
-								secretValue: item.secretValue,
-							};
-							if (item.secretComment) s.secretComment = item.secretComment;
-							if (item.skipMultilineEncoding) s.skipMultilineEncoding = item.skipMultilineEncoding;
-							return s;
-						});
-
-						const body: IDataObject = {
-							projectId: workspaceId,
-							environment,
-							secretPath: effectivePath,
-							secrets,
-						};
-
-						const response = await this.helpers.httpRequest({
-							method: 'POST',
-							url: `${apiUrl}/v4/secrets/batch`,
-							headers: baseHeaders,
-							body: JSON.stringify(body),
-						});
-
-						const responseData = response as IDataObject;
-						if (Array.isArray(responseData.secrets)) {
-							for (const secret of responseData.secrets as IDataObject[]) {
-								returnData.push({ json: secret, pairedItem: { item: i } });
-							}
-						} else {
-							// Approval / policy-gated response
-							returnData.push({ json: responseData, pairedItem: { item: i } });
-						}
-
-					// ── updateMany (v4 batch PATCH) ───────────────────────────────────────
-					} else if (operation === 'updateMany') {
-						const secretsToUpdateParam = this.getNodeParameter('secretsToUpdate', i, {}) as IDataObject;
-						const secretItems = (secretsToUpdateParam.values as IDataObject[]) ?? [];
-
-						if (secretItems.length === 0) {
-							throw new NodeOperationError(
-								this.getNode(),
-								'At least one secret must be added in the Secrets list',
-								{ itemIndex: i },
-							);
-						}
-
-						const updateManyOptions = this.getNodeParameter('updateManyOptions', i, {}) as IDataObject;
-						const effectivePath = (updateManyOptions.secretPath as string) || secretPath;
-
-						const secrets = secretItems.map((item) => {
-							const s: IDataObject = { secretKey: item.secretKey };
-							if (item.secretValue !== undefined && item.secretValue !== '') {
-								s.secretValue = item.secretValue;
-							}
-							if (item.newSecretName) s.newSecretName = item.newSecretName;
-							if (item.secretComment !== undefined && item.secretComment !== '') {
-								s.secretComment = item.secretComment;
-							}
-							if (item.skipMultilineEncoding) s.skipMultilineEncoding = item.skipMultilineEncoding;
-							return s;
-						});
-
-						const body: IDataObject = {
-							projectId: workspaceId,
-							environment,
-							secretPath: effectivePath,
-							secrets,
-						};
-
-						if (updateManyOptions.mode) body.mode = updateManyOptions.mode;
-
-						const response = await this.helpers.httpRequest({
-							method: 'PATCH',
-							url: `${apiUrl}/v4/secrets/batch`,
-							headers: baseHeaders,
-							body: JSON.stringify(body),
-						});
-
-						const responseData = response as IDataObject;
-						if (Array.isArray(responseData.secrets)) {
-							for (const secret of responseData.secrets as IDataObject[]) {
-								returnData.push({ json: secret, pairedItem: { item: i } });
-							}
-						} else {
-							// Approval / policy-gated response
-							returnData.push({ json: responseData, pairedItem: { item: i } });
-						}
-					}
-
-				// ── Workspace resource ──────────────────────────────────────────────────
-				} else if (resource === 'workspace') {
-					if (operation === 'getAll') {
-						const response = await this.helpers.httpRequest({
-							method: 'GET',
-							url: `${apiUrl}/v1/workspace`,
-							headers: baseHeaders,
-						});
-
-						const workspaces = (response as IDataObject).workspaces as IDataObject[];
-						for (const workspace of workspaces) {
-							returnData.push({ json: workspace, pairedItem: { item: i } });
-						}
-					}
+				// ── Folder resource ──────────────────────────────────────────────────
+				} else if (resource === 'folder') {
+					const results = await executeFolderOperation(this, apiUrl, baseHeaders, operation, i);
+					returnData.push(...results);
 				}
 			} catch (error) {
 				const e = ensureError(error);
