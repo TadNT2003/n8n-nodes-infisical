@@ -13,6 +13,7 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 		{ param: 'httpNode', secretKey: 'httpNode' },
 	],
 	googleOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
 		{ param: 'clientId', secretKey: 'clientId' },
 		{ param: 'clientSecret', secretKey: 'clientSecret' },
 		{ param: 'scope', secretKey: 'scope' },
@@ -219,14 +220,6 @@ function buildSecretPath(rootPath: string, credentialName: string): string {
 	return root === '/' ? `/${slug}` : `${root}/${slug}`;
 }
 
-// Fix 7.5: removed `typeof value === 'boolean' && value === false` — false is a meaningful value
-// that must be written to Infisical (e.g. ssl:false, sshTunnel:false as condition keys).
-function isEmptyValue(value: unknown): boolean {
-	if (value === null || value === undefined) return true;
-	if (typeof value === 'string' && value.trim() === '') return true;
-	return false;
-}
-
 // Fix 7.7: `default` added so applyDefaultForProp can read the schema's declared default first.
 type PropDef = { type?: string; enum?: unknown[]; default?: unknown };
 type Sub = { required?: string[]; not?: { required?: string[] } };
@@ -272,6 +265,23 @@ function coerceValue(raw: string, def?: PropDef): string | number | boolean {
 	return raw;
 }
 
+// Decide whether a conditional branch fires given its condition key and values.
+//
+// When condKey IS in schema properties, fire only when the current value matches condValues.
+//
+// When condKey is NOT in schema properties (e.g. useDynamicClientRegistration on
+// googleOAuth2Api), JSON Schema evaluates the if-clause vacuously — the properties keyword
+// has nothing to check, so it passes, and both the [true] branch and the [false] branch
+// appear to fire simultaneously. That is the "vacuous truth" problem.
+//
+// n8n avoids it by internally defaulting the absent key to false before validating, so only
+// the branch whose condValues contain a falsy value actually fires (the "standard mode"
+// branch). We mirror that: condValues=[false] fires, condValues=[true] does not.
+function conditionFires(condKeyInSchema: boolean, condValues: unknown[], condVal: unknown): boolean {
+	if (condKeyInSchema) return condValues.includes(condVal);
+	return condValues.some((v) => !v);
+}
+
 // Validate credential data against the n8n schema's required fields and conditional requirements.
 // For form mode, pass availableFormFields to skip checks for fields the form cannot provide.
 function validateAgainstSchema(
@@ -283,20 +293,20 @@ function validateAgainstSchema(
 
 	for (const field of schemaInfo.topRequired) {
 		if (availableFormFields && !availableFormFields.has(field)) continue;
-		if (isEmptyValue(data[field])) {
-			errors.push(`"${field}" is required but missing or empty`);
+		if (data[field] === undefined || data[field] === null) {
+			errors.push(`"${field}" is required but not provided`);
 		}
 	}
 
 	for (const { condKey, condValues, thenRequired } of schemaInfo.condBranches) {
 		const condVal = data[condKey];
 		const condKeyInSchema = condKey in schemaInfo.props;
-		if (!condKeyInSchema || condValues.includes(condVal)) {
+		if (conditionFires(condKeyInSchema, condValues, condVal)) {
 			for (const field of thenRequired) {
 				if (availableFormFields && !availableFormFields.has(field)) continue;
-				if (isEmptyValue(data[field])) {
+				if (data[field] === undefined || data[field] === null) {
 					const when = condKeyInSchema ? ` when "${condKey}" is "${String(condVal)}"` : '';
-					errors.push(`"${field}" is required${when} but missing or empty`);
+					errors.push(`"${field}" is required${when} but not provided`);
 				}
 			}
 		}
@@ -469,10 +479,8 @@ async function fetchN8nSchema(
 function applyCondBranches(fullData: IDataObject, schemaInfo: SchemaInfo): void {
 	for (const { condKey, condValues, thenRequired, elseProhibited } of schemaInfo.condBranches) {
 		const condVal = fullData[condKey];
-		// When condKey is absent from schema properties it can't appear in the data,
-		// so JSON Schema's `properties` validator skips it → condition fires vacuously.
 		const condKeyInSchema = condKey in schemaInfo.props;
-		if (!condKeyInSchema || condValues.includes(condVal)) {
+		if (conditionFires(condKeyInSchema, condValues, condVal)) {
 			// Condition fires → fill any missing then-required fields with safe defaults.
 			for (const field of thenRequired) {
 				if (field in fullData) continue;
@@ -767,13 +775,15 @@ export async function executeSyncOperation(
 		}
 	}
 
-	// Collect non-empty credential fields as Infisical secrets
+	// Collect credential fields as Infisical secrets; empty strings are written as "" so that
+	// required-but-blank fields (e.g. serverUrl on googleOAuth2Api) don't fail schema validation
+	// on the way back. Only null/undefined is skipped.
 	const secretMetadata: IDataObject[] = [{ key: 'n8n_credential_type', value: credentialType }];
 	const secrets: IDataObject[] = [];
 
 	if (inputMode === 'json') {
 		for (const [key, value] of Object.entries(parsedJson ?? {})) {
-			if (isEmptyValue(value)) continue;
+			if (value === null || value === undefined) continue;
 			if (fetchedSchemaProps && !(key in fetchedSchemaProps)) continue;
 			const secretValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
 			secrets.push({ secretKey: key, secretValue, secretMetadata });
@@ -789,7 +799,7 @@ export async function executeSyncOperation(
 		}
 		for (const { param, secretKey } of fieldMap) {
 			const value = ctx.getNodeParameter(param, i, '') as unknown;
-			if (isEmptyValue(value)) continue;
+			if (value === null || value === undefined) continue;
 			secrets.push({ secretKey, secretValue: String(value), secretMetadata });
 		}
 	}
