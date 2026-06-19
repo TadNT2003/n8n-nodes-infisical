@@ -23,3 +23,7 @@ npm-debug.log*
 # Environment variables
 .env
 .env.local
+.env.dev
+
+# Local files
+scripts/validate_infisical.py
