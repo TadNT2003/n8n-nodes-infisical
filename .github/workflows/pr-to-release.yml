@@ -1,0 +1,21 @@
+name: PR to release branch check
+
+on:
+  pull_request:
+    branches:
+      - release
+
+jobs:
+  check-source-branch:
+    name: Require PR from main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if source branch is not main
+        if: github.head_ref != 'main'
+        run: |
+          echo "PRs to release must come from the 'main' branch."
+          echo "This PR is from '${{ github.head_ref }}'."
+          exit 1
+
+      - name: Source branch is main
+        run: echo "Source branch check passed."
