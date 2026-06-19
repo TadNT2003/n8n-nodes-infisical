@@ -7,29 +7,29 @@ on:
 
 jobs:
   validate-tag:
-    name: Validate tag is on main
+    name: Validate tag is on release
     runs-on: ubuntu-latest
     outputs:
-      on-main: ${{ steps.check.outputs.on-main }}
+      on-release: ${{ steps.check.outputs.on-release }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Check tag is reachable from main
+      - name: Check tag is reachable from release
         id: check
         run: |
-          git fetch origin main
-          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
-            echo "on-main=true" >> "$GITHUB_OUTPUT"
+          git fetch origin release
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/release; then
+            echo "on-release=true" >> "$GITHUB_OUTPUT"
           else
-            echo "on-main=false" >> "$GITHUB_OUTPUT"
+            echo "on-release=false" >> "$GITHUB_OUTPUT"
           fi
 
   publish:
     name: Publish package
     needs: validate-tag
-    if: needs.validate-tag.outputs.on-main == 'true'
+    if: needs.validate-tag.outputs.on-release == 'true'
     permissions:
       id-token: write  # Required for OIDC
       contents: read
