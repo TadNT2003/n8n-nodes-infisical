@@ -53,6 +53,7 @@ All API calls are delegated to operation modules in [utils/](utils/):
 - The node `execute()` method authenticates once per execution (calls `getInfisicalToken`), then loops over input items dispatching to the appropriate operation module.
 - Each operation module receives `(ctx, apiUrl, baseHeaders, operation, itemIndex)` and returns `INodeExecutionData[]`.
 - `syncOperations.ts` uses `CREDENTIAL_FIELD_MAPS` to translate between n8n parameter names and Infisical secret key names for the supported credential types. When `autoSyncFromInfisical` creates credentials, it calls `fetchN8nSchema()` to get the credential JSON Schema, derives safe defaults for optional fields, and applies `allOf` if/then/else conditional logic to avoid sending prohibited fields.
+- Credential names are mapped to Infisical folder names via a lossless encoding (`toFolderName`/`fromFolderName`): characters in `[A-Za-z0-9-]` pass through unchanged, `_` becomes `__`, and everything else becomes `_XX` hex sequences. This preserves the full n8n credential name (spaces, special characters, Unicode) across the round-trip. See [docs/folder-name-encoding.md](docs/folder-name-encoding.md).
 - Both nodes duplicate the `testInfisicalApiCredentials` credential test method verbatim (a known duplication).
 
 ### Build output
