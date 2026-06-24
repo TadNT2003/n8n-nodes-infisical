@@ -210,14 +210,27 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 	],
 };
 
-function toSlug(name: string): string {
-	return name.trim().replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+// Lossless encoding: [A-Za-z0-9-] pass through, _ → __, everything else → _XX hex sequences.
+// Infisical folder names only allow [a-zA-Z0-9_-], so % cannot be used as an escape character.
+function toFolderName(name: string): string {
+	return [...name].map(c => {
+		if (/[A-Za-z0-9-]/.test(c)) return c;
+		if (c === '_') return '__';
+		return encodeURIComponent(c).replace(/%/g, '_');
+	}).join('');
+}
+
+function fromFolderName(slug: string): string {
+	const restored = slug.replace(/_([0-9A-Fa-f]{2}|_)/g, (_, p1: string) =>
+		p1 === '_' ? '_' : '%' + p1,
+	);
+	return decodeURIComponent(restored);
 }
 
 function buildSecretPath(rootPath: string, credentialName: string): string {
 	const root = rootPath.replace(/\/+$/, '') || '/';
-	const slug = toSlug(credentialName);
-	return root === '/' ? `/${slug}` : `${root}/${slug}`;
+	const folder = toFolderName(credentialName);
+	return root === '/' ? `/${folder}` : `${root}/${folder}`;
 }
 
 // Fix 7.7: `default` added so applyDefaultForProp can read the schema's declared default first.
@@ -626,7 +639,8 @@ async function autoSyncFromInfisical(
 			}
 		}
 
-		const existing = credByName.get(folderName);
+		const credentialName = fromFolderName(folderName);
+		const existing = credByName.get(credentialName);
 
 		if (existing) {
 			// Fix 7.2: apply the same fullData build logic as the create path so that condition-key
@@ -664,7 +678,7 @@ async function autoSyncFromInfisical(
 				method: 'POST',
 				url: `${n8nApiUrl}/api/v1/credentials`,
 				headers: n8nHeaders,
-				body: { name: folderName, type: credentialType, data: fullData },
+				body: { name: credentialName, type: credentialType, data: fullData },
 			}) as IDataObject;
 			results.push({
 				json: { ...created, action: 'created', secretPath, secretCount: secrets.length },
@@ -765,7 +779,7 @@ export async function executeSyncOperation(
 			method: 'POST',
 			url: `${apiUrl}/v2/folders`,
 			headers: baseHeaders,
-			body: { projectId, environment, name: toSlug(credentialName), path: folderPath },
+			body: { projectId, environment, name: toFolderName(credentialName), path: folderPath },
 		});
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number }; statusCode?: number; message?: string };
