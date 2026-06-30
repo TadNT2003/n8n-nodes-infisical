@@ -26,4 +26,4 @@ npm-debug.log*
 .env.dev
 
 # Local files
-scripts/validate_infisical.py
+scripts/

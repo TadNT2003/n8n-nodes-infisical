@@ -59,3 +59,12 @@ All API calls are delegated to operation modules in [utils/](utils/):
 ### Build output
 
 TypeScript compiles to `dist/`. The `gulp build` step copies static assets (icons, etc.) alongside the JS. The `n8n` section of `package.json` points to `dist/` paths — n8n loads from there.
+
+## Documentation
+
+Whenever a document is added or updated under `docs/`, always produce **both** an English version and a Vietnamese version:
+
+- English: `docs/<name>.md`
+- Vietnamese: `docs/<name>.vi.md`
+
+Both files must be kept in sync — any change to one must be reflected in the other.
