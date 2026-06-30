@@ -282,17 +282,18 @@ function coerceValue(raw: string, def?: PropDef): string | number | boolean {
 //
 // When condKey IS in schema properties, fire only when the current value matches condValues.
 //
-// When condKey is NOT in schema properties (e.g. useDynamicClientRegistration on
-// googleOAuth2Api), JSON Schema evaluates the if-clause vacuously — the properties keyword
-// has nothing to check, so it passes, and both the [true] branch and the [false] branch
-// appear to fire simultaneously. That is the "vacuous truth" problem.
-//
-// n8n avoids it by internally defaulting the absent key to false before validating, so only
-// the branch whose condValues contain a falsy value actually fires (the "standard mode"
-// branch). We mirror that: condValues=[false] fires, condValues=[true] does not.
+// When condKey is NOT in schema properties (e.g. useDynamicClientRegistration or grantType on
+// googleOAuth2Api / googleSheetsOAuth2Api), JSON Schema evaluates the if-clause vacuously:
+// the `properties` keyword only constrains keys that ARE present, so an absent key always
+// satisfies the constraint. The if-clause passes → then fires (else never fires) for every
+// such branch, regardless of condValues. n8n's own schema validator follows this standard
+// JSON Schema behaviour — when useDynamicClientRegistration is absent, BOTH the [true] and
+// [false] allOf branches fire, requiring serverUrl AND clientId/clientSecret simultaneously.
+// We mirror that by always returning true for vacuous-truth branches.
 function conditionFires(condKeyInSchema: boolean, condValues: unknown[], condVal: unknown): boolean {
 	if (condKeyInSchema) return condValues.includes(condVal);
-	return condValues.some((v) => !v);
+	// Vacuous truth: absent key → if always passes → then always fires.
+	return true;
 }
 
 // Validate credential data against the n8n schema's required fields and conditional requirements.
