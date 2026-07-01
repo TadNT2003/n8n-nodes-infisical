@@ -36,6 +36,10 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 	cohereApi: [{ param: 'apiKey', secretKey: 'apiKey' }],
 	huggingFaceApi: [{ param: 'apiKey', secretKey: 'apiKey' }],
 	mistralCloudApi: [{ param: 'apiKey', secretKey: 'apiKey' }],
+	googlePalmApi: [
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'apiKey', secretKey: 'apiKey' },
+	],
 	discordBotApi: [{ param: 'botToken', secretKey: 'botToken' }],
 	discordWebhookApi: [{ param: 'webhookUri', secretKey: 'webhookUri' }],
 	mySql: [
