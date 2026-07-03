@@ -214,6 +214,16 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 	],
 };
 
+// n8n's credential schema endpoint (GET /credentials/schema/{type}) doesn't expose a field's
+// `default` value — only type/enum/required — and a credential saved via the n8n UI with a
+// field left untouched omits that key from its stored data entirely (confirmed for
+// googlePalmApi: a credential saved with only "API Key" filled in has no "host" key at all
+// in its decrypted export). There's nothing in n8n's API for us to recover that value from,
+// so known UI defaults for required fields are hardcoded here as a last-resort fallback.
+const CREDENTIAL_FIELD_DEFAULTS: Record<string, Record<string, string>> = {
+	googlePalmApi: { host: 'https://generativelanguage.googleapis.com' },
+};
+
 // Lossless encoding: [A-Za-z0-9-] pass through, _ → __, everything else → _XX hex sequences.
 // Infisical folder names only allow [a-zA-Z0-9_-], so % cannot be used as an escape character.
 function toFolderName(name: string): string {
@@ -651,7 +661,11 @@ async function autoSyncFromInfisical(
 			// Fix 7.2: apply the same fullData build logic as the create path so that condition-key
 			// changes (e.g. ssl:false→true) get their required fields filled and their prohibited
 			// fields removed, preventing spurious 422 errors on update.
-			const fullData: IDataObject = { ...(schemaInfo?.defaults ?? {}), ...credentialData };
+			const fullData: IDataObject = {
+				...(credentialType ? CREDENTIAL_FIELD_DEFAULTS[credentialType] : undefined),
+				...(schemaInfo?.defaults ?? {}),
+				...credentialData,
+			};
 			if (schemaInfo) applyCondBranches(fullData, schemaInfo);
 
 			const updated = await ctx.helpers.httpRequest({
@@ -676,7 +690,11 @@ async function autoSyncFromInfisical(
 			// Merge schema defaults (Infisical values take precedence) then apply
 			// conditional field rules: fill any still-missing then-required fields,
 			// and remove any fields prohibited by else blocks given actual merged values.
-			const fullData: IDataObject = { ...(schemaInfo?.defaults ?? {}), ...credentialData };
+			const fullData: IDataObject = {
+				...(credentialType ? CREDENTIAL_FIELD_DEFAULTS[credentialType] : undefined),
+				...(schemaInfo?.defaults ?? {}),
+				...credentialData,
+			};
 			if (schemaInfo) applyCondBranches(fullData, schemaInfo);
 
 			const created = await ctx.helpers.httpRequest({
@@ -734,6 +752,18 @@ export async function executeSyncOperation(
 		} catch {
 			throw new NodeOperationError(ctx.getNode(), 'Credential Fields (JSON) is not valid JSON', { itemIndex: i });
 		}
+
+		// A credential exported straight from n8n omits any field left at its UI default
+		// (see CREDENTIAL_FIELD_DEFAULTS above), so fill those in before validation/collection
+		// runs — otherwise a perfectly valid credential fails "required but not provided".
+		const fieldDefaults = CREDENTIAL_FIELD_DEFAULTS[credentialType];
+		if (fieldDefaults) {
+			for (const [key, value] of Object.entries(fieldDefaults)) {
+				if (parsedJson[key] === undefined || parsedJson[key] === null || parsedJson[key] === '') {
+					parsedJson[key] = value;
+				}
+			}
+		}
 	}
 
 	// Validate against the n8n credential schema if n8nApi credentials are available.
@@ -756,8 +786,9 @@ export async function executeSyncOperation(
 			const fieldMap = CREDENTIAL_FIELD_MAPS[credentialType];
 			if (fieldMap) {
 				availableFormFields = new Set(fieldMap.map((f) => f.param));
+				const fieldDefaults = CREDENTIAL_FIELD_DEFAULTS[credentialType];
 				for (const { param } of fieldMap) {
-					validationData[param] = ctx.getNodeParameter(param, i, '');
+					validationData[param] = ctx.getNodeParameter(param, i, fieldDefaults?.[param] ?? '');
 				}
 			}
 		}
@@ -787,9 +818,17 @@ export async function executeSyncOperation(
 			body: { projectId, environment, name: toFolderName(credentialName), path: folderPath },
 		});
 	} catch (err: unknown) {
-		const e = err as { response?: { status?: number }; statusCode?: number; message?: string };
+		const e = err as {
+			response?: { status?: number; data?: { message?: string } };
+			statusCode?: number;
+			message?: string;
+		};
 		const status = e?.response?.status ?? e?.statusCode;
-		if (status !== 409 && !e?.message?.toLowerCase().includes('already exist')) {
+		// Infisical returns 400 (not 409) with a descriptive body message for a duplicate
+		// folder name; the generic Axios error message doesn't contain it, so check the
+		// actual response body before falling back to the top-level message.
+		const bodyMessage = e?.response?.data?.message ?? e?.message;
+		if (status !== 409 && !bodyMessage?.toLowerCase().includes('already exist')) {
 			throw err;
 		}
 	}
@@ -816,8 +855,9 @@ export async function executeSyncOperation(
 				{ itemIndex: i },
 			);
 		}
+		const fieldDefaults = CREDENTIAL_FIELD_DEFAULTS[credentialType];
 		for (const { param, secretKey } of fieldMap) {
-			const value = ctx.getNodeParameter(param, i, '') as unknown;
+			const value = ctx.getNodeParameter(param, i, fieldDefaults?.[param] ?? '') as unknown;
 			if (value === null || value === undefined) continue;
 			secrets.push({ secretKey, secretValue: String(value), secretMetadata });
 		}
