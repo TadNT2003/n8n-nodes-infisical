@@ -548,6 +548,10 @@ Tất cả tên `param` đã được xác minh theo schema thực tế từ `GE
 | `gitlabOAuth2Api` | `server` | `server` | string | URL server GitLab; mặc định `https://gitlab.com` |
 | `gitlabOAuth2Api` | `clientId` | `clientId` | string | |
 | `gitlabOAuth2Api` | `clientSecret` | `clientSecret` | string | |
+| `bitbucketApi` | `username` | `username` | string | |
+| `bitbucketApi` | `appPassword` | `appPassword` | string | không phải mật khẩu tài khoản |
+| `bitbucketAccessTokenApi` | `email` | `email` | string | |
+| `bitbucketAccessTokenApi` | `accessToken` | `accessToken` | string | |
 
 `githubOAuth2Api` và `gitlabOAuth2Api` đều kế thừa (`extends`) từ `oAuth2Api` nhưng ghi đè
 `grantType`, `authUrl`, `accessTokenUrl`, `scope`, `authQueryParameters`, và `authentication`
@@ -556,6 +560,10 @@ thành các trường schema `hidden` với giá trị mặc định cố địn
 nào trong số này do người dùng chỉnh sửa được, nên chúng bị loại khỏi field map một cách có chủ
 đích — chỉ `server` và các trường OAuth client được đồng bộ. Khác với `githubApi`, `gitlabApi`
 không có trường `user`.
+
+`bitbucketApi` và `bitbucketAccessTokenApi` đều là schema phẳng không có điều kiện `allOf` và
+không có trường `server` (chỉ hỗ trợ Bitbucket Cloud — không có biến thể server tự quản lý).
+Không cần entry trong `CREDENTIAL_FIELD_DEFAULTS`.
 
 ### Google
 
@@ -828,7 +836,7 @@ Bao gồm tất cả các trường boolean/enum kiểm soát điều kiện nga
 
 #### Chế độ form (mặc định)
 
-Hiển thị các trường riêng lẻ cho loại credential được chọn. Hỗ trợ 35 loại trong `CREDENTIAL_FIELD_MAPS`. Giá trị trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo field map.
+Hiển thị các trường riêng lẻ cho loại credential được chọn. Hỗ trợ 37 loại trong `CREDENTIAL_FIELD_MAPS`. Giá trị trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo field map.
 
 #### Chế độ JSON
 

@@ -14,7 +14,7 @@ Ba thao tác được cung cấp:
 
 | Thao tác | Chiều | Mô tả |
 | --- | --- | --- |
-| `syncToInfisical` | n8n → Infisical | Đọc từ form credential n8n **hoặc một đối tượng JSON**, ghi vào thư mục secret Infisical. Hỗ trợ hai chế độ nhập: **form** (35 loại được định sẵn) và **JSON** (bất kỳ loại credential nào). Khi `n8nApi` được cấu hình, xác thực dữ liệu đầu vào theo credential schema trước khi ghi. |
+| `syncToInfisical` | n8n → Infisical | Đọc từ form credential n8n **hoặc một đối tượng JSON**, ghi vào thư mục secret Infisical. Hỗ trợ hai chế độ nhập: **form** (37 loại được định sẵn) và **JSON** (bất kỳ loại credential nào). Khi `n8nApi` được cấu hình, xác thực dữ liệu đầu vào theo credential schema trước khi ghi. |
 | `syncFromInfisical` | Infisical → n8n | Đọc một thư mục cụ thể theo tên, cập nhật credential n8n đích theo ID |
 | `autoSyncFromInfisical` | Infisical → n8n | Tự động phát hiện tất cả thư mục credential dưới một đường dẫn gốc, tạo hoặc cập nhật credential n8n tương ứng |
 
@@ -90,6 +90,16 @@ Về cấu trúc giống hệt cặp GitHub: `gitlabApi` là schema phẳng vớ
 không được khai báo trên `server` (mặc định `https://gitlab.com`), và `gitlabOAuth2Api` ghi đè
 cùng sáu trường của `oAuth2Api` thành `hidden`/được tính toán. Điểm khác biệt duy nhất là
 `gitlabApi` không có trường `user` — chỉ có `server` và `accessToken`.
+
+---
+
+### 3.1d Bitbucket (`bitbucketApi`, `bitbucketAccessTokenApi`)
+
+Cả hai đều là schema phẳng không có `allOf` và không có trường `server` — chỉ hỗ trợ Bitbucket
+Cloud, không có biến thể tự quản lý, nên khác với GitHub/GitLab, không có lỗ hổng giá trị mặc
+định không được khai báo và không cần entry trong `CREDENTIAL_FIELD_DEFAULTS`. `bitbucketApi`
+dùng `username`/`appPassword`; `bitbucketAccessTokenApi` dùng `email`/`accessToken`. Không loại
+nào có biến thể OAuth2.
 
 ---
 
@@ -420,7 +430,7 @@ else:
 
 #### Chế độ form (mặc định)
 
-Người dùng chọn loại credential từ dropdown gồm 35 loại được định sẵn và điền từng trường riêng lẻ. Các trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo `CREDENTIAL_FIELD_MAPS`. Chỉ hỗ trợ 35 loại có entry trong `CREDENTIAL_FIELD_MAPS`.
+Người dùng chọn loại credential từ dropdown gồm 37 loại được định sẵn và điền từng trường riêng lẻ. Các trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo `CREDENTIAL_FIELD_MAPS`. Chỉ hỗ trợ 37 loại có entry trong `CREDENTIAL_FIELD_MAPS`.
 
 #### Chế độ JSON
 

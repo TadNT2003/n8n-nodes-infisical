@@ -157,6 +157,8 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Anthropic', value: 'anthropicApi' },
 					{ name: 'Basic Auth', value: 'httpBasicAuth' },
 					{ name: 'Bearer Auth', value: 'httpBearerAuth' },
+					{ name: 'Bitbucket (Access Token)', value: 'bitbucketAccessTokenApi' },
+					{ name: 'Bitbucket (App Password)', value: 'bitbucketApi' },
 					{ name: 'Cohere', value: 'cohereApi' },
 					{ name: 'Custom Auth', value: 'httpCustomAuth' },
 					{ name: 'Digest Auth', value: 'httpDigestAuth' },
@@ -466,7 +468,7 @@ export class InfisicalSync implements INodeType {
 				},
 			},
 
-			// ── Shared: email (Google SA + Jira) ──────────────────────────────────
+			// ── Shared: email (Google SA + Jira + Bitbucket Access Token) ─────────
 			{
 				displayName: 'Email',
 				name: 'email',
@@ -476,7 +478,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['googleApi', 'jiraSoftwareCloudApi'],
+						credentialType: ['googleApi', 'jiraSoftwareCloudApi', 'bitbucketAccessTokenApi'],
 					},
 				},
 			},
@@ -543,7 +545,11 @@ export class InfisicalSync implements INodeType {
 				default: '',
 				description: 'Personal access token',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['githubApi', 'gitlabApi'] },
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['githubApi', 'gitlabApi', 'bitbucketAccessTokenApi'],
+					},
 				},
 			},
 
@@ -556,6 +562,28 @@ export class InfisicalSync implements INodeType {
 				description: 'GitLab self-managed server URL — leave default for gitlab.com',
 				displayOptions: {
 					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['gitlabApi', 'gitlabOAuth2Api'] },
+				},
+			},
+
+			// ── Bitbucket ─────────────────────────────────────────────────────────
+			{
+				displayName: 'Username',
+				name: 'username',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['bitbucketApi'] },
+				},
+			},
+			{
+				displayName: 'App Password',
+				name: 'appPassword',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				description: 'App password (not the account password)',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['bitbucketApi'] },
 				},
 			},
 

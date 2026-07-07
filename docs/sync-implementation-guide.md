@@ -626,6 +626,10 @@ All `param` names were verified against the actual schema from `GET /api/v1/cred
 | `gitlabOAuth2Api` | `server` | `server` | string | GitLab server URL; defaults to `https://gitlab.com` |
 | `gitlabOAuth2Api` | `clientId` | `clientId` | string | |
 | `gitlabOAuth2Api` | `clientSecret` | `clientSecret` | string | |
+| `bitbucketApi` | `username` | `username` | string | |
+| `bitbucketApi` | `appPassword` | `appPassword` | string | not the account password |
+| `bitbucketAccessTokenApi` | `email` | `email` | string | |
+| `bitbucketAccessTokenApi` | `accessToken` | `accessToken` | string | |
 
 `githubOAuth2Api` and `gitlabOAuth2Api` both extend `oAuth2Api` but override `grantType`,
 `authUrl`, `accessTokenUrl`, `scope`, `authQueryParameters`, and `authentication` as `hidden`
@@ -633,6 +637,10 @@ schema fields with fixed/computed defaults (`authUrl`/`accessTokenUrl` are deriv
 via an n8n expression). None of those are user-editable, so they are intentionally excluded from
 the field map — only `server` and the OAuth client credentials are synced. Unlike `githubApi`,
 `gitlabApi` has no `user` field.
+
+`bitbucketApi` and `bitbucketAccessTokenApi` are both flat schemas with no `allOf` conditionals
+and no `server` field (Bitbucket Cloud only — no self-managed server variant). No
+`CREDENTIAL_FIELD_DEFAULTS` entries are needed.
 
 ### Google
 
@@ -915,7 +923,7 @@ branch fires.
 
 #### Form mode (default)
 
-Displays individual fields for the selected credential type. Supports the 35 types in
+Displays individual fields for the selected credential type. Supports the 37 types in
 `CREDENTIAL_FIELD_MAPS`. Field values are read via `ctx.getNodeParameter(param, i, '')` and mapped
 to Infisical secret keys per the field map.
 

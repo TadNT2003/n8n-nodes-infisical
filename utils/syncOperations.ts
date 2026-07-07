@@ -65,6 +65,14 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 		{ param: 'clientId', secretKey: 'clientId' },
 		{ param: 'clientSecret', secretKey: 'clientSecret' },
 	],
+	bitbucketApi: [
+		{ param: 'username', secretKey: 'username' },
+		{ param: 'appPassword', secretKey: 'appPassword' },
+	],
+	bitbucketAccessTokenApi: [
+		{ param: 'email', secretKey: 'email' },
+		{ param: 'accessToken', secretKey: 'accessToken' },
+	],
 	mySql: [
 		{ param: 'host', secretKey: 'host' },
 		{ param: 'database', secretKey: 'database' },

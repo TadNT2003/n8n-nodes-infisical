@@ -16,7 +16,7 @@ Three operations are exposed:
 
 | Operation | Direction | Description |
 | --- | --- | --- |
-| `syncToInfisical` | n8n → Infisical | Reads from an n8n credential form **or a JSON object**, writes to an Infisical secret folder. Supports two input modes: **form** (35 hardcoded types) and **JSON** (any credential type). When `n8nApi` is configured, validates input against the credential schema before writing. |
+| `syncToInfisical` | n8n → Infisical | Reads from an n8n credential form **or a JSON object**, writes to an Infisical secret folder. Supports two input modes: **form** (37 hardcoded types) and **JSON** (any credential type). When `n8nApi` is configured, validates input against the credential schema before writing. |
 | `syncFromInfisical` | Infisical → n8n | Reads a specific named folder, updates a target n8n credential by ID |
 | `autoSyncFromInfisical` | Infisical → n8n | Discovers all credential folders under a root path, creates or updates n8n credentials automatically |
 
@@ -103,6 +103,15 @@ Structurally identical to the GitHub pair: `gitlabApi` is a flat schema with the
 undeclared-default gap on `server` (defaults to `https://gitlab.com`), and `gitlabOAuth2Api`
 overrides the same six `oAuth2Api` fields as `hidden`/computed. The one difference is `gitlabApi`
 has no `user` field — only `server` and `accessToken`.
+
+---
+
+### 3.1d Bitbucket (`bitbucketApi`, `bitbucketAccessTokenApi`)
+
+Both are flat schemas with no `allOf` and no `server` field — Bitbucket Cloud only, no
+self-managed variant, so unlike GitHub/GitLab there's no undeclared-default gap and no
+`CREDENTIAL_FIELD_DEFAULTS` entry needed. `bitbucketApi` uses `username`/`appPassword`;
+`bitbucketAccessTokenApi` uses `email`/`accessToken`. Neither has an OAuth2 counterpart.
 
 ---
 
@@ -466,9 +475,9 @@ essential required fields like `serverUrl` for Google OAuth2.
 
 #### Form mode (default)
 
-The user selects a credential type from a dropdown of 35 hardcoded types and fills in individual
+The user selects a credential type from a dropdown of 37 hardcoded types and fills in individual
 fields. Fields are read via `ctx.getNodeParameter(param, i, '')` and mapped to Infisical secret
-keys using `CREDENTIAL_FIELD_MAPS`. Only the 35 types with a `CREDENTIAL_FIELD_MAPS` entry are
+keys using `CREDENTIAL_FIELD_MAPS`. Only the 37 types with a `CREDENTIAL_FIELD_MAPS` entry are
 supported.
 
 #### JSON mode
