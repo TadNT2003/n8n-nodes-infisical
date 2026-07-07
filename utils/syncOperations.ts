@@ -854,15 +854,18 @@ export async function executeSyncOperation(
 		});
 	} catch (err: unknown) {
 		const e = err as {
-			response?: { status?: number; data?: { message?: string } };
+			response?: { status?: number; data?: { message?: unknown } };
 			statusCode?: number;
-			message?: string;
+			message?: unknown;
 		};
 		const status = e?.response?.status ?? e?.statusCode;
 		// Infisical returns 400 (not 409) with a descriptive body message for a duplicate
 		// folder name; the generic Axios error message doesn't contain it, so check the
 		// actual response body before falling back to the top-level message.
-		const bodyMessage = e?.response?.data?.message ?? e?.message;
+		// `message` isn't always a string — validation-failure responses (e.g. 422) return
+		// an array of issue objects instead, so it must be coerced before calling string methods.
+		const rawMessage = e?.response?.data?.message ?? e?.message;
+		const bodyMessage = typeof rawMessage === 'string' ? rawMessage : undefined;
 		if (status !== 409 && !bodyMessage?.toLowerCase().includes('already exist')) {
 			throw err;
 		}
