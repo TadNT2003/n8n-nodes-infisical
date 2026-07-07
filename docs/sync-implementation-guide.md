@@ -611,6 +611,23 @@ All `param` names were verified against the actual schema from `GET /api/v1/cred
 | `discordBotApi` | `botToken` | `botToken` | string | |
 | `discordWebhookApi` | `webhookUri` | `webhookUri` | string | |
 
+### Code Hosting
+
+| n8n type | n8n `param` | Infisical `secretKey` | Type | Notes |
+| --- | --- | --- | --- | --- |
+| `githubApi` | `server` | `server` | string | GitHub Enterprise URL; defaults to `https://api.github.com` |
+| `githubApi` | `user` | `user` | string | |
+| `githubApi` | `accessToken` | `accessToken` | string | personal access token |
+| `githubOAuth2Api` | `server` | `server` | string | GitHub Enterprise URL; defaults to `https://api.github.com` |
+| `githubOAuth2Api` | `clientId` | `clientId` | string | |
+| `githubOAuth2Api` | `clientSecret` | `clientSecret` | string | |
+
+`githubOAuth2Api` extends `oAuth2Api` but overrides `grantType`, `authUrl`, `accessTokenUrl`,
+`scope`, `authQueryParameters`, and `authentication` as `hidden` schema fields with
+fixed/computed defaults (`authUrl`/`accessTokenUrl` are derived from `server` via an n8n
+expression). None of those are user-editable, so they are intentionally excluded from the field
+map — only `server` and the OAuth client credentials are synced.
+
 ### Google
 
 | n8n type | n8n `param` | Infisical `secretKey` | Type | Notes |
@@ -892,7 +909,7 @@ branch fires.
 
 #### Form mode (default)
 
-Displays individual fields for the selected credential type. Supports the 31 types in
+Displays individual fields for the selected credential type. Supports the 33 types in
 `CREDENTIAL_FIELD_MAPS`. Field values are read via `ctx.getNodeParameter(param, i, '')` and mapped
 to Infisical secret keys per the field map.
 

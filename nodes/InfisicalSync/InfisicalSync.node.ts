@@ -162,6 +162,8 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Digest Auth', value: 'httpDigestAuth' },
 					{ name: 'Discord Bot', value: 'discordBotApi' },
 					{ name: 'Discord Webhook', value: 'discordWebhookApi' },
+					{ name: 'GitHub (API Key)', value: 'githubApi' },
+					{ name: 'GitHub OAuth2', value: 'githubOAuth2Api' },
 					{ name: 'Google Docs (OAuth2)', value: 'googleDocsOAuth2Api' },
 					{ name: 'Google Drive (OAuth2)', value: 'googleDriveOAuth2Api' },
 					{ name: 'Google OAuth2', value: 'googleOAuth2Api' },
@@ -311,6 +313,7 @@ export class InfisicalSync implements INodeType {
 							'googleDocsOAuth2Api',
 							'infisicalApi',
 							'oAuth2Api',
+							'githubOAuth2Api',
 						],
 					},
 				},
@@ -332,6 +335,7 @@ export class InfisicalSync implements INodeType {
 							'googleDocsOAuth2Api',
 							'infisicalApi',
 							'oAuth2Api',
+							'githubOAuth2Api',
 						],
 					},
 				},
@@ -516,6 +520,29 @@ export class InfisicalSync implements INodeType {
 				},
 			},
 
+			// ── GitHub ────────────────────────────────────────────────────────────
+			{
+				displayName: 'Server',
+				name: 'server',
+				type: 'string',
+				default: 'https://api.github.com',
+				description: 'GitHub Enterprise server URL — leave default for github.com',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['githubApi', 'githubOAuth2Api'] },
+				},
+			},
+			{
+				displayName: 'Access Token',
+				name: 'accessToken',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				description: 'Personal access token',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['githubApi'] },
+				},
+			},
+
 			// ── Database: shared host / user / password / port / database ─────────
 			{
 				displayName: 'Host',
@@ -561,7 +588,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth', 'githubApi'],
 					},
 				},
 			},

@@ -14,7 +14,7 @@ Ba thao tác được cung cấp:
 
 | Thao tác | Chiều | Mô tả |
 | --- | --- | --- |
-| `syncToInfisical` | n8n → Infisical | Đọc từ form credential n8n **hoặc một đối tượng JSON**, ghi vào thư mục secret Infisical. Hỗ trợ hai chế độ nhập: **form** (31 loại được định sẵn) và **JSON** (bất kỳ loại credential nào). Khi `n8nApi` được cấu hình, xác thực dữ liệu đầu vào theo credential schema trước khi ghi. |
+| `syncToInfisical` | n8n → Infisical | Đọc từ form credential n8n **hoặc một đối tượng JSON**, ghi vào thư mục secret Infisical. Hỗ trợ hai chế độ nhập: **form** (33 loại được định sẵn) và **JSON** (bất kỳ loại credential nào). Khi `n8nApi` được cấu hình, xác thực dữ liệu đầu vào theo credential schema trước khi ghi. |
 | `syncFromInfisical` | Infisical → n8n | Đọc một thư mục cụ thể theo tên, cập nhật credential n8n đích theo ID |
 | `autoSyncFromInfisical` | Infisical → n8n | Tự động phát hiện tất cả thư mục credential dưới một đường dẫn gốc, tạo hoặc cập nhật credential n8n tương ứng |
 
@@ -66,6 +66,21 @@ Khi khóa điều kiện `if` **vắng mặt trong `schema.properties`** — ngh
 Các schema này có `properties` phẳng không có điều kiện `allOf`. Tất cả các trường nhạy cảm đều nằm trong `required`. Không cần giá trị mặc định khi tạo; chỉ cần truyền giá trị trường từ Infisical.
 
 **Hành vi bộ kiểm tra**: đơn giản — các trường required phải có mặt, không có gì khác.
+
+---
+
+### 3.1b GitHub (`githubApi`, `githubOAuth2Api`)
+
+**`githubApi`**: schema phẳng, không có `allOf`. Trường `server` có giá trị mặc định được khai
+báo (`https://api.github.com`) nhưng không phải required và không được endpoint schema công khai
+(giống lỗ hổng của `host` ở `googlePalmApi`), nên được hardcode trong `CREDENTIAL_FIELD_DEFAULTS`
+như một giá trị dự phòng.
+
+**`githubOAuth2Api`**: kế thừa từ `oAuth2Api` nhưng ghi đè `grantType`, `authUrl`,
+`accessTokenUrl`, `scope`, `authQueryParameters`, và `authentication` thành các trường `hidden`
+với giá trị mặc định cố định/được tính toán — `authUrl`/`accessTokenUrl` được suy ra từ `server`
+qua một expression của n8n. Không trường hidden nào do người dùng chỉnh sửa được, nên chỉ
+`server`, `clientId`, và `clientSecret` được đồng bộ.
 
 ---
 
@@ -396,7 +411,7 @@ else:
 
 #### Chế độ form (mặc định)
 
-Người dùng chọn loại credential từ dropdown gồm 31 loại được định sẵn và điền từng trường riêng lẻ. Các trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo `CREDENTIAL_FIELD_MAPS`. Chỉ hỗ trợ 31 loại có entry trong `CREDENTIAL_FIELD_MAPS`.
+Người dùng chọn loại credential từ dropdown gồm 33 loại được định sẵn và điền từng trường riêng lẻ. Các trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo `CREDENTIAL_FIELD_MAPS`. Chỉ hỗ trợ 33 loại có entry trong `CREDENTIAL_FIELD_MAPS`.
 
 #### Chế độ JSON
 

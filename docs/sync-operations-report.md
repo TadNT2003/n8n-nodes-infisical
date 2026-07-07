@@ -16,7 +16,7 @@ Three operations are exposed:
 
 | Operation | Direction | Description |
 | --- | --- | --- |
-| `syncToInfisical` | n8n → Infisical | Reads from an n8n credential form **or a JSON object**, writes to an Infisical secret folder. Supports two input modes: **form** (31 hardcoded types) and **JSON** (any credential type). When `n8nApi` is configured, validates input against the credential schema before writing. |
+| `syncToInfisical` | n8n → Infisical | Reads from an n8n credential form **or a JSON object**, writes to an Infisical secret folder. Supports two input modes: **form** (33 hardcoded types) and **JSON** (any credential type). When `n8nApi` is configured, validates input against the credential schema before writing. |
 | `syncFromInfisical` | Infisical → n8n | Reads a specific named folder, updates a target n8n credential by ID |
 | `autoSyncFromInfisical` | Infisical → n8n | Discovers all credential folders under a root path, creates or updates n8n credentials automatically |
 
@@ -80,6 +80,20 @@ These schemas have flat `properties` with no `allOf` conditionals. All sensitive
 `required`. No defaults needed for creation; just pass the field values from Infisical.
 
 **Validator behavior**: straightforward — required fields must be present, nothing else.
+
+---
+
+### 3.1b GitHub (`githubApi`, `githubOAuth2Api`)
+
+**`githubApi`**: flat schema, no `allOf`. `server` has a declared default
+(`https://api.github.com`) that is not required and not exposed by the schema endpoint (same gap
+as `googlePalmApi`'s `host`), so it's hardcoded in `CREDENTIAL_FIELD_DEFAULTS` as a fallback.
+
+**`githubOAuth2Api`**: extends `oAuth2Api` but overrides `grantType`, `authUrl`,
+`accessTokenUrl`, `scope`, `authQueryParameters`, and `authentication` as `hidden` fields with
+fixed/computed defaults — `authUrl`/`accessTokenUrl` are derived from `server` via an n8n
+expression. None of the hidden fields are user-settable, so only `server`, `clientId`, and
+`clientSecret` are synced.
 
 ---
 
@@ -443,9 +457,9 @@ essential required fields like `serverUrl` for Google OAuth2.
 
 #### Form mode (default)
 
-The user selects a credential type from a dropdown of 31 hardcoded types and fills in individual
+The user selects a credential type from a dropdown of 33 hardcoded types and fills in individual
 fields. Fields are read via `ctx.getNodeParameter(param, i, '')` and mapped to Infisical secret
-keys using `CREDENTIAL_FIELD_MAPS`. Only the 31 types with a `CREDENTIAL_FIELD_MAPS` entry are
+keys using `CREDENTIAL_FIELD_MAPS`. Only the 33 types with a `CREDENTIAL_FIELD_MAPS` entry are
 supported.
 
 #### JSON mode
