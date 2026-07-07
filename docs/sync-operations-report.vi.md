@@ -14,7 +14,7 @@ Ba thao tác được cung cấp:
 
 | Thao tác | Chiều | Mô tả |
 | --- | --- | --- |
-| `syncToInfisical` | n8n → Infisical | Đọc từ form credential n8n **hoặc một đối tượng JSON**, ghi vào thư mục secret Infisical. Hỗ trợ hai chế độ nhập: **form** (33 loại được định sẵn) và **JSON** (bất kỳ loại credential nào). Khi `n8nApi` được cấu hình, xác thực dữ liệu đầu vào theo credential schema trước khi ghi. |
+| `syncToInfisical` | n8n → Infisical | Đọc từ form credential n8n **hoặc một đối tượng JSON**, ghi vào thư mục secret Infisical. Hỗ trợ hai chế độ nhập: **form** (35 loại được định sẵn) và **JSON** (bất kỳ loại credential nào). Khi `n8nApi` được cấu hình, xác thực dữ liệu đầu vào theo credential schema trước khi ghi. |
 | `syncFromInfisical` | Infisical → n8n | Đọc một thư mục cụ thể theo tên, cập nhật credential n8n đích theo ID |
 | `autoSyncFromInfisical` | Infisical → n8n | Tự động phát hiện tất cả thư mục credential dưới một đường dẫn gốc, tạo hoặc cập nhật credential n8n tương ứng |
 
@@ -81,6 +81,15 @@ như một giá trị dự phòng.
 với giá trị mặc định cố định/được tính toán — `authUrl`/`accessTokenUrl` được suy ra từ `server`
 qua một expression của n8n. Không trường hidden nào do người dùng chỉnh sửa được, nên chỉ
 `server`, `clientId`, và `clientSecret` được đồng bộ.
+
+---
+
+### 3.1c GitLab (`gitlabApi`, `gitlabOAuth2Api`)
+
+Về cấu trúc giống hệt cặp GitHub: `gitlabApi` là schema phẳng với cùng lỗ hổng giá trị mặc định
+không được khai báo trên `server` (mặc định `https://gitlab.com`), và `gitlabOAuth2Api` ghi đè
+cùng sáu trường của `oAuth2Api` thành `hidden`/được tính toán. Điểm khác biệt duy nhất là
+`gitlabApi` không có trường `user` — chỉ có `server` và `accessToken`.
 
 ---
 
@@ -411,7 +420,7 @@ else:
 
 #### Chế độ form (mặc định)
 
-Người dùng chọn loại credential từ dropdown gồm 33 loại được định sẵn và điền từng trường riêng lẻ. Các trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo `CREDENTIAL_FIELD_MAPS`. Chỉ hỗ trợ 33 loại có entry trong `CREDENTIAL_FIELD_MAPS`.
+Người dùng chọn loại credential từ dropdown gồm 35 loại được định sẵn và điền từng trường riêng lẻ. Các trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo `CREDENTIAL_FIELD_MAPS`. Chỉ hỗ trợ 35 loại có entry trong `CREDENTIAL_FIELD_MAPS`.
 
 #### Chế độ JSON
 

@@ -621,12 +621,18 @@ All `param` names were verified against the actual schema from `GET /api/v1/cred
 | `githubOAuth2Api` | `server` | `server` | string | GitHub Enterprise URL; defaults to `https://api.github.com` |
 | `githubOAuth2Api` | `clientId` | `clientId` | string | |
 | `githubOAuth2Api` | `clientSecret` | `clientSecret` | string | |
+| `gitlabApi` | `server` | `server` | string | GitLab server URL; defaults to `https://gitlab.com` |
+| `gitlabApi` | `accessToken` | `accessToken` | string | personal access token |
+| `gitlabOAuth2Api` | `server` | `server` | string | GitLab server URL; defaults to `https://gitlab.com` |
+| `gitlabOAuth2Api` | `clientId` | `clientId` | string | |
+| `gitlabOAuth2Api` | `clientSecret` | `clientSecret` | string | |
 
-`githubOAuth2Api` extends `oAuth2Api` but overrides `grantType`, `authUrl`, `accessTokenUrl`,
-`scope`, `authQueryParameters`, and `authentication` as `hidden` schema fields with
-fixed/computed defaults (`authUrl`/`accessTokenUrl` are derived from `server` via an n8n
-expression). None of those are user-editable, so they are intentionally excluded from the field
-map — only `server` and the OAuth client credentials are synced.
+`githubOAuth2Api` and `gitlabOAuth2Api` both extend `oAuth2Api` but override `grantType`,
+`authUrl`, `accessTokenUrl`, `scope`, `authQueryParameters`, and `authentication` as `hidden`
+schema fields with fixed/computed defaults (`authUrl`/`accessTokenUrl` are derived from `server`
+via an n8n expression). None of those are user-editable, so they are intentionally excluded from
+the field map — only `server` and the OAuth client credentials are synced. Unlike `githubApi`,
+`gitlabApi` has no `user` field.
 
 ### Google
 
@@ -909,7 +915,7 @@ branch fires.
 
 #### Form mode (default)
 
-Displays individual fields for the selected credential type. Supports the 33 types in
+Displays individual fields for the selected credential type. Supports the 35 types in
 `CREDENTIAL_FIELD_MAPS`. Field values are read via `ctx.getNodeParameter(param, i, '')` and mapped
 to Infisical secret keys per the field map.
 

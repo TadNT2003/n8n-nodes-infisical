@@ -164,6 +164,8 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Discord Webhook', value: 'discordWebhookApi' },
 					{ name: 'GitHub (API Key)', value: 'githubApi' },
 					{ name: 'GitHub OAuth2', value: 'githubOAuth2Api' },
+					{ name: 'GitLab (API Key)', value: 'gitlabApi' },
+					{ name: 'GitLab OAuth2', value: 'gitlabOAuth2Api' },
 					{ name: 'Google Docs (OAuth2)', value: 'googleDocsOAuth2Api' },
 					{ name: 'Google Drive (OAuth2)', value: 'googleDriveOAuth2Api' },
 					{ name: 'Google OAuth2', value: 'googleOAuth2Api' },
@@ -314,6 +316,7 @@ export class InfisicalSync implements INodeType {
 							'infisicalApi',
 							'oAuth2Api',
 							'githubOAuth2Api',
+							'gitlabOAuth2Api',
 						],
 					},
 				},
@@ -336,6 +339,7 @@ export class InfisicalSync implements INodeType {
 							'infisicalApi',
 							'oAuth2Api',
 							'githubOAuth2Api',
+							'gitlabOAuth2Api',
 						],
 					},
 				},
@@ -539,7 +543,19 @@ export class InfisicalSync implements INodeType {
 				default: '',
 				description: 'Personal access token',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['githubApi'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['githubApi', 'gitlabApi'] },
+				},
+			},
+
+			// ── GitLab ────────────────────────────────────────────────────────────
+			{
+				displayName: 'Server',
+				name: 'server',
+				type: 'string',
+				default: 'https://gitlab.com',
+				description: 'GitLab self-managed server URL — leave default for gitlab.com',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['gitlabApi', 'gitlabOAuth2Api'] },
 				},
 			},
 

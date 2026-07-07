@@ -54,6 +54,17 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 		{ param: 'clientId', secretKey: 'clientId' },
 		{ param: 'clientSecret', secretKey: 'clientSecret' },
 	],
+	gitlabApi: [
+		{ param: 'server', secretKey: 'server' },
+		{ param: 'accessToken', secretKey: 'accessToken' },
+	],
+	// scope/authUrl/accessTokenUrl are `hidden` fields with fixed/computed defaults on this
+	// credential type (not user-editable), so only server + OAuth client fields are synced.
+	gitlabOAuth2Api: [
+		{ param: 'server', secretKey: 'server' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+	],
 	mySql: [
 		{ param: 'host', secretKey: 'host' },
 		{ param: 'database', secretKey: 'database' },
@@ -236,6 +247,8 @@ const CREDENTIAL_FIELD_DEFAULTS: Record<string, Record<string, string>> = {
 	googlePalmApi: { host: 'https://generativelanguage.googleapis.com' },
 	githubApi: { server: 'https://api.github.com' },
 	githubOAuth2Api: { server: 'https://api.github.com' },
+	gitlabApi: { server: 'https://gitlab.com' },
+	gitlabOAuth2Api: { server: 'https://gitlab.com' },
 };
 
 // Lossless encoding: [A-Za-z0-9-] pass through, _ → __, everything else → _XX hex sequences.

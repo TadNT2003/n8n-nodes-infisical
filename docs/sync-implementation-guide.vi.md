@@ -543,13 +543,19 @@ Tất cả tên `param` đã được xác minh theo schema thực tế từ `GE
 | `githubOAuth2Api` | `server` | `server` | string | URL GitHub Enterprise; mặc định `https://api.github.com` |
 | `githubOAuth2Api` | `clientId` | `clientId` | string | |
 | `githubOAuth2Api` | `clientSecret` | `clientSecret` | string | |
+| `gitlabApi` | `server` | `server` | string | URL server GitLab; mặc định `https://gitlab.com` |
+| `gitlabApi` | `accessToken` | `accessToken` | string | personal access token |
+| `gitlabOAuth2Api` | `server` | `server` | string | URL server GitLab; mặc định `https://gitlab.com` |
+| `gitlabOAuth2Api` | `clientId` | `clientId` | string | |
+| `gitlabOAuth2Api` | `clientSecret` | `clientSecret` | string | |
 
-`githubOAuth2Api` kế thừa (`extends`) từ `oAuth2Api` nhưng ghi đè `grantType`, `authUrl`,
-`accessTokenUrl`, `scope`, `authQueryParameters`, và `authentication` thành các trường schema
-`hidden` với giá trị mặc định cố định/được tính toán (`authUrl`/`accessTokenUrl` được suy ra từ
-`server` qua một expression của n8n). Không trường nào trong số này do người dùng chỉnh sửa được,
-nên chúng bị loại khỏi field map một cách có chủ đích — chỉ `server` và các trường OAuth client
-được đồng bộ.
+`githubOAuth2Api` và `gitlabOAuth2Api` đều kế thừa (`extends`) từ `oAuth2Api` nhưng ghi đè
+`grantType`, `authUrl`, `accessTokenUrl`, `scope`, `authQueryParameters`, và `authentication`
+thành các trường schema `hidden` với giá trị mặc định cố định/được tính toán
+(`authUrl`/`accessTokenUrl` được suy ra từ `server` qua một expression của n8n). Không trường
+nào trong số này do người dùng chỉnh sửa được, nên chúng bị loại khỏi field map một cách có chủ
+đích — chỉ `server` và các trường OAuth client được đồng bộ. Khác với `githubApi`, `gitlabApi`
+không có trường `user`.
 
 ### Google
 
@@ -822,7 +828,7 @@ Bao gồm tất cả các trường boolean/enum kiểm soát điều kiện nga
 
 #### Chế độ form (mặc định)
 
-Hiển thị các trường riêng lẻ cho loại credential được chọn. Hỗ trợ 33 loại trong `CREDENTIAL_FIELD_MAPS`. Giá trị trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo field map.
+Hiển thị các trường riêng lẻ cho loại credential được chọn. Hỗ trợ 35 loại trong `CREDENTIAL_FIELD_MAPS`. Giá trị trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo field map.
 
 #### Chế độ JSON
 

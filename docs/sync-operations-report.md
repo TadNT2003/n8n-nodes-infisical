@@ -16,7 +16,7 @@ Three operations are exposed:
 
 | Operation | Direction | Description |
 | --- | --- | --- |
-| `syncToInfisical` | n8n → Infisical | Reads from an n8n credential form **or a JSON object**, writes to an Infisical secret folder. Supports two input modes: **form** (33 hardcoded types) and **JSON** (any credential type). When `n8nApi` is configured, validates input against the credential schema before writing. |
+| `syncToInfisical` | n8n → Infisical | Reads from an n8n credential form **or a JSON object**, writes to an Infisical secret folder. Supports two input modes: **form** (35 hardcoded types) and **JSON** (any credential type). When `n8nApi` is configured, validates input against the credential schema before writing. |
 | `syncFromInfisical` | Infisical → n8n | Reads a specific named folder, updates a target n8n credential by ID |
 | `autoSyncFromInfisical` | Infisical → n8n | Discovers all credential folders under a root path, creates or updates n8n credentials automatically |
 
@@ -94,6 +94,15 @@ as `googlePalmApi`'s `host`), so it's hardcoded in `CREDENTIAL_FIELD_DEFAULTS` a
 fixed/computed defaults — `authUrl`/`accessTokenUrl` are derived from `server` via an n8n
 expression. None of the hidden fields are user-settable, so only `server`, `clientId`, and
 `clientSecret` are synced.
+
+---
+
+### 3.1c GitLab (`gitlabApi`, `gitlabOAuth2Api`)
+
+Structurally identical to the GitHub pair: `gitlabApi` is a flat schema with the same
+undeclared-default gap on `server` (defaults to `https://gitlab.com`), and `gitlabOAuth2Api`
+overrides the same six `oAuth2Api` fields as `hidden`/computed. The one difference is `gitlabApi`
+has no `user` field — only `server` and `accessToken`.
 
 ---
 
@@ -457,9 +466,9 @@ essential required fields like `serverUrl` for Google OAuth2.
 
 #### Form mode (default)
 
-The user selects a credential type from a dropdown of 33 hardcoded types and fills in individual
+The user selects a credential type from a dropdown of 35 hardcoded types and fills in individual
 fields. Fields are read via `ctx.getNodeParameter(param, i, '')` and mapped to Infisical secret
-keys using `CREDENTIAL_FIELD_MAPS`. Only the 33 types with a `CREDENTIAL_FIELD_MAPS` entry are
+keys using `CREDENTIAL_FIELD_MAPS`. Only the 35 types with a `CREDENTIAL_FIELD_MAPS` entry are
 supported.
 
 #### JSON mode
