@@ -257,15 +257,19 @@ const CREDENTIAL_FIELD_DEFAULTS: Record<string, Record<string, string>> = {
 	githubOAuth2Api: { server: 'https://api.github.com' },
 	gitlabApi: { server: 'https://gitlab.com' },
 	gitlabOAuth2Api: { server: 'https://gitlab.com' },
+	deepseekApi: { baseUrl: 'https://api.deepseek.com' },
 };
 
 // Lossless encoding: [A-Za-z0-9-] pass through, _ → __, everything else → _XX hex sequences.
 // Infisical folder names only allow [a-zA-Z0-9_-], so % cannot be used as an escape character.
+// Bytes are hex-encoded directly rather than via `encodeURIComponent(c).replace(/%/g, '_')`,
+// which leaves `! ' ( ) * . ~` unescaped — none of those are valid in an Infisical folder name.
 function toFolderName(name: string): string {
 	return [...name].map(c => {
 		if (/[A-Za-z0-9-]/.test(c)) return c;
 		if (c === '_') return '__';
-		return encodeURIComponent(c).replace(/%/g, '_');
+		const bytes = unescape(encodeURIComponent(c));
+		return [...bytes].map((b) => '_' + b.charCodeAt(0).toString(16).padStart(2, '0').toUpperCase()).join('');
 	}).join('');
 }
 

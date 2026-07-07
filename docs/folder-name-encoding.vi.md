@@ -50,7 +50,8 @@ function toFolderName(name: string): string {
     return [...name].map(c => {
         if (/[A-Za-z0-9-]/.test(c)) return c;
         if (c === '_') return '__';
-        return encodeURIComponent(c).replace(/%/g, '_');
+        const bytes = unescape(encodeURIComponent(c));
+        return [...bytes].map((b) => '_' + b.charCodeAt(0).toString(16).padStart(2, '0').toUpperCase()).join('');
     }).join('');
 }
 
@@ -63,6 +64,8 @@ function fromFolderName(slug: string): string {
 ```
 
 `toFolderName` được gọi trong `buildSecretPath` (dùng bởi `syncToInfisical`) và khi tạo folder Infisical. `fromFolderName` được gọi trong `autoSyncFromInfisical` trước khi tra cứu tên credential và trước lệnh gọi tạo credential, để n8n luôn lưu tên gốc dễ đọc cho con người.
+
+**Lỗi cần lưu ý — `encodeURIComponent` không escape toàn bộ byte UTF-8.** Phiên bản `toFolderName` trước đây tính từng đoạn byte bằng `encodeURIComponent(c).replace(/%/g, '_')` trực tiếp. `encodeURIComponent` cố tình giữ nguyên không escape các ký tự `! ' ( ) * . ~` (vì chúng hợp lệ trong một URI component), nên một tên chứa ví dụ `(` sẽ tạo ra ký tự `(` nguyên văn trong tên folder thay vì `_28` — không hợp lệ theo quy tắc `[a-zA-Z0-9_-]` của Infisical, gây lỗi 422 khi tạo folder cho các tên như `"Google Gemini(PaLM) Api account"`. Bản sửa lỗi đưa mọi ký tự không thuộc nhóm giữ-nguyên qua `unescape(encodeURIComponent(c))` trước, cho ra một chuỗi byte UTF-8 thô không có ngoại lệ "an toàn" nào, sau đó hex-encode vô điều kiện từng byte của chuỗi đó.
 
 ## Tại sao không dùng trực tiếp percent encoding?
 
