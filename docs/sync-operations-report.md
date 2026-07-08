@@ -17,8 +17,8 @@ Three operations are exposed:
 | Operation | Direction | Description |
 | --- | --- | --- |
 | `syncToInfisical` | n8n → Infisical | Reads from an n8n credential form **or a JSON object**, writes to an Infisical secret folder. Supports two input modes: **form** (37 hardcoded types) and **JSON** (any credential type). When `n8nApi` is configured, validates input against the credential schema before writing. |
-| `syncFromInfisical` | Infisical → n8n | Reads a specific named folder, updates a target n8n credential by ID |
-| `autoSyncFromInfisical` | Infisical → n8n | Discovers all credential folders under a root path, creates or updates n8n credentials automatically |
+| `syncFromInfisical` | Infisical → n8n | Reads a specific named folder, updates a target n8n credential by ID. If that credential was deleted, falls back to create-or-skip per the `ifCredentialMissing` parameter (§9). |
+| `autoSyncFromInfisical` | Infisical → n8n | Discovers all credential folders under a root path, creates or updates n8n credentials automatically. When no matching n8n credential exists, creates or skips per the `ifCredentialMissing` parameter (§9). |
 
 `autoSyncFromInfisical` is the most complex because it must satisfy n8n's schema validator on
 CREATE — and that validator turned out to be the source of all non-trivial bugs.
@@ -664,3 +664,30 @@ defaults[key] = def.default
 | `oAuth1Api` | 1 branch | `allowedDomains` | no | working |
 | `oAuth2Api` | 2 branches | `authUrl` (grantType-driven), `allowedDomains` | no | working |
 | `jwtAuth` | 2 branches (mutual exclusion) | `secret` XOR `privateKey`/`publicKey` | no | working |
+
+---
+
+## 9. Missing-Credential Handling (`ifCredentialMissing`)
+
+Both Infisical → n8n operations now expose an **If Credential Missing** node parameter
+(`create` default, or `skip`) controlling what happens when the target n8n credential cannot be
+resolved — deleted since the last sync (`syncFromInfisical`, resolved by ID) or never created
+(`autoSyncFromInfisical`, resolved by name match).
+
+- `create` — builds a new-credential payload the same way the existing `autoSyncFromInfisical`
+  create path does (schema defaults + `applyCondBranches`, see §5–§6), using the
+  `n8n_credential_type` metadata tag stored on the folder's secrets to determine the type. Throws
+  if that metadata is absent (`syncFromInfisical`) or reports a skip with a reason
+  (`autoSyncFromInfisical`).
+- `skip` — leaves n8n untouched and returns/pushes an item with `action: "skipped"` and a `reason`.
+
+`syncFromInfisical` detects the missing-credential case by catching a 404 on its
+`PATCH /api/v1/credentials/{id}` call (previously unhandled — any error there aborted the item).
+`autoSyncFromInfisical` detects it the same way it always has: no entry in `credByName` for the
+folder's decoded name.
+
+The create-path payload construction (schema defaults, `CREDENTIAL_FIELD_DEFAULTS`, post-merge
+conditional-branch adjustment) is shared between both operations via a new `mergeCredentialData`
+helper, replacing what was previously duplicated inline in `autoSyncFromInfisical`'s update and
+create branches. See the [Implementation Guide §9](sync-implementation-guide.md#9-missing-credential-handling)
+for the full design rationale and code-level walkthrough.

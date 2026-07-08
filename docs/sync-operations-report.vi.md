@@ -15,8 +15,8 @@ Ba thao tác được cung cấp:
 | Thao tác | Chiều | Mô tả |
 | --- | --- | --- |
 | `syncToInfisical` | n8n → Infisical | Đọc từ form credential n8n **hoặc một đối tượng JSON**, ghi vào thư mục secret Infisical. Hỗ trợ hai chế độ nhập: **form** (37 loại được định sẵn) và **JSON** (bất kỳ loại credential nào). Khi `n8nApi` được cấu hình, xác thực dữ liệu đầu vào theo credential schema trước khi ghi. |
-| `syncFromInfisical` | Infisical → n8n | Đọc một thư mục cụ thể theo tên, cập nhật credential n8n đích theo ID |
-| `autoSyncFromInfisical` | Infisical → n8n | Tự động phát hiện tất cả thư mục credential dưới một đường dẫn gốc, tạo hoặc cập nhật credential n8n tương ứng |
+| `syncFromInfisical` | Infisical → n8n | Đọc một thư mục cụ thể theo tên, cập nhật credential n8n đích theo ID. Nếu credential đó đã bị xóa, chuyển sang tạo mới hoặc bỏ qua theo tham số `ifCredentialMissing` (§9). |
+| `autoSyncFromInfisical` | Infisical → n8n | Tự động phát hiện tất cả thư mục credential dưới một đường dẫn gốc, tạo hoặc cập nhật credential n8n tương ứng. Khi không tìm thấy credential n8n khớp, tạo mới hoặc bỏ qua theo tham số `ifCredentialMissing` (§9). |
 
 `autoSyncFromInfisical` là thao tác phức tạp nhất vì nó phải thỏa mãn bộ kiểm tra schema của n8n khi CREATE — và đây là nguồn gốc của mọi lỗi không tầm thường.
 
@@ -577,3 +577,30 @@ defaults[key] = def.default
 | `oAuth1Api` | 1 nhánh | `allowedDomains` | không | hoạt động |
 | `oAuth2Api` | 2 nhánh | `authUrl` (theo grantType), `allowedDomains` | không | hoạt động |
 | `jwtAuth` | 2 nhánh (loại trừ lẫn nhau) | `secret` XOR `privateKey`/`publicKey` | không | hoạt động |
+
+---
+
+## 9. Xử Lý Credential Bị Thiếu (`ifCredentialMissing`)
+
+Cả hai thao tác Infisical → n8n giờ đây có thêm tham số node **If Credential Missing**
+(mặc định `create`, hoặc `skip`) kiểm soát điều gì xảy ra khi không thể xác định được credential
+n8n đích — đã bị xóa kể từ lần sync trước (`syncFromInfisical`, xác định theo ID) hoặc chưa từng
+được tạo (`autoSyncFromInfisical`, xác định theo khớp tên).
+
+- `create` — xây dựng payload credential mới theo đúng cách đường dẫn create sẵn có của
+  `autoSyncFromInfisical` (giá trị mặc định schema + `applyCondBranches`, xem §5–§6), dùng
+  metadata `n8n_credential_type` được lưu trên secrets của thư mục để xác định loại. Ném lỗi nếu
+  thiếu metadata này (`syncFromInfisical`) hoặc báo cáo bỏ qua kèm lý do (`autoSyncFromInfisical`).
+- `skip` — không đụng đến n8n và trả về/đẩy vào kết quả một item với `action: "skipped"` kèm
+  `reason`.
+
+`syncFromInfisical` phát hiện trường hợp credential bị thiếu bằng cách bắt lỗi 404 từ lệnh gọi
+`PATCH /api/v1/credentials/{id}` (trước đây không được xử lý — bất kỳ lỗi nào ở đó đều làm hỏng
+item). `autoSyncFromInfisical` phát hiện theo cách nó vẫn luôn làm: không có entry trong
+`credByName` cho tên đã giải mã của thư mục.
+
+Việc xây dựng payload trên đường dẫn create (giá trị mặc định schema, `CREDENTIAL_FIELD_DEFAULTS`,
+điều chỉnh điều kiện post-merge) được chia sẻ giữa cả hai thao tác qua một helper mới
+`mergeCredentialData`, thay thế logic trước đây bị trùng lặp inline trong các nhánh update và
+create của `autoSyncFromInfisical`. Xem [Hướng Dẫn Triển Khai §9](sync-implementation-guide.vi.md#9-xử-lý-credential-bị-thiếu)
+để biết lý do thiết kế đầy đủ và giải thích chi tiết ở mức code.
