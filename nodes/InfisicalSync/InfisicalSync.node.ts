@@ -122,6 +122,30 @@ export class InfisicalSync implements INodeType {
 				displayOptions: { show: { operation: ['syncFromInfisical'] } },
 			},
 
+			// ── Infisical → n8n: missing-credential behavior (shared) ─────────────
+			{
+				displayName: 'If Credential Missing',
+				name: 'ifCredentialMissing',
+				type: 'options',
+				noDataExpression: true,
+				default: 'create',
+				options: [
+					{
+						name: 'Create New Credential',
+						value: 'create',
+						description: 'Create a new n8n credential using the "n8n_credential_type" metadata stored on the secrets',
+					},
+					{
+						name: 'Skip',
+						value: 'skip',
+						description: 'Leave it alone and report the item as skipped',
+					},
+				],
+				description:
+					'What to do when the target n8n credential cannot be found (e.g. it was deleted, or no credential with this name exists yet)',
+				displayOptions: { show: { operation: ['syncFromInfisical', 'autoSyncFromInfisical'] } },
+			},
+
 			// ── Input mode (syncToInfisical only) ─────────────────────────────────
 			{
 				displayName: 'Input Mode',
