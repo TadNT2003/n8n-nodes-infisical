@@ -530,7 +530,7 @@ export class InfisicalSync implements INodeType {
 			},
 			{
 				displayName: 'Jira Domain',
-				name: 'jiraDomain',
+				name: 'domain',
 				type: 'string',
 				default: '',
 				placeholder: 'yourcompany.atlassian.net',
@@ -905,7 +905,7 @@ export class InfisicalSync implements INodeType {
 			// ── Microsoft SQL specific ────────────────────────────────────────────
 			{
 				displayName: 'Windows Domain',
-				name: 'mssqlDomain',
+				name: 'domain',
 				type: 'string',
 				default: '',
 				description: 'Optional Windows authentication domain',
