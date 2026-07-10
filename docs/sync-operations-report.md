@@ -74,12 +74,20 @@ not in `schema.properties`, so all four `allOf` branches fire simultaneously, an
 ### 3.1 Simple API-key types
 
 **Types**: `anthropicApi`, `openAiApi`, `groqApi`, `cohereApi`, `huggingFaceApi`,
-`mistralCloudApi`, `discordBotApi`, `discordWebhookApi`, `jiraSoftwareCloudApi`
+`mistralCloudApi`, `googlePalmApi`, `discordBotApi`, `discordWebhookApi`, `jiraSoftwareCloudApi`,
+`slackApi`, `telegramApi`, `mattermostApi`, `matrixApi`, `rocketchatApi`, `whatsAppApi`,
+`facebookGraphApi`, `pushoverApi`
 
 These schemas have flat `properties` with no `allOf` conditionals. All sensitive fields are in
-`required`. No defaults needed for creation; just pass the field values from Infisical.
+`required`. No defaults needed for creation; just pass the field values from Infisical. A few carry
+a host/base-URL default recorded in `CREDENTIAL_FIELD_DEFAULTS` (`googlePalmApi.host`,
+`telegramApi.baseUrl`, `matrixApi.homeserverUrl`).
 
 **Validator behavior**: straightforward — required fields must be present, nothing else.
+
+The one messaging/social type that is **not** flat is `twilioApi`: it has an `authType` condition
+key (`authToken` vs `apiKey`) that gates `authToken` against `apiKeySid`/`apiKeySecret` — the same
+`allOf` pattern as `infisicalApi`.
 
 ---
 
@@ -374,6 +382,10 @@ map entry, all secrets are passed through as-is (the fallback path for unmapped 
 | `mongoDb` | `tls` | `tls` | Earlier version incorrectly used `ssl`; MongoDB schema uses `tls` |
 | `postgres` | `ssl` | `ssl` | Earlier version incorrectly used `sslMode`; schema uses `ssl` |
 
+The `syncToInfisical` **Form** UI fields were realigned to match these `param` names as well (the
+form field must be named exactly like the `param` or its value is never read). Every mapped type
+now has complete Form fields — see [Implementation Guide §4.4](sync-implementation-guide.md#44-form-mode-field-parity).
+
 ### 4.3 Type coercion
 
 Infisical stores everything as strings. The `coerceValue` function converts values to the types
@@ -647,8 +659,10 @@ defaults[key] = def.default
 | `anthropicApi` | flat | none | no | working |
 | `openAiApi` | flat | none | no | working |
 | `discordBotApi` / `discordWebhookApi` | flat | none | no | working |
+| `slackApi` / `telegramApi` / `mattermostApi` / `matrixApi` / `rocketchatApi` / `whatsAppApi` / `facebookGraphApi` / `pushoverApi` | flat | none | no | working |
+| `twilioApi` | 1 branch | `authToken` XOR `apiKeySid`/`apiKeySecret` | no | working |
 | `jiraSoftwareCloudApi` | flat | none | no | working |
-| `groqApi` / `cohereApi` / `huggingFaceApi` / `mistralCloudApi` | flat | none | no | working |
+| `groqApi` / `cohereApi` / `huggingFaceApi` / `mistralCloudApi` / `googlePalmApi` | flat | none | no | working |
 | `microsoftSql` | flat | none | no | working |
 | `redis` | 1 branch | `disableTlsVerification` | no | working |
 | `googleApi` | 3 branches | `delegatedEmail`, `httpWarning`, `scopes`, `allowedDomains` | no | working |

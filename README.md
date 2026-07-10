@@ -296,11 +296,11 @@ Both Infisical → n8n operations expose an **If Credential Missing** option for
 
 ### Supported Credential Types (Form Mode)
 
-Form mode supports **46 credential types**. JSON mode accepts any type registered in n8n.
+Form mode supports **47 credential types**. JSON mode accepts any type registered in n8n.
 
 #### AI / LLM
 
-`anthropicApi`, `openAiApi`, `groqApi`, `cohereApi`, `huggingFaceApi`, `mistralCloudApi`
+`anthropicApi`, `openAiApi`, `groqApi`, `cohereApi`, `huggingFaceApi`, `mistralCloudApi`, `googlePalmApi`
 
 #### Productivity / Project Management
 

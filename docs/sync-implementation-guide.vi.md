@@ -418,6 +418,21 @@ Khi node sync gọi `http://localhost:5678/api/v1/credentials` từ bên trong c
 
 Credential `n8nApi` do đó phải sử dụng tên dịch vụ Docker cho `baseUrl`: `http://n8n-patch-enterprise:5678/api/v1` — mà proxy chuyển tiếp đúng cách đến dịch vụ n8n trên mạng Docker nội bộ.
 
+### 4.4 Đồng bộ trường ở chế độ Form
+
+Chế độ **Form** của `syncToInfisical` đọc mỗi trường qua `getNodeParameter(param, …)`, trong đó `param` là tên trong `CREDENTIAL_FIELD_MAPS`. Do đó một trường form chỉ được nối dây nếu thuộc tính `name` của nó **trùng khớp chính xác** với `param` đó. Một số trường có `name` khác với `param` trong map, nên chế độ Form âm thầm gửi giá trị rỗng cho chúng (field map, chế độ JSON, và auto-sync không bị ảnh hưởng). Chúng đã được sửa để `name` của thuộc tính form khớp với `param`:
+
+| Loại | `name` trường form cũ | `name` đã sửa (= `param`) |
+| --- | --- | --- |
+| `jiraSoftwareCloudApi` | `jiraDomain` | `domain` |
+| `microsoftSql` | `mssqlDomain` | `domain` |
+| `postgres` | `sslMode` | `ssl` (options `allow`/`disable`/`require`) |
+| `mongoDb` | `ssl` | `tls` |
+
+Ngoài ra, mỗi `param` trong map giờ đều có một trường Form tương ứng để **tất cả các loại credential được hỗ trợ đều chỉnh sửa được đầy đủ ở chế độ Form** (trước đây một số chỉ truy cập được qua chế độ JSON). Các trường được thêm để lấp đầy khoảng trống: `telegramApi.accessToken`; `password` cho `httpBasicAuth`/`httpDigestAuth`; `inpersonate`/`httpNode` của `googleApi`; `googleOAuth2Api.serverUrl`; `allowUnauthorizedCerts` của `postgres`; `sshAuthenticateWith`/`privateKey`/`passphrase` cho `mySql`/`postgres`; và `googlePalmApi` (`host` + `apiKey`, cũng được thêm vào dropdown Credential Type). Một bước kiểm tra độ phủ nay xác nhận 47/47 loại có map đều có đầy đủ trường Form.
+
+**Quy tắc về sau**: khi thêm một entry field-map, cũng phải thêm một thuộc tính Form có `name` bằng với `param`, nếu không giá trị không thể nhập được ở chế độ Form.
+
 ---
 
 ## 5. Xử Lý Bộ Kiểm Tra: Thuật Toán Đầy Đủ
@@ -518,6 +533,8 @@ Tất cả tên `param` đã được xác minh theo schema thực tế từ `GE
 | `cohereApi` | `apiKey` | `apiKey` | string | |
 | `huggingFaceApi` | `apiKey` | `apiKey` | string | |
 | `mistralCloudApi` | `apiKey` | `apiKey` | string | |
+| `googlePalmApi` | `host` | `host` | string | host Google PaLM / Gemini; mặc định `https://generativelanguage.googleapis.com` (trong `CREDENTIAL_FIELD_DEFAULTS`) |
+| `googlePalmApi` | `apiKey` | `apiKey` | string | required |
 
 ### Năng suất / Quản lý dự án
 
@@ -527,12 +544,40 @@ Tất cả tên `param` đã được xác minh theo schema thực tế từ `GE
 | `jiraSoftwareCloudApi` | `apiToken` | `apiToken` | string | |
 | `jiraSoftwareCloudApi` | `domain` | `domain` | string | thuộc tính schema là `domain`, không phải `jiraDomain` |
 
-### Nhắn tin / Webhooks
+### Nhắn tin / Mạng xã hội
 
 | Loại n8n | `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
 | --- | --- | --- | --- | --- |
 | `discordBotApi` | `botToken` | `botToken` | string | |
 | `discordWebhookApi` | `webhookUri` | `webhookUri` | string | |
+| `slackApi` | `accessToken` | `accessToken` | string | token bot/user (required) |
+| `slackApi` | `signatureSecret` | `signatureSecret` | string | signing secret tùy chọn |
+| `telegramApi` | `accessToken` | `accessToken` | string | required |
+| `telegramApi` | `baseUrl` | `baseUrl` | string | mặc định `https://api.telegram.org` (trong `CREDENTIAL_FIELD_DEFAULTS`) |
+| `mattermostApi` | `accessToken` | `accessToken` | string | |
+| `mattermostApi` | `baseUrl` | `baseUrl` | string | URL cơ sở API server |
+| `mattermostApi` | `allowUnauthorizedCerts` | `allowUnauthorizedCerts` | boolean | |
+| `matrixApi` | `accessToken` | `accessToken` | string | |
+| `matrixApi` | `homeserverUrl` | `homeserverUrl` | string | mặc định `https://matrix-client.matrix.org` (trong `CREDENTIAL_FIELD_DEFAULTS`) |
+| `rocketchatApi` | `userId` | `userId` | string | |
+| `rocketchatApi` | `authKey` | `authKey` | string | |
+| `rocketchatApi` | `domain` | `domain` | string | URL server |
+| `whatsAppApi` | `accessToken` | `accessToken` | string | |
+| `whatsAppApi` | `businessAccountId` | `businessAccountId` | string | |
+| `facebookGraphApi` | `accessToken` | `accessToken` | string | |
+| `pushoverApi` | `apiKey` | `apiKey` | string | app token |
+
+`twilioApi` có điều kiện và được liệt kê riêng bên dưới.
+
+#### Twilio (`twilioApi`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `authType` | `authType` | string (enum) | khóa điều kiện: `'authToken'` hoặc `'apiKey'` |
+| `accountSid` | `accountSid` | string | |
+| `authToken` | `authToken` | string | chỉ khi `authType: 'authToken'` |
+| `apiKeySid` | `apiKeySid` | string | chỉ khi `authType: 'apiKey'` |
+| `apiKeySecret` | `apiKeySecret` | string | chỉ khi `authType: 'apiKey'` |
 
 ### Lưu trữ mã nguồn (Code Hosting)
 
@@ -576,6 +621,7 @@ Không cần entry trong `CREDENTIAL_FIELD_DEFAULTS`.
 | `googleApi` | `scopes` | `scopes` | string | chỉ khi `httpNode: true` |
 | `googleApi` | `inpersonate` | `inpersonate` | boolean | khóa điều kiện: kiểm soát nhánh delegatedEmail |
 | `googleApi` | `httpNode` | `httpNode` | boolean | khóa điều kiện: kiểm soát nhánh scopes |
+| `googleOAuth2Api` | `serverUrl` | `serverUrl` | string | kế thừa từ `oAuth2Api` |
 | `googleOAuth2Api` | `clientId` | `clientId` | string | |
 | `googleOAuth2Api` | `clientSecret` | `clientSecret` | string | |
 | `googleOAuth2Api` | `scope` | `scope` | string | |

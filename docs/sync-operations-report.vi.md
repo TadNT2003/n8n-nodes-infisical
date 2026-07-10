@@ -61,11 +61,15 @@ Khi khóa điều kiện `if` **vắng mặt trong `schema.properties`** — ngh
 ### 3.1 Các loại API key đơn giản
 
 **Loại**: `anthropicApi`, `openAiApi`, `groqApi`, `cohereApi`, `huggingFaceApi`,
-`mistralCloudApi`, `discordBotApi`, `discordWebhookApi`, `jiraSoftwareCloudApi`
+`mistralCloudApi`, `googlePalmApi`, `discordBotApi`, `discordWebhookApi`, `jiraSoftwareCloudApi`,
+`slackApi`, `telegramApi`, `mattermostApi`, `matrixApi`, `rocketchatApi`, `whatsAppApi`,
+`facebookGraphApi`, `pushoverApi`
 
-Các schema này có `properties` phẳng không có điều kiện `allOf`. Tất cả các trường nhạy cảm đều nằm trong `required`. Không cần giá trị mặc định khi tạo; chỉ cần truyền giá trị trường từ Infisical.
+Các schema này có `properties` phẳng không có điều kiện `allOf`. Tất cả các trường nhạy cảm đều nằm trong `required`. Không cần giá trị mặc định khi tạo; chỉ cần truyền giá trị trường từ Infisical. Một số loại có giá trị mặc định host/base-URL được ghi trong `CREDENTIAL_FIELD_DEFAULTS` (`googlePalmApi.host`, `telegramApi.baseUrl`, `matrixApi.homeserverUrl`).
 
 **Hành vi bộ kiểm tra**: đơn giản — các trường required phải có mặt, không có gì khác.
+
+Loại nhắn tin/mạng xã hội duy nhất **không** phẳng là `twilioApi`: nó có khóa điều kiện `authType` (`authToken` so với `apiKey`) chi phối `authToken` đối lập với `apiKeySid`/`apiKeySecret` — cùng mẫu `allOf` như `infisicalApi`.
 
 ---
 
@@ -337,6 +341,8 @@ Nếu map tồn tại cho một loại, chỉ các trường được khai báo 
 | `mongoDb` | `tls` | `tls` | Phiên bản trước sử dụng sai `ssl`; schema MongoDB sử dụng `tls` |
 | `postgres` | `ssl` | `ssl` | Phiên bản trước sử dụng sai `sslMode`; schema sử dụng `ssl` |
 
+Các trường UI **Form** của `syncToInfisical` cũng đã được căn chỉnh khớp với các tên `param` này (trường form phải có tên đúng như `param`, nếu không giá trị của nó không bao giờ được đọc). Mọi loại có map giờ đều có đầy đủ trường Form — xem [Hướng dẫn triển khai §4.4](sync-implementation-guide.vi.md#44-đồng-bộ-trường-ở-chế-độ-form).
+
 ### 4.3 Ép kiểu (Type coercion)
 
 Infisical lưu trữ mọi thứ dưới dạng chuỗi. Hàm `coerceValue` chuyển đổi giá trị sang kiểu mà schema n8n mong đợi, sử dụng `PropDef` của schema để quyết định:
@@ -560,8 +566,10 @@ defaults[key] = def.default
 | `anthropicApi` | phẳng | không | không | hoạt động |
 | `openAiApi` | phẳng | không | không | hoạt động |
 | `discordBotApi` / `discordWebhookApi` | phẳng | không | không | hoạt động |
+| `slackApi` / `telegramApi` / `mattermostApi` / `matrixApi` / `rocketchatApi` / `whatsAppApi` / `facebookGraphApi` / `pushoverApi` | phẳng | không | không | hoạt động |
+| `twilioApi` | 1 nhánh | `authToken` đối lập `apiKeySid`/`apiKeySecret` | không | hoạt động |
 | `jiraSoftwareCloudApi` | phẳng | không | không | hoạt động |
-| `groqApi` / `cohereApi` / `huggingFaceApi` / `mistralCloudApi` | phẳng | không | không | hoạt động |
+| `groqApi` / `cohereApi` / `huggingFaceApi` / `mistralCloudApi` / `googlePalmApi` | phẳng | không | không | hoạt động |
 | `microsoftSql` | phẳng | không | không | hoạt động |
 | `redis` | 1 nhánh | `disableTlsVerification` | không | hoạt động |
 | `googleApi` | 3 nhánh | `delegatedEmail`, `httpWarning`, `scopes`, `allowedDomains` | không | hoạt động |

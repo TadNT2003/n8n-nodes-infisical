@@ -493,6 +493,32 @@ The `n8nApi` credential must therefore use the Docker service name for `baseUrl`
 `http://n8n-patch-enterprise:5678/api/v1` — which the proxy correctly forwards to the n8n service
 on the internal Docker network.
 
+### 4.4 Form-mode field parity
+
+`syncToInfisical` **Form** mode reads each field via `getNodeParameter(param, …)`, where `param` is
+the `CREDENTIAL_FIELD_MAPS` name. A form field is therefore only wired if its property `name`
+**exactly equals** that `param`. Several fields had a `name` that differed from the map `param`, so
+Form mode silently sent an empty value for them (the field map, JSON mode, and auto-sync were
+unaffected). These were corrected so the form property `name` matches the `param`:
+
+| Type | Old form field `name` | Corrected `name` (= `param`) |
+| --- | --- | --- |
+| `jiraSoftwareCloudApi` | `jiraDomain` | `domain` |
+| `microsoftSql` | `mssqlDomain` | `domain` |
+| `postgres` | `sslMode` | `ssl` (options `allow`/`disable`/`require`) |
+| `mongoDb` | `ssl` | `tls` |
+
+In addition, every mapped `param` now has a matching Form field so that **all supported credential
+types are fully editable in Form mode** (previously some were reachable only through JSON mode).
+Fields added to close the gap: `telegramApi.accessToken`; `httpBasicAuth`/`httpDigestAuth`
+`password`; `googleApi` `inpersonate`/`httpNode`; `googleOAuth2Api.serverUrl`; `postgres`
+`allowUnauthorizedCerts`; `mySql`/`postgres` `sshAuthenticateWith`/`privateKey`/`passphrase`; and
+`googlePalmApi` (`host` + `apiKey`, also added to the Credential Type dropdown). A coverage check
+now confirms 47/47 mapped types have complete Form fields.
+
+**Rule going forward**: when adding a field-map entry, also add a Form property whose `name` equals
+the `param`, or the value cannot be entered in Form mode.
+
 ---
 
 ## 5. Dealing with the Validator: Full Algorithm
@@ -596,6 +622,8 @@ All `param` names were verified against the actual schema from `GET /api/v1/cred
 | `cohereApi` | `apiKey` | `apiKey` | string | |
 | `huggingFaceApi` | `apiKey` | `apiKey` | string | |
 | `mistralCloudApi` | `apiKey` | `apiKey` | string | |
+| `googlePalmApi` | `host` | `host` | string | Google PaLM / Gemini host; defaults to `https://generativelanguage.googleapis.com` (in `CREDENTIAL_FIELD_DEFAULTS`) |
+| `googlePalmApi` | `apiKey` | `apiKey` | string | required |
 
 ### Productivity / Project Management
 
@@ -605,12 +633,40 @@ All `param` names were verified against the actual schema from `GET /api/v1/cred
 | `jiraSoftwareCloudApi` | `apiToken` | `apiToken` | string | |
 | `jiraSoftwareCloudApi` | `domain` | `domain` | string | schema property is `domain`, not `jiraDomain` |
 
-### Messaging / Webhooks
+### Messaging / Social
 
 | n8n type | n8n `param` | Infisical `secretKey` | Type | Notes |
 | --- | --- | --- | --- | --- |
 | `discordBotApi` | `botToken` | `botToken` | string | |
 | `discordWebhookApi` | `webhookUri` | `webhookUri` | string | |
+| `slackApi` | `accessToken` | `accessToken` | string | bot/user token (required) |
+| `slackApi` | `signatureSecret` | `signatureSecret` | string | optional signing secret |
+| `telegramApi` | `accessToken` | `accessToken` | string | required |
+| `telegramApi` | `baseUrl` | `baseUrl` | string | defaults to `https://api.telegram.org` (in `CREDENTIAL_FIELD_DEFAULTS`) |
+| `mattermostApi` | `accessToken` | `accessToken` | string | |
+| `mattermostApi` | `baseUrl` | `baseUrl` | string | server API base URL |
+| `mattermostApi` | `allowUnauthorizedCerts` | `allowUnauthorizedCerts` | boolean | |
+| `matrixApi` | `accessToken` | `accessToken` | string | |
+| `matrixApi` | `homeserverUrl` | `homeserverUrl` | string | defaults to `https://matrix-client.matrix.org` (in `CREDENTIAL_FIELD_DEFAULTS`) |
+| `rocketchatApi` | `userId` | `userId` | string | |
+| `rocketchatApi` | `authKey` | `authKey` | string | |
+| `rocketchatApi` | `domain` | `domain` | string | server URL |
+| `whatsAppApi` | `accessToken` | `accessToken` | string | |
+| `whatsAppApi` | `businessAccountId` | `businessAccountId` | string | |
+| `facebookGraphApi` | `accessToken` | `accessToken` | string | |
+| `pushoverApi` | `apiKey` | `apiKey` | string | app token |
+
+`twilioApi` is conditional and listed separately below.
+
+#### Twilio (`twilioApi`)
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `authType` | `authType` | string (enum) | condition key: `'authToken'` or `'apiKey'` |
+| `accountSid` | `accountSid` | string | |
+| `authToken` | `authToken` | string | only when `authType: 'authToken'` |
+| `apiKeySid` | `apiKeySid` | string | only when `authType: 'apiKey'` |
+| `apiKeySecret` | `apiKeySecret` | string | only when `authType: 'apiKey'` |
 
 ### Code Hosting
 
@@ -653,6 +709,7 @@ and no `server` field (Bitbucket Cloud only — no self-managed server variant).
 | `googleApi` | `scopes` | `scopes` | string | only when `httpNode: true` |
 | `googleApi` | `inpersonate` | `inpersonate` | boolean | condition key: controls delegatedEmail branch |
 | `googleApi` | `httpNode` | `httpNode` | boolean | condition key: controls scopes branch |
+| `googleOAuth2Api` | `serverUrl` | `serverUrl` | string | inherited from `oAuth2Api` |
 | `googleOAuth2Api` | `clientId` | `clientId` | string | |
 | `googleOAuth2Api` | `clientSecret` | `clientSecret` | string | |
 | `googleOAuth2Api` | `scope` | `scope` | string | |
