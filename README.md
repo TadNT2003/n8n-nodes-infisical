@@ -296,7 +296,7 @@ Both Infisical → n8n operations expose an **If Credential Missing** option for
 
 ### Supported Credential Types (Form Mode)
 
-Form mode supports **31 credential types**. JSON mode accepts any type registered in n8n.
+Form mode supports **46 credential types**. JSON mode accepts any type registered in n8n.
 
 #### AI / LLM
 
@@ -306,9 +306,13 @@ Form mode supports **31 credential types**. JSON mode accepts any type registere
 
 `jiraSoftwareCloudApi`
 
-#### Messaging / Webhooks
+#### Messaging / Social
 
-`discordBotApi`, `discordWebhookApi`
+`discordBotApi`, `discordWebhookApi`, `slackApi`, `telegramApi`, `twilioApi`, `mattermostApi`, `matrixApi`, `rocketchatApi`, `whatsAppApi`, `facebookGraphApi`, `pushoverApi`
+
+#### Source Control
+
+`githubApi`, `githubOAuth2Api`, `gitlabApi`, `gitlabOAuth2Api`, `bitbucketApi`, `bitbucketAccessTokenApi`
 
 #### Google
 

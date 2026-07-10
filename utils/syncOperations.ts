@@ -42,6 +42,43 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 	],
 	discordBotApi: [{ param: 'botToken', secretKey: 'botToken' }],
 	discordWebhookApi: [{ param: 'webhookUri', secretKey: 'webhookUri' }],
+	// ── Messaging / social (static-token) ──────────────────────────────────────
+	slackApi: [
+		{ param: 'accessToken', secretKey: 'accessToken' },
+		{ param: 'signatureSecret', secretKey: 'signatureSecret' },
+	],
+	telegramApi: [
+		{ param: 'accessToken', secretKey: 'accessToken' },
+		{ param: 'baseUrl', secretKey: 'baseUrl' },
+	],
+	twilioApi: [
+		// condition-controlling field: authToken vs apiKey branches
+		{ param: 'authType', secretKey: 'authType' },
+		{ param: 'accountSid', secretKey: 'accountSid' },
+		{ param: 'authToken', secretKey: 'authToken' },
+		{ param: 'apiKeySid', secretKey: 'apiKeySid' },
+		{ param: 'apiKeySecret', secretKey: 'apiKeySecret' },
+	],
+	mattermostApi: [
+		{ param: 'accessToken', secretKey: 'accessToken' },
+		{ param: 'baseUrl', secretKey: 'baseUrl' },
+		{ param: 'allowUnauthorizedCerts', secretKey: 'allowUnauthorizedCerts' },
+	],
+	matrixApi: [
+		{ param: 'accessToken', secretKey: 'accessToken' },
+		{ param: 'homeserverUrl', secretKey: 'homeserverUrl' },
+	],
+	rocketchatApi: [
+		{ param: 'userId', secretKey: 'userId' },
+		{ param: 'authKey', secretKey: 'authKey' },
+		{ param: 'domain', secretKey: 'domain' },
+	],
+	whatsAppApi: [
+		{ param: 'accessToken', secretKey: 'accessToken' },
+		{ param: 'businessAccountId', secretKey: 'businessAccountId' },
+	],
+	facebookGraphApi: [{ param: 'accessToken', secretKey: 'accessToken' }],
+	pushoverApi: [{ param: 'apiKey', secretKey: 'apiKey' }],
 	githubApi: [
 		{ param: 'server', secretKey: 'server' },
 		{ param: 'user', secretKey: 'user' },
@@ -258,6 +295,8 @@ const CREDENTIAL_FIELD_DEFAULTS: Record<string, Record<string, string>> = {
 	gitlabApi: { server: 'https://gitlab.com' },
 	gitlabOAuth2Api: { server: 'https://gitlab.com' },
 	deepseekApi: { baseUrl: 'https://api.deepseek.com' },
+	telegramApi: { baseUrl: 'https://api.telegram.org' },
+	matrixApi: { homeserverUrl: 'https://matrix-client.matrix.org' },
 };
 
 // Lossless encoding: [A-Za-z0-9-] pass through, _ → __, everything else → _XX hex sequences.

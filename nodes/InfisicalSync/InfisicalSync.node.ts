@@ -188,6 +188,7 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Digest Auth', value: 'httpDigestAuth' },
 					{ name: 'Discord Bot', value: 'discordBotApi' },
 					{ name: 'Discord Webhook', value: 'discordWebhookApi' },
+					{ name: 'Facebook Graph', value: 'facebookGraphApi' },
 					{ name: 'GitHub (API Key)', value: 'githubApi' },
 					{ name: 'GitHub OAuth2', value: 'githubOAuth2Api' },
 					{ name: 'GitLab (API Key)', value: 'gitlabApi' },
@@ -203,6 +204,8 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Infisical', value: 'infisicalApi' },
 					{ name: 'Jira Software Cloud', value: 'jiraSoftwareCloudApi' },
 					{ name: 'JWT Auth', value: 'jwtAuth' },
+					{ name: 'Mattermost', value: 'mattermostApi' },
+					{ name: 'Matrix', value: 'matrixApi' },
 					{ name: 'Microsoft SQL Server', value: 'microsoftSql' },
 					{ name: 'Mistral', value: 'mistralCloudApi' },
 					{ name: 'MongoDB', value: 'mongoDb' },
@@ -212,9 +215,15 @@ export class InfisicalSync implements INodeType {
 					{ name: 'OAuth2 API', value: 'oAuth2Api' },
 					{ name: 'OpenAI', value: 'openAiApi' },
 					{ name: 'PostgreSQL', value: 'postgres' },
+					{ name: 'Pushover', value: 'pushoverApi' },
 					{ name: 'Query Auth', value: 'httpQueryAuth' },
 					{ name: 'Redis', value: 'redis' },
+					{ name: 'Rocket.Chat', value: 'rocketchatApi' },
+					{ name: 'Slack', value: 'slackApi' },
 					{ name: 'SSL Certificates', value: 'httpSslAuth' },
+					{ name: 'Telegram', value: 'telegramApi' },
+					{ name: 'Twilio', value: 'twilioApi' },
+					{ name: 'WhatsApp', value: 'whatsAppApi' },
 				],
 			},
 
@@ -262,6 +271,7 @@ export class InfisicalSync implements INodeType {
 							'mistralCloudApi',
 							'n8nApi',
 							'infisicalApi',
+							'pushoverApi',
 						],
 					},
 				},
@@ -550,6 +560,169 @@ export class InfisicalSync implements INodeType {
 				},
 			},
 
+			// ── Messaging / social ────────────────────────────────────────────────
+			{
+				displayName: 'Signature Secret',
+				name: 'signatureSecret',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				description: 'Optional Slack signing secret for verifying request signatures',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['slackApi'] },
+				},
+			},
+			{
+				displayName: 'Base URL',
+				name: 'baseUrl',
+				type: 'string',
+				default: 'https://api.telegram.org',
+				description: 'Telegram Bot API endpoint — leave default unless using a proxy',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['telegramApi'] },
+				},
+			},
+			{
+				displayName: 'Base URL',
+				name: 'baseUrl',
+				type: 'string',
+				default: '',
+				placeholder: 'https://mattermost.example.com/api/v4',
+				description: 'Mattermost server API base URL',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['mattermostApi'] },
+				},
+			},
+			{
+				displayName: 'Ignore SSL Issues (Insecure)',
+				name: 'allowUnauthorizedCerts',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to connect even if SSL certificate validation is not possible',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['mattermostApi'] },
+				},
+			},
+			{
+				displayName: 'Homeserver URL',
+				name: 'homeserverUrl',
+				type: 'string',
+				default: 'https://matrix-client.matrix.org',
+				description: 'Matrix homeserver base URL',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['matrixApi'] },
+				},
+			},
+			// ── Twilio (authType drives which secret fields apply) ────────────────
+			{
+				displayName: 'Authentication Type',
+				name: 'authType',
+				type: 'options',
+				default: 'authToken',
+				options: [
+					{ name: 'Auth Token', value: 'authToken' },
+					{ name: 'API Key', value: 'apiKey' },
+				],
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['twilioApi'] },
+				},
+			},
+			{
+				displayName: 'Account SID',
+				name: 'accountSid',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['twilioApi'] },
+				},
+			},
+			{
+				displayName: 'Auth Token',
+				name: 'authToken',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['twilioApi'],
+						authType: ['authToken'],
+					},
+				},
+			},
+			{
+				displayName: 'API Key SID',
+				name: 'apiKeySid',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['twilioApi'],
+						authType: ['apiKey'],
+					},
+				},
+			},
+			{
+				displayName: 'API Key Secret',
+				name: 'apiKeySecret',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['twilioApi'],
+						authType: ['apiKey'],
+					},
+				},
+			},
+			// ── Rocket.Chat ───────────────────────────────────────────────────────
+			{
+				displayName: 'User ID',
+				name: 'userId',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['rocketchatApi'] },
+				},
+			},
+			{
+				displayName: 'Auth Key',
+				name: 'authKey',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['rocketchatApi'] },
+				},
+			},
+			{
+				displayName: 'Domain',
+				name: 'domain',
+				type: 'string',
+				default: '',
+				placeholder: 'https://n8n.rocket.chat',
+				description: 'Rocket.Chat server URL',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['rocketchatApi'] },
+				},
+			},
+			// ── WhatsApp ──────────────────────────────────────────────────────────
+			{
+				displayName: 'Business Account ID',
+				name: 'businessAccountId',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['whatsAppApi'] },
+				},
+			},
+
 			// ── GitHub ────────────────────────────────────────────────────────────
 			{
 				displayName: 'Server',
@@ -572,7 +745,16 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['githubApi', 'gitlabApi', 'bitbucketAccessTokenApi'],
+						credentialType: [
+							'githubApi',
+							'gitlabApi',
+							'bitbucketAccessTokenApi',
+							'slackApi',
+							'mattermostApi',
+							'matrixApi',
+							'whatsAppApi',
+							'facebookGraphApi',
+						],
 					},
 				},
 			},
