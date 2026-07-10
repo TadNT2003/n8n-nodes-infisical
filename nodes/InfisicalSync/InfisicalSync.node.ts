@@ -196,6 +196,7 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Google Docs (OAuth2)', value: 'googleDocsOAuth2Api' },
 					{ name: 'Google Drive (OAuth2)', value: 'googleDriveOAuth2Api' },
 					{ name: 'Google OAuth2', value: 'googleOAuth2Api' },
+					{ name: 'Google PaLM / Gemini', value: 'googlePalmApi' },
 					{ name: 'Google Service Account', value: 'googleApi' },
 					{ name: 'Google Sheets (OAuth2)', value: 'googleSheetsOAuth2Api' },
 					{ name: 'Groq', value: 'groqApi' },
@@ -269,6 +270,7 @@ export class InfisicalSync implements INodeType {
 							'cohereApi',
 							'huggingFaceApi',
 							'mistralCloudApi',
+							'googlePalmApi',
 							'n8nApi',
 							'infisicalApi',
 							'pushoverApi',
@@ -298,6 +300,16 @@ export class InfisicalSync implements INodeType {
 						inputMode: ['form'],
 						credentialType: ['openAiApi', 'anthropicApi'],
 					},
+				},
+			},
+			{
+				displayName: 'Host',
+				name: 'host',
+				type: 'string',
+				default: 'https://generativelanguage.googleapis.com',
+				description: 'Google PaLM / Gemini API host',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googlePalmApi'] },
 				},
 			},
 
@@ -333,8 +345,37 @@ export class InfisicalSync implements INodeType {
 					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleApi'] },
 				},
 			},
+			{
+				displayName: 'Impersonate a User',
+				name: 'inpersonate',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to impersonate a user via domain-wide delegation',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleApi'] },
+				},
+			},
+			{
+				displayName: 'Set up for use in HTTP Request node',
+				name: 'httpNode',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleApi'] },
+				},
+			},
 
 			// ── Google OAuth2 ─────────────────────────────────────────────────────
+			{
+				displayName: 'Server URL',
+				name: 'serverUrl',
+				type: 'string',
+				default: '',
+				description: 'Google OAuth2 server URL',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleOAuth2Api'] },
+				},
+			},
 			{
 				displayName: 'Client ID',
 				name: 'clientId',
@@ -750,6 +791,7 @@ export class InfisicalSync implements INodeType {
 							'gitlabApi',
 							'bitbucketAccessTokenApi',
 							'slackApi',
+							'telegramApi',
 							'mattermostApi',
 							'matrixApi',
 							'whatsAppApi',
@@ -852,7 +894,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth'],
 					},
 				},
 			},
@@ -916,7 +958,7 @@ export class InfisicalSync implements INodeType {
 
 			// ── SSL/TLS ───────────────────────────────────────────────────────────
 			{
-				displayName: 'SSL/TLS',
+				displayName: 'SSL',
 				name: 'ssl',
 				type: 'boolean',
 				default: false,
@@ -924,13 +966,22 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'mongoDb', 'redis'],
+						credentialType: ['mySql', 'redis'],
 					},
 				},
 			},
 			{
-				displayName: 'SSL Mode',
-				name: 'sslMode',
+				displayName: 'TLS',
+				name: 'tls',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['mongoDb'] },
+				},
+			},
+			{
+				displayName: 'SSL',
+				name: 'ssl',
 				type: 'options',
 				default: 'disable',
 				options: [
@@ -938,6 +989,16 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Allow', value: 'allow' },
 					{ name: 'Require', value: 'require' },
 				],
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['postgres'] },
+				},
+			},
+			{
+				displayName: 'Ignore SSL Issues (Insecure)',
+				name: 'allowUnauthorizedCerts',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to connect even if SSL certificate validation is not possible',
 				displayOptions: {
 					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['postgres'] },
 				},
@@ -1011,6 +1072,57 @@ export class InfisicalSync implements INodeType {
 						inputMode: ['form'],
 						credentialType: ['mySql', 'postgres'],
 						sshTunnel: [true],
+						sshAuthenticateWith: ['password'],
+					},
+				},
+			},
+			{
+				displayName: 'SSH Authenticate With',
+				name: 'sshAuthenticateWith',
+				type: 'options',
+				default: 'password',
+				options: [
+					{ name: 'Password', value: 'password' },
+					{ name: 'Private Key', value: 'privateKey' },
+				],
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['mySql', 'postgres'],
+						sshTunnel: [true],
+					},
+				},
+			},
+			{
+				displayName: 'SSH Private Key',
+				name: 'privateKey',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['mySql', 'postgres'],
+						sshTunnel: [true],
+						sshAuthenticateWith: ['privateKey'],
+					},
+				},
+			},
+			{
+				displayName: 'SSH Private Key Passphrase',
+				name: 'passphrase',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['mySql', 'postgres'],
+						sshTunnel: [true],
+						sshAuthenticateWith: ['privateKey'],
 					},
 				},
 			},
