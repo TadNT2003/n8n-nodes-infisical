@@ -338,6 +338,25 @@ Required fields: `accessTokenUrl`, `clientId`, `clientSecret`, `scope`. `authent
 
 ---
 
+### 3.11b Messaging / social OAuth2 (`slackOAuth2Api`, `microsoftTeamsOAuth2Api`, `twitterOAuth2Api`, `twitterOAuth1Api`, `linkedInOAuth2Api`, `discordOAuth2Api`)
+
+Unlike the generic `oAuth2Api`, these service-specific types keep `grantType`, `scope`, `authUrl`,
+`accessTokenUrl`, `authQueryParameters`, and `authentication` as **`hidden`** fields with
+fixed/computed defaults — so only the user-editable app-registration fields are synced
+(`clientId`/`clientSecret`, or `consumerKey`/`consumerSecret` for the OAuth1 Twitter/X type), plus
+service-specific config: `signatureSecret` (Slack), `botToken` (Discord), `graphApiBaseUrl` +
+editable `authUrl`/`accessTokenUrl` (Microsoft — tenant-specific), `organizationSupport`/`legacy`
+(LinkedIn), and the `customScopes` → `userScope`/`enabledScopes` scope-customisation branch (Slack,
+Teams, Discord).
+
+**`oauthTokenData` is intentionally not synced.** That JSON blob holds the access/refresh tokens
+minted by the browser consent flow; it is not in the field map, so a pulled credential is created
+without it (the schema default of `{}` applies) and must be re-authorised in the target n8n with a
+single "Connect" click. This matches the existing OAuth2 pattern (`googleOAuth2Api`,
+`githubOAuth2Api`, …) which also sync only the app-registration fields.
+
+---
+
 ### 3.12 JWT Auth (`jwtAuth`)
 
 **Two conditional branches**:
@@ -677,6 +696,9 @@ defaults[key] = def.default
 | `httpSslAuth` | flat | none | no | working |
 | `oAuth1Api` | 1 branch | `allowedDomains` | no | working |
 | `oAuth2Api` | 2 branches | `authUrl` (grantType-driven), `allowedDomains` | no | working |
+| `slackOAuth2Api` / `microsoftTeamsOAuth2Api` / `discordOAuth2Api` | branches | `customScopes` drives `userScope`/`enabledScopes` | yes | working (clientId/secret only, no `oauthTokenData`) |
+| `twitterOAuth2Api` / `linkedInOAuth2Api` | branches | none synced | yes | working (clientId/secret only, no `oauthTokenData`) |
+| `twitterOAuth1Api` | 1 branch | `allowedDomains` | no | working (consumerKey/secret only, no `oauthTokenData`) |
 | `jwtAuth` | 2 branches (mutual exclusion) | `secret` XOR `privateKey`/`publicKey` | no | working |
 
 ---

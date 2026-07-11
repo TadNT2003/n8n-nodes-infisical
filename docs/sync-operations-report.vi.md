@@ -300,6 +300,25 @@ Các trường required: `accessTokenUrl`, `clientId`, `clientSecret`, `scope`. 
 
 ---
 
+### 3.11b OAuth2 nhắn tin / mạng xã hội (`slackOAuth2Api`, `microsoftTeamsOAuth2Api`, `twitterOAuth2Api`, `twitterOAuth1Api`, `linkedInOAuth2Api`, `discordOAuth2Api`)
+
+Khác với `oAuth2Api` chung, các loại đặc thù theo dịch vụ này giữ `grantType`, `scope`, `authUrl`,
+`accessTokenUrl`, `authQueryParameters`, và `authentication` là các trường **`hidden`** với giá trị
+mặc định cố định/được tính toán — nên chỉ các trường app-registration người dùng chỉnh sửa được mới
+được đồng bộ (`clientId`/`clientSecret`, hoặc `consumerKey`/`consumerSecret` cho loại OAuth1 của
+Twitter/X), cùng cấu hình đặc thù theo dịch vụ: `signatureSecret` (Slack), `botToken` (Discord),
+`graphApiBaseUrl` + `authUrl`/`accessTokenUrl` chỉnh sửa được (Microsoft — theo tenant),
+`organizationSupport`/`legacy` (LinkedIn), và nhánh tùy chỉnh scope `customScopes` →
+`userScope`/`enabledScopes` (Slack, Teams, Discord).
+
+**`oauthTokenData` cố tình không được đồng bộ.** Blob JSON đó chứa token access/refresh được tạo từ
+luồng đồng ý trên trình duyệt; nó không nằm trong field map, nên credential được kéo về được tạo mà
+không có nó (giá trị mặc định `{}` của schema được áp dụng) và phải được cấp quyền lại trong n8n đích
+bằng một cú nhấp "Connect". Điều này khớp với mẫu OAuth2 hiện có (`googleOAuth2Api`,
+`githubOAuth2Api`, …) vốn cũng chỉ đồng bộ các trường app-registration.
+
+---
+
 ### 3.12 JWT Auth (`jwtAuth`)
 
 **Hai nhánh điều kiện**:
@@ -584,6 +603,9 @@ defaults[key] = def.default
 | `httpSslAuth` | phẳng | không | không | hoạt động |
 | `oAuth1Api` | 1 nhánh | `allowedDomains` | không | hoạt động |
 | `oAuth2Api` | 2 nhánh | `authUrl` (theo grantType), `allowedDomains` | không | hoạt động |
+| `slackOAuth2Api` / `microsoftTeamsOAuth2Api` / `discordOAuth2Api` | có nhánh | `customScopes` điều khiển `userScope`/`enabledScopes` | có | hoạt động (chỉ clientId/secret, không có `oauthTokenData`) |
+| `twitterOAuth2Api` / `linkedInOAuth2Api` | có nhánh | không đồng bộ | có | hoạt động (chỉ clientId/secret, không có `oauthTokenData`) |
+| `twitterOAuth1Api` | 1 nhánh | `allowedDomains` | không | hoạt động (chỉ consumerKey/secret, không có `oauthTokenData`) |
 | `jwtAuth` | 2 nhánh (loại trừ lẫn nhau) | `secret` XOR `privateKey`/`publicKey` | không | hoạt động |
 
 ---

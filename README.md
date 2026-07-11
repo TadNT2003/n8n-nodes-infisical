@@ -296,7 +296,7 @@ Both Infisical → n8n operations expose an **If Credential Missing** option for
 
 ### Supported Credential Types (Form Mode)
 
-Form mode supports **47 credential types**. JSON mode accepts any type registered in n8n.
+Form mode supports **53 credential types**. JSON mode accepts any type registered in n8n.
 
 #### AI / LLM
 
@@ -309,6 +309,12 @@ Form mode supports **47 credential types**. JSON mode accepts any type registere
 #### Messaging / Social
 
 `discordBotApi`, `discordWebhookApi`, `slackApi`, `telegramApi`, `twilioApi`, `mattermostApi`, `matrixApi`, `rocketchatApi`, `whatsAppApi`, `facebookGraphApi`, `pushoverApi`
+
+#### Messaging / Social (OAuth2)
+
+`slackOAuth2Api`, `microsoftTeamsOAuth2Api`, `twitterOAuth2Api`, `twitterOAuth1Api`, `linkedInOAuth2Api`, `discordOAuth2Api`
+
+> **Note**: OAuth2 credentials sync only the app-registration fields (`clientId`/`clientSecret` and service-specific config). The `oauthTokenData` blob from the browser consent flow is **not** synced — a pulled credential must be re-authorised (one "Connect" click) in the target n8n.
 
 #### Source Control
 

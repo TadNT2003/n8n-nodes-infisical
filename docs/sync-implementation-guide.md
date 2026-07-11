@@ -668,6 +668,31 @@ All `param` names were verified against the actual schema from `GET /api/v1/cred
 | `apiKeySid` | `apiKeySid` | string | only when `authType: 'apiKey'` |
 | `apiKeySecret` | `apiKeySecret` | string | only when `authType: 'apiKey'` |
 
+### Messaging / Social (OAuth2)
+
+Only the user-editable app-registration and scope-config fields are synced. `grantType`,
+`scope`, `authQueryParameters`, and `authentication` are `hidden` (fixed/computed) on these types
+and excluded. **`oauthTokenData`** (the browser-consent access/refresh tokens) is intentionally
+**not** synced — a pulled credential must be re-authorised in the target n8n. `authUrl` and
+`accessTokenUrl` are hidden on most services but user-editable (tenant-specific) on Microsoft, so
+they are synced only for `microsoftTeamsOAuth2Api`.
+
+| n8n type | n8n `param` | Type | Notes |
+| --- | --- | --- | --- |
+| `slackOAuth2Api` | `serverUrl`, `clientId`, `clientSecret`, `signatureSecret` | string | |
+| `slackOAuth2Api` | `customScopes` | boolean | condition key: drives `userScope` |
+| `slackOAuth2Api` | `userScope` | string | only when `customScopes: true` |
+| `microsoftTeamsOAuth2Api` | `serverUrl`, `authUrl`, `accessTokenUrl`, `clientId`, `clientSecret`, `graphApiBaseUrl` | string | `authUrl`/`accessTokenUrl` editable (tenant-specific) |
+| `microsoftTeamsOAuth2Api` | `customScopes` | boolean | condition key: drives `enabledScopes` |
+| `microsoftTeamsOAuth2Api` | `enabledScopes` | string | only when `customScopes: true` |
+| `twitterOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `twitterOAuth1Api` | `consumerKey`, `consumerSecret` | string | both required |
+| `linkedInOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `linkedInOAuth2Api` | `organizationSupport`, `legacy` | boolean | |
+| `discordOAuth2Api` | `serverUrl`, `clientId`, `clientSecret`, `botToken` | string | |
+| `discordOAuth2Api` | `customScopes` | boolean | condition key: drives `enabledScopes` |
+| `discordOAuth2Api` | `enabledScopes` | string | only when `customScopes: true` |
+
 ### Code Hosting
 
 | n8n type | n8n `param` | Infisical `secretKey` | Type | Notes |

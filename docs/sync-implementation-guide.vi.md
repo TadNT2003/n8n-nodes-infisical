@@ -579,6 +579,32 @@ Tất cả tên `param` đã được xác minh theo schema thực tế từ `GE
 | `apiKeySid` | `apiKeySid` | string | chỉ khi `authType: 'apiKey'` |
 | `apiKeySecret` | `apiKeySecret` | string | chỉ khi `authType: 'apiKey'` |
 
+### Nhắn tin / Mạng xã hội (OAuth2)
+
+Chỉ các trường app-registration và cấu hình scope mà người dùng chỉnh sửa được mới được đồng bộ.
+`grantType`, `scope`, `authQueryParameters`, và `authentication` là các trường `hidden`
+(cố định/được tính toán) trên các loại này và bị loại trừ. **`oauthTokenData`** (token
+access/refresh từ luồng đồng ý trên trình duyệt) cố tình **không** được đồng bộ — credential được
+kéo về phải được cấp quyền lại trong n8n đích. `authUrl` và `accessTokenUrl` bị ẩn trên hầu hết
+dịch vụ nhưng người dùng chỉnh sửa được (theo tenant) trên Microsoft, nên chỉ được đồng bộ cho
+`microsoftTeamsOAuth2Api`.
+
+| Loại n8n | `param` n8n | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `slackOAuth2Api` | `serverUrl`, `clientId`, `clientSecret`, `signatureSecret` | string | |
+| `slackOAuth2Api` | `customScopes` | boolean | khóa điều kiện: điều khiển `userScope` |
+| `slackOAuth2Api` | `userScope` | string | chỉ khi `customScopes: true` |
+| `microsoftTeamsOAuth2Api` | `serverUrl`, `authUrl`, `accessTokenUrl`, `clientId`, `clientSecret`, `graphApiBaseUrl` | string | `authUrl`/`accessTokenUrl` chỉnh sửa được (theo tenant) |
+| `microsoftTeamsOAuth2Api` | `customScopes` | boolean | khóa điều kiện: điều khiển `enabledScopes` |
+| `microsoftTeamsOAuth2Api` | `enabledScopes` | string | chỉ khi `customScopes: true` |
+| `twitterOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `twitterOAuth1Api` | `consumerKey`, `consumerSecret` | string | cả hai đều required |
+| `linkedInOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `linkedInOAuth2Api` | `organizationSupport`, `legacy` | boolean | |
+| `discordOAuth2Api` | `serverUrl`, `clientId`, `clientSecret`, `botToken` | string | |
+| `discordOAuth2Api` | `customScopes` | boolean | khóa điều kiện: điều khiển `enabledScopes` |
+| `discordOAuth2Api` | `enabledScopes` | string | chỉ khi `customScopes: true` |
+
 ### Lưu trữ mã nguồn (Code Hosting)
 
 | Loại n8n | `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
