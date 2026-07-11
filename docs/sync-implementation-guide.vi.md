@@ -536,13 +536,19 @@ Tất cả tên `param` đã được xác minh theo schema thực tế từ `GE
 | `googlePalmApi` | `host` | `host` | string | host Google PaLM / Gemini; mặc định `https://generativelanguage.googleapis.com` (trong `CREDENTIAL_FIELD_DEFAULTS`) |
 | `googlePalmApi` | `apiKey` | `apiKey` | string | required |
 
-### Năng suất / Quản lý dự án
+### Năng suất / Quản lý dự án / SaaS
 
 | Loại n8n | `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
 | --- | --- | --- | --- | --- |
 | `jiraSoftwareCloudApi` | `email` | `email` | string | |
 | `jiraSoftwareCloudApi` | `apiToken` | `apiToken` | string | |
 | `jiraSoftwareCloudApi` | `domain` | `domain` | string | thuộc tính schema là `domain`, không phải `jiraDomain` |
+| `airtableTokenApi` | `accessToken` | `accessToken` | string | personal access token |
+| `notionApi` | `apiKey` | `apiKey` | string | internal integration secret |
+| `stripeApi` | `secretKey` | `secretKey` | string | required |
+| `stripeApi` | `signatureSecret` | `signatureSecret` | string | webhook signing secret tùy chọn |
+| `hubspotAppToken` | `appToken` | `appToken` | string | required |
+| `sendGridApi` | `apiKey` | `apiKey` | string | |
 
 ### Nhắn tin / Mạng xã hội
 

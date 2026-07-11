@@ -63,7 +63,8 @@ Khi khóa điều kiện `if` **vắng mặt trong `schema.properties`** — ngh
 **Loại**: `anthropicApi`, `openAiApi`, `groqApi`, `cohereApi`, `huggingFaceApi`,
 `mistralCloudApi`, `googlePalmApi`, `discordBotApi`, `discordWebhookApi`, `jiraSoftwareCloudApi`,
 `slackApi`, `telegramApi`, `mattermostApi`, `matrixApi`, `rocketchatApi`, `whatsAppApi`,
-`facebookGraphApi`, `pushoverApi`
+`facebookGraphApi`, `pushoverApi`, `airtableTokenApi`, `notionApi`, `stripeApi`,
+`hubspotAppToken`, `sendGridApi`
 
 Các schema này có `properties` phẳng không có điều kiện `allOf`. Tất cả các trường nhạy cảm đều nằm trong `required`. Không cần giá trị mặc định khi tạo; chỉ cần truyền giá trị trường từ Infisical. Một số loại có giá trị mặc định host/base-URL được ghi trong `CREDENTIAL_FIELD_DEFAULTS` (`googlePalmApi.host`, `telegramApi.baseUrl`, `matrixApi.homeserverUrl`).
 
@@ -586,6 +587,7 @@ defaults[key] = def.default
 | `openAiApi` | phẳng | không | không | hoạt động |
 | `discordBotApi` / `discordWebhookApi` | phẳng | không | không | hoạt động |
 | `slackApi` / `telegramApi` / `mattermostApi` / `matrixApi` / `rocketchatApi` / `whatsAppApi` / `facebookGraphApi` / `pushoverApi` | phẳng | không | không | hoạt động |
+| `airtableTokenApi` / `notionApi` / `stripeApi` / `hubspotAppToken` / `sendGridApi` | phẳng | không | không | hoạt động |
 | `twilioApi` | 1 nhánh | `authToken` đối lập `apiKeySid`/`apiKeySecret` | không | hoạt động |
 | `jiraSoftwareCloudApi` | phẳng | không | không | hoạt động |
 | `groqApi` / `cohereApi` / `huggingFaceApi` / `mistralCloudApi` / `googlePalmApi` | phẳng | không | không | hoạt động |

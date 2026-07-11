@@ -178,6 +178,7 @@ export class InfisicalSync implements INodeType {
 				description: 'The n8n credential type to sync',
 				displayOptions: { show: { operation: ['syncToInfisical'], inputMode: ['form'] } },
 				options: [
+					{ name: 'Airtable', value: 'airtableTokenApi' },
 					{ name: 'Anthropic', value: 'anthropicApi' },
 					{ name: 'Basic Auth', value: 'httpBasicAuth' },
 					{ name: 'Bearer Auth', value: 'httpBearerAuth' },
@@ -202,6 +203,7 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Google Sheets (OAuth2)', value: 'googleSheetsOAuth2Api' },
 					{ name: 'Groq', value: 'groqApi' },
 					{ name: 'Header Auth', value: 'httpHeaderAuth' },
+					{ name: 'HubSpot (App Token)', value: 'hubspotAppToken' },
 					{ name: 'HuggingFace', value: 'huggingFaceApi' },
 					{ name: 'Infisical', value: 'infisicalApi' },
 					{ name: 'Jira Software Cloud', value: 'jiraSoftwareCloudApi' },
@@ -215,6 +217,7 @@ export class InfisicalSync implements INodeType {
 					{ name: 'MongoDB', value: 'mongoDb' },
 					{ name: 'MySQL', value: 'mySql' },
 					{ name: 'n8n', value: 'n8nApi' },
+					{ name: 'Notion', value: 'notionApi' },
 					{ name: 'OAuth1 API', value: 'oAuth1Api' },
 					{ name: 'OAuth2 API', value: 'oAuth2Api' },
 					{ name: 'OpenAI', value: 'openAiApi' },
@@ -223,9 +226,11 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Query Auth', value: 'httpQueryAuth' },
 					{ name: 'Redis', value: 'redis' },
 					{ name: 'Rocket.Chat', value: 'rocketchatApi' },
+					{ name: 'SendGrid', value: 'sendGridApi' },
 					{ name: 'Slack', value: 'slackApi' },
 					{ name: 'Slack OAuth2', value: 'slackOAuth2Api' },
 					{ name: 'SSL Certificates', value: 'httpSslAuth' },
+					{ name: 'Stripe', value: 'stripeApi' },
 					{ name: 'Telegram', value: 'telegramApi' },
 					{ name: 'Twilio', value: 'twilioApi' },
 					{ name: 'Twitter/X OAuth1', value: 'twitterOAuth1Api' },
@@ -280,6 +285,8 @@ export class InfisicalSync implements INodeType {
 							'n8nApi',
 							'infisicalApi',
 							'pushoverApi',
+							'notionApi',
+							'sendGridApi',
 						],
 					},
 				},
@@ -635,9 +642,9 @@ export class InfisicalSync implements INodeType {
 				type: 'string',
 				typeOptions: { password: true },
 				default: '',
-				description: 'Optional Slack signing secret for verifying request signatures',
+				description: 'Optional signing/webhook secret for verifying request signatures',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['slackApi', 'slackOAuth2Api'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['slackApi', 'slackOAuth2Api', 'stripeApi'] },
 				},
 			},
 			{
@@ -791,6 +798,28 @@ export class InfisicalSync implements INodeType {
 				},
 			},
 
+			// ── Productivity / SaaS ─────────────────────────────────────────────────
+			{
+				displayName: 'Secret Key',
+				name: 'secretKey',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['stripeApi'] },
+				},
+			},
+			{
+				displayName: 'App Token',
+				name: 'appToken',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['hubspotAppToken'] },
+				},
+			},
+
 			// ── GitHub ────────────────────────────────────────────────────────────
 			{
 				displayName: 'Server',
@@ -823,6 +852,7 @@ export class InfisicalSync implements INodeType {
 							'matrixApi',
 							'whatsAppApi',
 							'facebookGraphApi',
+							'airtableTokenApi',
 						],
 					},
 				},

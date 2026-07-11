@@ -76,7 +76,8 @@ not in `schema.properties`, so all four `allOf` branches fire simultaneously, an
 **Types**: `anthropicApi`, `openAiApi`, `groqApi`, `cohereApi`, `huggingFaceApi`,
 `mistralCloudApi`, `googlePalmApi`, `discordBotApi`, `discordWebhookApi`, `jiraSoftwareCloudApi`,
 `slackApi`, `telegramApi`, `mattermostApi`, `matrixApi`, `rocketchatApi`, `whatsAppApi`,
-`facebookGraphApi`, `pushoverApi`
+`facebookGraphApi`, `pushoverApi`, `airtableTokenApi`, `notionApi`, `stripeApi`,
+`hubspotAppToken`, `sendGridApi`
 
 These schemas have flat `properties` with no `allOf` conditionals. All sensitive fields are in
 `required`. No defaults needed for creation; just pass the field values from Infisical. A few carry
@@ -679,6 +680,7 @@ defaults[key] = def.default
 | `openAiApi` | flat | none | no | working |
 | `discordBotApi` / `discordWebhookApi` | flat | none | no | working |
 | `slackApi` / `telegramApi` / `mattermostApi` / `matrixApi` / `rocketchatApi` / `whatsAppApi` / `facebookGraphApi` / `pushoverApi` | flat | none | no | working |
+| `airtableTokenApi` / `notionApi` / `stripeApi` / `hubspotAppToken` / `sendGridApi` | flat | none | no | working |
 | `twilioApi` | 1 branch | `authToken` XOR `apiKeySid`/`apiKeySecret` | no | working |
 | `jiraSoftwareCloudApi` | flat | none | no | working |
 | `groqApi` / `cohereApi` / `huggingFaceApi` / `mistralCloudApi` / `googlePalmApi` | flat | none | no | working |

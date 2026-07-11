@@ -625,13 +625,19 @@ All `param` names were verified against the actual schema from `GET /api/v1/cred
 | `googlePalmApi` | `host` | `host` | string | Google PaLM / Gemini host; defaults to `https://generativelanguage.googleapis.com` (in `CREDENTIAL_FIELD_DEFAULTS`) |
 | `googlePalmApi` | `apiKey` | `apiKey` | string | required |
 
-### Productivity / Project Management
+### Productivity / Project Management / SaaS
 
 | n8n type | n8n `param` | Infisical `secretKey` | Type | Notes |
 | --- | --- | --- | --- | --- |
 | `jiraSoftwareCloudApi` | `email` | `email` | string | |
 | `jiraSoftwareCloudApi` | `apiToken` | `apiToken` | string | |
 | `jiraSoftwareCloudApi` | `domain` | `domain` | string | schema property is `domain`, not `jiraDomain` |
+| `airtableTokenApi` | `accessToken` | `accessToken` | string | personal access token |
+| `notionApi` | `apiKey` | `apiKey` | string | internal integration secret |
+| `stripeApi` | `secretKey` | `secretKey` | string | required |
+| `stripeApi` | `signatureSecret` | `signatureSecret` | string | optional webhook signing secret |
+| `hubspotAppToken` | `appToken` | `appToken` | string | required |
+| `sendGridApi` | `apiKey` | `apiKey` | string | |
 
 ### Messaging / Social
 

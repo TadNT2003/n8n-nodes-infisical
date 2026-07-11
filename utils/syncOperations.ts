@@ -130,6 +130,15 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 		{ param: 'customScopes', secretKey: 'customScopes' },
 		{ param: 'enabledScopes', secretKey: 'enabledScopes' },
 	],
+	// ── Productivity / SaaS (static-token) ─────────────────────────────────────
+	airtableTokenApi: [{ param: 'accessToken', secretKey: 'accessToken' }],
+	notionApi: [{ param: 'apiKey', secretKey: 'apiKey' }],
+	stripeApi: [
+		{ param: 'secretKey', secretKey: 'secretKey' },
+		{ param: 'signatureSecret', secretKey: 'signatureSecret' },
+	],
+	hubspotAppToken: [{ param: 'appToken', secretKey: 'appToken' }],
+	sendGridApi: [{ param: 'apiKey', secretKey: 'apiKey' }],
 	githubApi: [
 		{ param: 'server', secretKey: 'server' },
 		{ param: 'user', secretKey: 'user' },
