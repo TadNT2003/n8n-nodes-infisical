@@ -79,6 +79,57 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 	],
 	facebookGraphApi: [{ param: 'accessToken', secretKey: 'accessToken' }],
 	pushoverApi: [{ param: 'apiKey', secretKey: 'apiKey' }],
+	// ── Messaging / social OAuth2 ──────────────────────────────────────────────
+	// Service-specific OAuth2 types: only the user-editable app-registration and
+	// scope-config fields are synced. grantType/authUrl/accessTokenUrl/scope/
+	// authQueryParameters/authentication are `hidden` (fixed/computed) on these types,
+	// and oauthTokenData (the browser-consent tokens) is intentionally NOT synced —
+	// a pulled credential must be re-authorised in the target n8n.
+	slackOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		{ param: 'signatureSecret', secretKey: 'signatureSecret' },
+		// condition-controlling: customScopes drives the userScope branch
+		{ param: 'customScopes', secretKey: 'customScopes' },
+		{ param: 'userScope', secretKey: 'userScope' },
+	],
+	microsoftTeamsOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		// authUrl/accessTokenUrl are user-editable on Microsoft (tenant-specific), not hidden
+		{ param: 'authUrl', secretKey: 'authUrl' },
+		{ param: 'accessTokenUrl', secretKey: 'accessTokenUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		{ param: 'graphApiBaseUrl', secretKey: 'graphApiBaseUrl' },
+		{ param: 'customScopes', secretKey: 'customScopes' },
+		{ param: 'enabledScopes', secretKey: 'enabledScopes' },
+	],
+	twitterOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+	],
+	twitterOAuth1Api: [
+		{ param: 'consumerKey', secretKey: 'consumerKey' },
+		{ param: 'consumerSecret', secretKey: 'consumerSecret' },
+	],
+	linkedInOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		{ param: 'organizationSupport', secretKey: 'organizationSupport' },
+		{ param: 'legacy', secretKey: 'legacy' },
+	],
+	discordOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		{ param: 'botToken', secretKey: 'botToken' },
+		// condition-controlling: customScopes drives the enabledScopes branch
+		{ param: 'customScopes', secretKey: 'customScopes' },
+		{ param: 'enabledScopes', secretKey: 'enabledScopes' },
+	],
 	githubApi: [
 		{ param: 'server', secretKey: 'server' },
 		{ param: 'user', secretKey: 'user' },

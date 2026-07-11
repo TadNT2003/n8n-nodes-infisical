@@ -187,6 +187,7 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Custom Auth', value: 'httpCustomAuth' },
 					{ name: 'Digest Auth', value: 'httpDigestAuth' },
 					{ name: 'Discord Bot', value: 'discordBotApi' },
+					{ name: 'Discord OAuth2', value: 'discordOAuth2Api' },
 					{ name: 'Discord Webhook', value: 'discordWebhookApi' },
 					{ name: 'Facebook Graph', value: 'facebookGraphApi' },
 					{ name: 'GitHub (API Key)', value: 'githubApi' },
@@ -205,9 +206,11 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Infisical', value: 'infisicalApi' },
 					{ name: 'Jira Software Cloud', value: 'jiraSoftwareCloudApi' },
 					{ name: 'JWT Auth', value: 'jwtAuth' },
+					{ name: 'LinkedIn OAuth2', value: 'linkedInOAuth2Api' },
 					{ name: 'Mattermost', value: 'mattermostApi' },
 					{ name: 'Matrix', value: 'matrixApi' },
 					{ name: 'Microsoft SQL Server', value: 'microsoftSql' },
+					{ name: 'Microsoft Teams OAuth2', value: 'microsoftTeamsOAuth2Api' },
 					{ name: 'Mistral', value: 'mistralCloudApi' },
 					{ name: 'MongoDB', value: 'mongoDb' },
 					{ name: 'MySQL', value: 'mySql' },
@@ -221,9 +224,12 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Redis', value: 'redis' },
 					{ name: 'Rocket.Chat', value: 'rocketchatApi' },
 					{ name: 'Slack', value: 'slackApi' },
+					{ name: 'Slack OAuth2', value: 'slackOAuth2Api' },
 					{ name: 'SSL Certificates', value: 'httpSslAuth' },
 					{ name: 'Telegram', value: 'telegramApi' },
 					{ name: 'Twilio', value: 'twilioApi' },
+					{ name: 'Twitter/X OAuth1', value: 'twitterOAuth1Api' },
+					{ name: 'Twitter/X OAuth2', value: 'twitterOAuth2Api' },
 					{ name: 'WhatsApp', value: 'whatsAppApi' },
 				],
 			},
@@ -371,9 +377,20 @@ export class InfisicalSync implements INodeType {
 				name: 'serverUrl',
 				type: 'string',
 				default: '',
-				description: 'Google OAuth2 server URL',
+				description: 'OAuth2 server URL',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleOAuth2Api'] },
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: [
+							'googleOAuth2Api',
+							'slackOAuth2Api',
+							'microsoftTeamsOAuth2Api',
+							'twitterOAuth2Api',
+							'linkedInOAuth2Api',
+							'discordOAuth2Api',
+						],
+					},
 				},
 			},
 			{
@@ -394,6 +411,11 @@ export class InfisicalSync implements INodeType {
 							'oAuth2Api',
 							'githubOAuth2Api',
 							'gitlabOAuth2Api',
+							'slackOAuth2Api',
+							'microsoftTeamsOAuth2Api',
+							'twitterOAuth2Api',
+							'linkedInOAuth2Api',
+							'discordOAuth2Api',
 						],
 					},
 				},
@@ -417,6 +439,11 @@ export class InfisicalSync implements INodeType {
 							'oAuth2Api',
 							'githubOAuth2Api',
 							'gitlabOAuth2Api',
+							'slackOAuth2Api',
+							'microsoftTeamsOAuth2Api',
+							'twitterOAuth2Api',
+							'linkedInOAuth2Api',
+							'discordOAuth2Api',
 						],
 					},
 				},
@@ -588,7 +615,7 @@ export class InfisicalSync implements INodeType {
 				typeOptions: { password: true },
 				default: '',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['discordBotApi'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['discordBotApi', 'discordOAuth2Api'] },
 				},
 			},
 			{
@@ -610,7 +637,7 @@ export class InfisicalSync implements INodeType {
 				default: '',
 				description: 'Optional Slack signing secret for verifying request signatures',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['slackApi'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['slackApi', 'slackOAuth2Api'] },
 				},
 			},
 			{
@@ -1237,7 +1264,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['oAuth1Api', 'oAuth2Api'],
+						credentialType: ['oAuth1Api', 'oAuth2Api', 'microsoftTeamsOAuth2Api'],
 					},
 				},
 			},
@@ -1250,7 +1277,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['oAuth1Api', 'oAuth2Api'],
+						credentialType: ['oAuth1Api', 'oAuth2Api', 'microsoftTeamsOAuth2Api'],
 					},
 				},
 			},
@@ -1262,7 +1289,7 @@ export class InfisicalSync implements INodeType {
 				type: 'string',
 				default: '',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth1Api'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth1Api', 'twitterOAuth1Api'] },
 				},
 			},
 			{
@@ -1272,7 +1299,7 @@ export class InfisicalSync implements INodeType {
 				typeOptions: { password: true },
 				default: '',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth1Api'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth1Api', 'twitterOAuth1Api'] },
 				},
 			},
 			{
@@ -1336,6 +1363,82 @@ export class InfisicalSync implements INodeType {
 				],
 				displayOptions: {
 					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth2Api'] },
+				},
+			},
+
+			// ── Messaging / social OAuth2 (service-specific editable fields) ──────────
+			{
+				displayName: 'Graph API Base URL',
+				name: 'graphApiBaseUrl',
+				type: 'string',
+				default: 'https://graph.microsoft.com',
+				description: 'Microsoft Graph API base URL',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['microsoftTeamsOAuth2Api'] },
+				},
+			},
+			{
+				displayName: 'Organization Support',
+				name: 'organizationSupport',
+				type: 'boolean',
+				default: true,
+				description: 'Whether to request permissions for posting as an organization',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['linkedInOAuth2Api'] },
+				},
+			},
+			{
+				displayName: 'Legacy',
+				name: 'legacy',
+				type: 'boolean',
+				default: true,
+				description: 'Whether to use the legacy LinkedIn API version',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['linkedInOAuth2Api'] },
+				},
+			},
+			{
+				displayName: 'Custom Scopes',
+				name: 'customScopes',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to use custom scopes instead of the defaults',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['slackOAuth2Api', 'microsoftTeamsOAuth2Api', 'discordOAuth2Api'],
+					},
+				},
+			},
+			{
+				displayName: 'User Scope',
+				name: 'userScope',
+				type: 'string',
+				default: '',
+				description: 'Space-separated Slack user scopes (only when Custom Scopes is enabled)',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['slackOAuth2Api'],
+						customScopes: [true],
+					},
+				},
+			},
+			{
+				displayName: 'Enabled Scopes',
+				name: 'enabledScopes',
+				type: 'string',
+				default: '',
+				description: 'Space-separated scopes to request (only when Custom Scopes is enabled)',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['microsoftTeamsOAuth2Api', 'discordOAuth2Api'],
+						customScopes: [true],
+					},
 				},
 			},
 
