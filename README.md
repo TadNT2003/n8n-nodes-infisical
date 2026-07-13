@@ -296,7 +296,7 @@ Both Infisical → n8n operations expose an **If Credential Missing** option for
 
 ### Supported Credential Types (Form Mode)
 
-Form mode supports **71 credential types**. JSON mode accepts any type registered in n8n.
+Form mode supports **75 credential types**. JSON mode accepts any type registered in n8n.
 
 #### AI / LLM
 
@@ -315,6 +315,12 @@ Form mode supports **71 credential types**. JSON mode accepts any type registere
 `slackOAuth2Api`, `microsoftTeamsOAuth2Api`, `twitterOAuth2Api`, `twitterOAuth1Api`, `linkedInOAuth2Api`, `discordOAuth2Api`
 
 > **Note**: OAuth2 credentials sync only the app-registration fields (`clientId`/`clientSecret` and service-specific config). The `oauthTokenData` blob from the browser consent flow is **not** synced — a pulled credential must be re-authorised (one "Connect" click) in the target n8n.
+
+#### SaaS (OAuth2)
+
+`salesforceOAuth2Api`, `hubspotOAuth2Api`, `dropboxOAuth2Api`, `spotifyOAuth2Api`
+
+> **Note**: Same pattern as the Messaging/Social OAuth2 group above (`clientId`/`clientSecret` only, no `oauthTokenData`). `salesforceOAuth2Api` additionally syncs `environment` (production/sandbox); `dropboxOAuth2Api` additionally syncs `accessType` (app folder/full Dropbox). `hubspotOAuth2Api` and `spotifyOAuth2Api` have no extra user-editable fields beyond the standard OAuth2 app registration.
 
 #### Source Control
 

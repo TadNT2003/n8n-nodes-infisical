@@ -519,6 +519,52 @@ now confirms 47/47 mapped types have complete Form fields.
 **Rule going forward**: when adding a field-map entry, also add a Form property whose `name` equals
 the `param`, or the value cannot be entered in Form mode.
 
+### 4.5 Parameter-name collision with the node's own top-level fields
+
+**Problem**
+
+`salesforceOAuth2Api` has a real, live-schema property literally named `environment` (its OAuth
+sandbox/production selector). The `InfisicalSync` node's own top-level "Environment" parameter —
+the Infisical environment slug (`dev`/`staging`/`prod`), shown for every `syncToInfisical`
+credential type regardless of which one is selected — is *also* named `environment`. n8n node
+parameters are a flat namespace keyed by `name`; two properties sharing a `name` only work safely
+if their `displayOptions.show` are mutually exclusive. Here they weren't: the top-level field has no
+`credentialType` restriction at all, so it and the Salesforce-specific field were simultaneously
+"live" whenever `credentialType: salesforceOAuth2Api` was selected in Form mode.
+
+**Symptom**
+
+Pushing a Salesforce OAuth2 credential in Form mode with sandbox mode selected caused
+`ctx.getNodeParameter('environment', i)` — used for the **Infisical target environment slug** — to
+read back `'sandbox'` instead of the real slug (e.g. `'dev'`), which then failed against Infisical's
+API with `Environment with slug 'sandbox' in project with ID '…' not found`. The `autoSyncFromInfisical`
+pull path was unaffected — it reads field values from the fetched Infisical secrets object (keyed by
+`secretKey`), not from `getNodeParameter`, so the collision only bites the Form-mode push path.
+
+**Fix**
+
+Renamed the internal Form parameter to `salesforceEnvironment` while keeping `secretKey: 'environment'`
+(the actual n8n/Infisical storage key is unaffected):
+
+```typescript
+salesforceOAuth2Api: [
+  // ...
+  { param: 'salesforceEnvironment', secretKey: 'environment' },  // was: 'environment'
+],
+```
+
+and the Form field's `name` was updated to match. This is the mirror image of §4.2's `domain`
+fix — there, the map `param` had to be *renamed to match* the schema; here, the map `param` had to
+be *deliberately different* from the schema's `secretKey` to avoid colliding with an unrelated,
+always-visible node parameter.
+
+**Rule going forward**: before adding a field-map entry whose `param` matches a common word, check
+it against the node's other top-level (non-`credentialType`-gated) parameter names — `projectId`,
+`environment`, `rootPath`, `credentialName`, `ifCredentialMissing`, `inputMode`,
+`credentialType`/`credentialTypeJson`, `credentialJson`, `n8nCredentialId`. If it collides, keep
+`secretKey` matching the real schema property but choose a distinct, type-prefixed `param` name for
+the Form field.
+
 ---
 
 ## 5. Dealing with the Validator: Full Algorithm
@@ -698,6 +744,22 @@ they are synced only for `microsoftTeamsOAuth2Api`.
 | `discordOAuth2Api` | `serverUrl`, `clientId`, `clientSecret`, `botToken` | string | |
 | `discordOAuth2Api` | `customScopes` | boolean | condition key: drives `enabledScopes` |
 | `discordOAuth2Api` | `enabledScopes` | string | only when `customScopes: true` |
+
+### SaaS (OAuth2)
+
+Same pattern as the messaging/social OAuth2 group above: only user-editable app-registration and
+service-specific config fields are synced; `grantType`/`authUrl`/`accessTokenUrl`/`scope`/
+`authQueryParameters`/`authentication` are `hidden` on all four, and `oauthTokenData` is
+intentionally not synced.
+
+| n8n type | n8n `param` | Type | Notes |
+| --- | --- | --- | --- |
+| `salesforceOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `salesforceOAuth2Api` | `environment` | string (enum) | `'production'` or `'sandbox'`; internal Form param is `salesforceEnvironment` — see §4.5 |
+| `hubspotOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | no extra user-editable fields |
+| `dropboxOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `dropboxOAuth2Api` | `accessType` | string (enum) | `'folder'` (App Folder) or `'full'` (Full Dropbox) |
+| `spotifyOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | no extra user-editable fields |
 
 ### Code Hosting
 

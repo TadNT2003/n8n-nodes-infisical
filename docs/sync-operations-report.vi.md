@@ -409,6 +409,25 @@ bằng một cú nhấp "Connect". Điều này khớp với mẫu OAuth2 hiện
 
 ---
 
+### 3.11c SaaS OAuth2 (`salesforceOAuth2Api`, `hubspotOAuth2Api`, `dropboxOAuth2Api`, `spotifyOAuth2Api`)
+
+Cùng hình dạng và cùng việc không đồng bộ `oauthTokenData` như §3.11b — khác biệt duy nhất là các
+trường đặc thù theo dịch vụ nào tồn tại. `salesforceOAuth2Api` thêm `environment` (`'production'`
+hoặc `'sandbox'`, quyết định các trường `hidden` auth/token URL sẽ trỏ tới đâu); `dropboxOAuth2Api`
+thêm `accessType` (`'folder'` hoặc `'full'`, kiểm soát scope OAuth được yêu cầu). Cả hai đều là các
+trường enum phẳng, không phải khóa điều kiện `allOf` — schema không chi phối trạng thái
+required/prohibited của bất kỳ trường *nào khác* dựa trên giá trị của chúng, khác với
+`twilioApi.authType` hay `snowflake.authentication`. `hubspotOAuth2Api` và `spotifyOAuth2Api` không
+có trường nào người dùng chỉnh sửa được ngoài bộ ba `serverUrl`/`clientId`/`clientSecret` tiêu chuẩn.
+
+`salesforceOAuth2Api.environment` từng xung đột với tham số "Environment" cấp cao nhất của chính
+node (slug môi trường Infisical, hiển thị cho mọi loại credential) — push ở chế độ Form đã âm thầm
+đưa giá trị `'sandbox'`/`'production'` của credential vào lệnh gọi API Infisical thay vì slug thật.
+Đã khắc phục bằng cách đặt cho trường Form một tên nội bộ riêng biệt (`salesforceEnvironment`) trong
+khi vẫn giữ `secretKey: 'environment'`; xem [Hướng dẫn triển khai §4.5](sync-implementation-guide.vi.md#45-xung-đột-tên-tham-số-với-các-trường-cấp-cao-nhất-của-chính-node).
+
+---
+
 ### 3.12 JWT Auth (`jwtAuth`)
 
 **Hai nhánh điều kiện**:
@@ -706,6 +725,8 @@ defaults[key] = def.default
 | `slackOAuth2Api` / `microsoftTeamsOAuth2Api` / `discordOAuth2Api` | có nhánh | `customScopes` điều khiển `userScope`/`enabledScopes` | có | hoạt động (chỉ clientId/secret, không có `oauthTokenData`) |
 | `twitterOAuth2Api` / `linkedInOAuth2Api` | có nhánh | không đồng bộ | có | hoạt động (chỉ clientId/secret, không có `oauthTokenData`) |
 | `twitterOAuth1Api` | 1 nhánh | `allowedDomains` | không | hoạt động (chỉ consumerKey/secret, không có `oauthTokenData`) |
+| `salesforceOAuth2Api` / `dropboxOAuth2Api` | có nhánh | `allowedDomains`; `environment`/`accessType` là enum phẳng, không phải khóa điều kiện | có | hoạt động (chỉ clientId/secret, không có `oauthTokenData`) |
+| `hubspotOAuth2Api` / `spotifyOAuth2Api` | có nhánh | `allowedDomains` | có | hoạt động (chỉ clientId/secret, không có `oauthTokenData`) |
 | `jwtAuth` | 2 nhánh (loại trừ lẫn nhau) | `secret` XOR `privateKey`/`publicKey` | không | hoạt động |
 
 ---

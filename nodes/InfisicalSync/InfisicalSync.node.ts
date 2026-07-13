@@ -193,6 +193,7 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Discord Bot', value: 'discordBotApi' },
 					{ name: 'Discord OAuth2', value: 'discordOAuth2Api' },
 					{ name: 'Discord Webhook', value: 'discordWebhookApi' },
+					{ name: 'Dropbox OAuth2', value: 'dropboxOAuth2Api' },
 					{ name: 'Elasticsearch', value: 'elasticsearchApi' },
 					{ name: 'Facebook Graph', value: 'facebookGraphApi' },
 					{ name: 'GitHub (API Key)', value: 'githubApi' },
@@ -208,6 +209,7 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Groq', value: 'groqApi' },
 					{ name: 'Header Auth', value: 'httpHeaderAuth' },
 					{ name: 'HubSpot (App Token)', value: 'hubspotAppToken' },
+					{ name: 'HubSpot OAuth2', value: 'hubspotOAuth2Api' },
 					{ name: 'HuggingFace', value: 'huggingFaceApi' },
 					{ name: 'IMAP', value: 'imap' },
 					{ name: 'Infisical', value: 'infisicalApi' },
@@ -233,11 +235,13 @@ export class InfisicalSync implements INodeType {
 					{ name: 'QuestDB', value: 'questDb' },
 					{ name: 'Redis', value: 'redis' },
 					{ name: 'Rocket.Chat', value: 'rocketchatApi' },
+					{ name: 'Salesforce OAuth2', value: 'salesforceOAuth2Api' },
 					{ name: 'SendGrid', value: 'sendGridApi' },
 					{ name: 'Slack', value: 'slackApi' },
 					{ name: 'Slack OAuth2', value: 'slackOAuth2Api' },
 					{ name: 'SMTP', value: 'smtp' },
 					{ name: 'Snowflake', value: 'snowflake' },
+					{ name: 'Spotify OAuth2', value: 'spotifyOAuth2Api' },
 					{ name: 'SSH (Password)', value: 'sshPassword' },
 					{ name: 'SSH (Private Key)', value: 'sshPrivateKey' },
 					{ name: 'SSL Certificates', value: 'httpSslAuth' },
@@ -409,6 +413,10 @@ export class InfisicalSync implements INodeType {
 							'twitterOAuth2Api',
 							'linkedInOAuth2Api',
 							'discordOAuth2Api',
+							'salesforceOAuth2Api',
+							'hubspotOAuth2Api',
+							'dropboxOAuth2Api',
+							'spotifyOAuth2Api',
 						],
 					},
 				},
@@ -436,6 +444,10 @@ export class InfisicalSync implements INodeType {
 							'twitterOAuth2Api',
 							'linkedInOAuth2Api',
 							'discordOAuth2Api',
+							'salesforceOAuth2Api',
+							'hubspotOAuth2Api',
+							'dropboxOAuth2Api',
+							'spotifyOAuth2Api',
 						],
 					},
 				},
@@ -464,6 +476,10 @@ export class InfisicalSync implements INodeType {
 							'twitterOAuth2Api',
 							'linkedInOAuth2Api',
 							'discordOAuth2Api',
+							'salesforceOAuth2Api',
+							'hubspotOAuth2Api',
+							'dropboxOAuth2Api',
+							'spotifyOAuth2Api',
 						],
 					},
 				},
@@ -2008,6 +2024,38 @@ export class InfisicalSync implements INodeType {
 						credentialType: ['microsoftTeamsOAuth2Api', 'discordOAuth2Api'],
 						customScopes: [true],
 					},
+				},
+			},
+
+			// ── SaaS OAuth2 (Salesforce / Dropbox editable extras) ────────────────
+			{
+				// Named 'salesforceEnvironment' (not 'environment') to avoid colliding
+				// with the node's top-level "Environment" parameter (Infisical
+				// environment slug), which is shown for every syncToInfisical
+				// credentialType and would otherwise share this field's stored value.
+				displayName: 'Environment',
+				name: 'salesforceEnvironment',
+				type: 'options',
+				default: 'production',
+				options: [
+					{ name: 'Production', value: 'production' },
+					{ name: 'Sandbox', value: 'sandbox' },
+				],
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['salesforceOAuth2Api'] },
+				},
+			},
+			{
+				displayName: 'APP Access Type',
+				name: 'accessType',
+				type: 'options',
+				default: 'full',
+				options: [
+					{ name: 'App Folder', value: 'folder' },
+					{ name: 'Full Dropbox', value: 'full' },
+				],
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['dropboxOAuth2Api'] },
 				},
 			},
 

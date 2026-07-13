@@ -446,6 +446,25 @@ single "Connect" click. This matches the existing OAuth2 pattern (`googleOAuth2A
 
 ---
 
+### 3.11c SaaS OAuth2 (`salesforceOAuth2Api`, `hubspotOAuth2Api`, `dropboxOAuth2Api`, `spotifyOAuth2Api`)
+
+Same shape and same non-sync of `oauthTokenData` as §3.11b — the only difference is which
+service-specific fields exist. `salesforceOAuth2Api` adds `environment` (`'production'` or
+`'sandbox'`, driving which auth/token URLs the hidden fields resolve to); `dropboxOAuth2Api` adds
+`accessType` (`'folder'` or `'full'`, controlling the OAuth scope requested). Both are flat
+enum fields, not `allOf` condition keys — the schema doesn't gate any *other* field's
+required/prohibited status on their value, unlike `twilioApi.authType` or `snowflake.authentication`.
+`hubspotOAuth2Api` and `spotifyOAuth2Api` have no user-editable fields beyond the standard
+`serverUrl`/`clientId`/`clientSecret` triplet.
+
+`salesforceOAuth2Api.environment` collided with the node's own top-level "Environment" parameter
+(the Infisical environment slug, shown for every credential type) — Form-mode push silently fed the
+credential's `'sandbox'`/`'production'` value into the Infisical API call instead. Fixed by giving
+the Form field a distinct internal name (`salesforceEnvironment`) while keeping `secretKey:
+'environment'`; see [Implementation Guide §4.5](sync-implementation-guide.md#45-parameter-name-collision-with-the-nodes-own-top-level-fields).
+
+---
+
 ### 3.12 JWT Auth (`jwtAuth`)
 
 **Two conditional branches**:
@@ -798,6 +817,8 @@ defaults[key] = def.default
 | `slackOAuth2Api` / `microsoftTeamsOAuth2Api` / `discordOAuth2Api` | branches | `customScopes` drives `userScope`/`enabledScopes` | yes | working (clientId/secret only, no `oauthTokenData`) |
 | `twitterOAuth2Api` / `linkedInOAuth2Api` | branches | none synced | yes | working (clientId/secret only, no `oauthTokenData`) |
 | `twitterOAuth1Api` | 1 branch | `allowedDomains` | no | working (consumerKey/secret only, no `oauthTokenData`) |
+| `salesforceOAuth2Api` / `dropboxOAuth2Api` | branches | `allowedDomains`; `environment`/`accessType` are flat enums, not condition keys | yes | working (clientId/secret only, no `oauthTokenData`) |
+| `hubspotOAuth2Api` / `spotifyOAuth2Api` | branches | `allowedDomains` | yes | working (clientId/secret only, no `oauthTokenData`) |
 | `jwtAuth` | 2 branches (mutual exclusion) | `secret` XOR `privateKey`/`publicKey` | no | working |
 
 ---

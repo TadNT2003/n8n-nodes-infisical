@@ -433,6 +433,53 @@ Ngoài ra, mỗi `param` trong map giờ đều có một trường Form tương
 
 **Quy tắc về sau**: khi thêm một entry field-map, cũng phải thêm một thuộc tính Form có `name` bằng với `param`, nếu không giá trị không thể nhập được ở chế độ Form.
 
+### 4.5 Xung đột tên tham số với các trường cấp cao nhất của chính node
+
+**Vấn đề**
+
+`salesforceOAuth2Api` có một thuộc tính schema thực tế, đang chạy, tên đúng là `environment` (bộ
+chọn sandbox/production của OAuth). Tham số "Environment" cấp cao nhất của chính node
+`InfisicalSync` — slug môi trường Infisical (`dev`/`staging`/`prod`), hiển thị cho mọi loại
+credential của `syncToInfisical` bất kể loại nào được chọn — cũng có tên `environment`. Tham số
+node trong n8n dùng chung một không gian tên phẳng theo `name`; hai thuộc tính dùng chung `name`
+chỉ an toàn nếu `displayOptions.show` của chúng loại trừ lẫn nhau. Ở đây thì không: trường cấp cao
+nhất không có giới hạn `credentialType` nào cả, nên nó và trường riêng của Salesforce cùng "sống"
+đồng thời bất cứ khi nào `credentialType: salesforceOAuth2Api` được chọn ở chế độ Form.
+
+**Triệu chứng**
+
+Đẩy một credential Salesforce OAuth2 ở chế độ Form với chế độ sandbox được chọn khiến
+`ctx.getNodeParameter('environment', i)` — dùng cho **slug môi trường đích của Infisical** — đọc
+lại giá trị `'sandbox'` thay vì slug thật (ví dụ `'dev'`), sau đó thất bại khi gọi API Infisical với
+lỗi `Environment with slug 'sandbox' in project with ID '…' not found`. Luồng pull của
+`autoSyncFromInfisical` không bị ảnh hưởng — nó đọc giá trị trường từ đối tượng secrets đã lấy về từ
+Infisical (theo khóa `secretKey`), không phải từ `getNodeParameter`, nên xung đột này chỉ ảnh hưởng
+đến luồng push ở chế độ Form.
+
+**Khắc phục**
+
+Đổi tên tham số Form nội bộ thành `salesforceEnvironment`, giữ nguyên `secretKey: 'environment'`
+(khóa lưu trữ thực tế trên n8n/Infisical không bị ảnh hưởng):
+
+```typescript
+salesforceOAuth2Api: [
+  // ...
+  { param: 'salesforceEnvironment', secretKey: 'environment' },  // trước đây: 'environment'
+],
+```
+
+và `name` của trường Form được cập nhật để khớp. Đây là hình ảnh đối xứng của việc sửa `domain` ở
+§4.2 — ở đó, `param` trong map phải *đổi tên để khớp* với schema; ở đây, `param` trong map phải
+*cố tình khác* với `secretKey` của schema để tránh xung đột với một tham số node khác, luôn hiển
+thị, không liên quan.
+
+**Quy tắc về sau**: trước khi thêm một entry field-map có `param` trùng với một từ thông dụng, hãy
+kiểm tra nó với các tên tham số cấp cao nhất khác của node (không bị giới hạn bởi `credentialType`)
+— `projectId`, `environment`, `rootPath`, `credentialName`, `ifCredentialMissing`, `inputMode`,
+`credentialType`/`credentialTypeJson`, `credentialJson`, `n8nCredentialId`. Nếu xung đột, giữ
+`secretKey` khớp với thuộc tính schema thực tế nhưng chọn một tên `param` riêng biệt, có tiền tố
+theo loại, cho trường Form.
+
 ---
 
 ## 5. Xử Lý Bộ Kiểm Tra: Thuật Toán Đầy Đủ
@@ -610,6 +657,22 @@ dịch vụ nhưng người dùng chỉnh sửa được (theo tenant) trên Mic
 | `discordOAuth2Api` | `serverUrl`, `clientId`, `clientSecret`, `botToken` | string | |
 | `discordOAuth2Api` | `customScopes` | boolean | khóa điều kiện: điều khiển `enabledScopes` |
 | `discordOAuth2Api` | `enabledScopes` | string | chỉ khi `customScopes: true` |
+
+### SaaS (OAuth2)
+
+Cùng mẫu với nhóm OAuth2 nhắn tin/mạng xã hội ở trên: chỉ các trường app-registration và cấu hình
+đặc thù theo dịch vụ mà người dùng chỉnh sửa được mới được đồng bộ; `grantType`/`authUrl`/
+`accessTokenUrl`/`scope`/`authQueryParameters`/`authentication` là `hidden` trên cả bốn loại, và
+`oauthTokenData` cố tình không được đồng bộ.
+
+| Loại n8n | `param` n8n | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `salesforceOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `salesforceOAuth2Api` | `environment` | string (enum) | `'production'` hoặc `'sandbox'`; param Form nội bộ là `salesforceEnvironment` — xem §4.5 |
+| `hubspotOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | không có trường bổ sung nào người dùng chỉnh sửa được |
+| `dropboxOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `dropboxOAuth2Api` | `accessType` | string (enum) | `'folder'` (App Folder) hoặc `'full'` (Full Dropbox) |
+| `spotifyOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | không có trường bổ sung nào người dùng chỉnh sửa được |
 
 ### Lưu trữ mã nguồn (Code Hosting)
 

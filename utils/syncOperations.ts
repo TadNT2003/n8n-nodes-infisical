@@ -130,6 +130,32 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 		{ param: 'customScopes', secretKey: 'customScopes' },
 		{ param: 'enabledScopes', secretKey: 'enabledScopes' },
 	],
+	salesforceOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		// param name deliberately differs from secretKey: the node's top-level
+		// "Environment" parameter (Infisical environment slug) already claims the
+		// name 'environment' across every operation — reusing it here would let
+		// this form field silently overwrite that unrelated parameter's value.
+		{ param: 'salesforceEnvironment', secretKey: 'environment' },
+	],
+	hubspotOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+	],
+	dropboxOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		{ param: 'accessType', secretKey: 'accessType' },
+	],
+	spotifyOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+	],
 	// ── Productivity / SaaS (static-token) ─────────────────────────────────────
 	airtableTokenApi: [{ param: 'accessToken', secretKey: 'accessToken' }],
 	notionApi: [{ param: 'apiKey', secretKey: 'apiKey' }],
