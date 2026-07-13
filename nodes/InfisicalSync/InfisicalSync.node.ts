@@ -180,6 +180,8 @@ export class InfisicalSync implements INodeType {
 				options: [
 					{ name: 'Airtable', value: 'airtableTokenApi' },
 					{ name: 'Anthropic', value: 'anthropicApi' },
+					{ name: 'AWS (IAM)', value: 'aws' },
+					{ name: 'AWS (Assume Role)', value: 'awsAssumeRole' },
 					{ name: 'Basic Auth', value: 'httpBasicAuth' },
 					{ name: 'Bearer Auth', value: 'httpBearerAuth' },
 					{ name: 'Bitbucket (Access Token)', value: 'bitbucketAccessTokenApi' },
@@ -503,6 +505,8 @@ export class InfisicalSync implements INodeType {
 							'httpCustomAuth',
 							'oAuth1Api',
 							'oAuth2Api',
+							'aws',
+							'awsAssumeRole',
 						],
 					},
 				},
@@ -531,6 +535,8 @@ export class InfisicalSync implements INodeType {
 							'httpCustomAuth',
 							'oAuth1Api',
 							'oAuth2Api',
+							'aws',
+							'awsAssumeRole',
 						],
 						allowedHttpRequestDomains: ['domains'],
 					},
@@ -1399,6 +1405,263 @@ export class InfisicalSync implements INodeType {
 				description: 'Passphrase used to create the key, if any',
 				displayOptions: {
 					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['sshPrivateKey'] },
+				},
+			},
+
+			// ── AWS (shared: IAM + Assume Role) ────────────────────────────────────
+			{
+				displayName: 'Region',
+				name: 'region',
+				type: 'string',
+				default: 'us-east-1',
+				placeholder: 'us-east-1',
+				description: 'AWS region code',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['aws', 'awsAssumeRole'] },
+				},
+			},
+			{
+				displayName: 'Custom Endpoints',
+				name: 'customEndpoints',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['aws', 'awsAssumeRole'] },
+				},
+			},
+			{
+				displayName: 'Rekognition Endpoint',
+				name: 'rekognitionEndpoint',
+				type: 'string',
+				default: '',
+				placeholder: 'https://rekognition.{region}.amazonaws.com',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws', 'awsAssumeRole'],
+						customEndpoints: [true],
+					},
+				},
+			},
+			{
+				displayName: 'Lambda Endpoint',
+				name: 'lambdaEndpoint',
+				type: 'string',
+				default: '',
+				placeholder: 'https://lambda.{region}.amazonaws.com',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws', 'awsAssumeRole'],
+						customEndpoints: [true],
+					},
+				},
+			},
+			{
+				displayName: 'SNS Endpoint',
+				name: 'snsEndpoint',
+				type: 'string',
+				default: '',
+				placeholder: 'https://sns.{region}.amazonaws.com',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws', 'awsAssumeRole'],
+						customEndpoints: [true],
+					},
+				},
+			},
+			{
+				displayName: 'SES Endpoint',
+				name: 'sesEndpoint',
+				type: 'string',
+				default: '',
+				placeholder: 'https://email.{region}.amazonaws.com',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws', 'awsAssumeRole'],
+						customEndpoints: [true],
+					},
+				},
+			},
+			{
+				displayName: 'SQS Endpoint',
+				name: 'sqsEndpoint',
+				type: 'string',
+				default: '',
+				placeholder: 'https://sqs.{region}.amazonaws.com',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws', 'awsAssumeRole'],
+						customEndpoints: [true],
+					},
+				},
+			},
+			{
+				displayName: 'S3 Endpoint',
+				name: 's3Endpoint',
+				type: 'string',
+				default: '',
+				placeholder: 'https://s3.{region}.amazonaws.com',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws', 'awsAssumeRole'],
+						customEndpoints: [true],
+					},
+				},
+			},
+			{
+				displayName: 'SSM Endpoint',
+				name: 'ssmEndpoint',
+				type: 'string',
+				default: '',
+				placeholder: 'https://ssm.{region}.amazonaws.com',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws', 'awsAssumeRole'],
+						customEndpoints: [true],
+					},
+				},
+			},
+
+			// ── AWS (IAM) ─────────────────────────────────────────────────────────
+			{
+				displayName: 'Access Key ID',
+				name: 'accessKeyId',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['aws'] },
+				},
+			},
+			{
+				displayName: 'Secret Access Key',
+				name: 'secretAccessKey',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['aws'] },
+				},
+			},
+			{
+				displayName: 'Temporary Security Credentials',
+				name: 'temporaryCredentials',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to use temporary credentials from AWS STS',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['aws'] },
+				},
+			},
+			{
+				displayName: 'Session Token',
+				name: 'sessionToken',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws'],
+						temporaryCredentials: [true],
+					},
+				},
+			},
+
+			// ── AWS (Assume Role) ─────────────────────────────────────────────────
+			{
+				displayName: 'Use System Credentials for Role',
+				name: 'useSystemCredentialsForRole',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['awsAssumeRole'] },
+				},
+			},
+			{
+				displayName: 'STS Access Key ID',
+				name: 'stsAccessKeyId',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['awsAssumeRole'],
+						useSystemCredentialsForRole: [false],
+					},
+				},
+			},
+			{
+				displayName: 'STS Secret Access Key',
+				name: 'stsSecretAccessKey',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['awsAssumeRole'],
+						useSystemCredentialsForRole: [false],
+					},
+				},
+			},
+			{
+				displayName: 'STS Session Token',
+				name: 'stsSessionToken',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['awsAssumeRole'],
+						useSystemCredentialsForRole: [false],
+					},
+				},
+			},
+			{
+				displayName: 'Role ARN',
+				name: 'roleArn',
+				type: 'string',
+				default: '',
+				placeholder: 'arn:aws:iam::123456789012:role/MyRole',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['awsAssumeRole'] },
+				},
+			},
+			{
+				displayName: 'External ID',
+				name: 'externalId',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['awsAssumeRole'] },
+				},
+			},
+			{
+				displayName: 'Role Session Name',
+				name: 'roleSessionName',
+				type: 'string',
+				default: 'n8n-session',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['awsAssumeRole'] },
 				},
 			},
 

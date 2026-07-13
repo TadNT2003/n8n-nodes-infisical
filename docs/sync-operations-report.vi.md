@@ -296,6 +296,30 @@ Các trường required theo loại:
 
 ---
 
+### 3.9b AWS (`aws`, `awsAssumeRole`)
+
+Cả hai loại đều mang nhánh `allowedHttpRequestDomains` giống §3.8, cộng thêm một nhánh
+`customEndpoints` dùng chung (7 trường ghi đè VPC-endpoint — `rekognitionEndpoint`,
+`lambdaEndpoint`, `snsEndpoint`, `sesEndpoint`, `sqsEndpoint`, `s3Endpoint`, `ssmEndpoint` — đều bị
+chi phối bởi một khóa điều kiện boolean, đều bị prohibit khi khóa đó là `false`).
+
+`aws` có thêm một nhánh `temporaryCredentials` chi phối `sessionToken` (thông tin đăng nhập tạm
+thời từ STS). `awsAssumeRole` có thêm một nhánh `useSystemCredentialsForRole` chi phối ba trường
+`sts*`, và ba trường required ở cấp cao nhất (`roleArn`, `externalId`, `roleSessionName`) — loại
+AWS duy nhất trong đợt này có trường required ở cấp cao nhất.
+
+Không loại nào có trường `host`/`region`-tương tự nào là required được schema phơi bày (`region`
+là tùy chọn với mặc định UI `us-east-1`, không required) — phương thức `authenticate()` của
+credential mới thực sự thất bại tại thời điểm gửi request khi key sai, không phải do schema
+validate trước.
+
+**Giá trị mặc định được tạo (`aws`)**:
+```json
+{ "region": "", "temporaryCredentials": false, "customEndpoints": false, "allowedHttpRequestDomains": "all" }
+```
+
+---
+
 ### 3.10 OAuth1 API (`oAuth1Api`)
 
 **Một nhánh điều kiện**:
@@ -632,6 +656,8 @@ defaults[key] = def.default
 | `elasticsearchApi` / `supabaseApi` / `nocoDb` | phẳng | không | không | hoạt động |
 | `snowflake` | 1 nhánh (loại trừ lẫn nhau) | `password` đối lập `privateKey`/`passphrase` | không | hoạt động |
 | `sshPassword` / `sshPrivateKey` | phẳng | không | không | hoạt động (required cấp cao nhất `host`/`port`) |
+| `aws` | 3 nhánh | `temporaryCredentials`→`sessionToken`, `customEndpoints`→7 endpoint, `allowedHttpRequestDomains` | không | hoạt động |
+| `awsAssumeRole` | 3 nhánh | `useSystemCredentialsForRole`→3 trường `sts*`, `customEndpoints`→7 endpoint, `allowedHttpRequestDomains` | không | hoạt động (required cấp cao nhất `roleArn`/`externalId`/`roleSessionName`) |
 | `googleApi` | 3 nhánh | `delegatedEmail`, `httpWarning`, `scopes`, `allowedDomains` | không | hoạt động |
 | `mySql` | 2 nhánh | 10 trường điều kiện | không | hoạt động |
 | `postgres` | 2 nhánh (đảo ngược mặc định) | `ssl` luôn + 7 trường SSH | không | hoạt động |

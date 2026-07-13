@@ -941,6 +941,54 @@ These three types share identical schema structure.
 
 ---
 
+### AWS
+
+`aws` and `awsAssumeRole` share the same `region` and 7 custom-endpoint fields (all gated by the
+`customEndpoints` condition key). Neither has any top-level required field in the live runtime
+schema (v2.21.5) — the credential's own `authenticate()` method fails at request time if the keys
+are wrong, rather than the schema enforcing it upfront.
+
+#### AWS (IAM) (`aws`)
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `region` | `region` | string | defaults to `us-east-1` |
+| `accessKeyId` | `accessKeyId` | string | |
+| `secretAccessKey` | `secretAccessKey` | string | |
+| `temporaryCredentials` | `temporaryCredentials` | boolean | condition key: controls `sessionToken` |
+| `sessionToken` | `sessionToken` | string | only when `temporaryCredentials: true` |
+| `customEndpoints` | `customEndpoints` | boolean | condition key: controls the 7 endpoint fields below |
+| `rekognitionEndpoint` | `rekognitionEndpoint` | string | only when `customEndpoints: true` |
+| `lambdaEndpoint` | `lambdaEndpoint` | string | only when `customEndpoints: true` |
+| `snsEndpoint` | `snsEndpoint` | string | only when `customEndpoints: true` |
+| `sesEndpoint` | `sesEndpoint` | string | only when `customEndpoints: true` |
+| `sqsEndpoint` | `sqsEndpoint` | string | only when `customEndpoints: true` |
+| `s3Endpoint` | `s3Endpoint` | string | only when `customEndpoints: true` |
+| `ssmEndpoint` | `ssmEndpoint` | string | only when `customEndpoints: true` |
+| `allowedHttpRequestDomains` | same | string (enum) | condition key: controls `allowedDomains` |
+| `allowedDomains` | same | string | only when `allowedHttpRequestDomains: 'domains'` |
+
+#### AWS (Assume Role) (`awsAssumeRole`)
+
+`roleArn`, `externalId`, and `roleSessionName` are top-level required. `roleSessionName` has a
+real n8n UI default (`'n8n-session'`) not exposed by the schema, so it's in
+`CREDENTIAL_FIELD_DEFAULTS` as a fallback — same gap pattern as `googlePalmApi.host`.
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `region` | `region` | string | |
+| `useSystemCredentialsForRole` | `useSystemCredentialsForRole` | boolean | condition key: controls the 3 `sts*` fields |
+| `stsAccessKeyId` | `stsAccessKeyId` | string | only when `useSystemCredentialsForRole: false` |
+| `stsSecretAccessKey` | `stsSecretAccessKey` | string | only when `useSystemCredentialsForRole: false` |
+| `stsSessionToken` | `stsSessionToken` | string | only when `useSystemCredentialsForRole: false` |
+| `roleArn` | `roleArn` | string | required |
+| `externalId` | `externalId` | string | required |
+| `roleSessionName` | `roleSessionName` | string | required; default `'n8n-session'` |
+| `customEndpoints` + 7 endpoint fields | same | | identical to `aws` above |
+| `allowedHttpRequestDomains` / `allowedDomains` | same | | identical to `aws` above |
+
+---
+
 ### Generic HTTP Auth
 
 #### Bearer Auth (`httpBearerAuth`)

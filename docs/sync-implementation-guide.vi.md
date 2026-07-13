@@ -854,6 +854,55 @@ Ba loại này có cấu trúc schema giống hệt nhau.
 
 ---
 
+### AWS
+
+`aws` và `awsAssumeRole` dùng chung trường `region` và 7 trường custom-endpoint (tất cả được chi
+phối bởi khóa điều kiện `customEndpoints`). Không loại nào có trường required ở cấp cao nhất trong
+schema thực tế đang chạy (v2.21.5) — phương thức `authenticate()` của credential sẽ thất bại tại
+thời điểm gửi request nếu key sai, thay vì schema ép buộc ngay từ đầu.
+
+#### AWS (IAM) (`aws`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `region` | `region` | string | mặc định `us-east-1` |
+| `accessKeyId` | `accessKeyId` | string | |
+| `secretAccessKey` | `secretAccessKey` | string | |
+| `temporaryCredentials` | `temporaryCredentials` | boolean | khóa điều kiện: kiểm soát `sessionToken` |
+| `sessionToken` | `sessionToken` | string | chỉ khi `temporaryCredentials: true` |
+| `customEndpoints` | `customEndpoints` | boolean | khóa điều kiện: kiểm soát 7 trường endpoint bên dưới |
+| `rekognitionEndpoint` | `rekognitionEndpoint` | string | chỉ khi `customEndpoints: true` |
+| `lambdaEndpoint` | `lambdaEndpoint` | string | chỉ khi `customEndpoints: true` |
+| `snsEndpoint` | `snsEndpoint` | string | chỉ khi `customEndpoints: true` |
+| `sesEndpoint` | `sesEndpoint` | string | chỉ khi `customEndpoints: true` |
+| `sqsEndpoint` | `sqsEndpoint` | string | chỉ khi `customEndpoints: true` |
+| `s3Endpoint` | `s3Endpoint` | string | chỉ khi `customEndpoints: true` |
+| `ssmEndpoint` | `ssmEndpoint` | string | chỉ khi `customEndpoints: true` |
+| `allowedHttpRequestDomains` | tương tự | string (enum) | khóa điều kiện: kiểm soát `allowedDomains` |
+| `allowedDomains` | tương tự | string | chỉ khi `allowedHttpRequestDomains: 'domains'` |
+
+#### AWS (Assume Role) (`awsAssumeRole`)
+
+`roleArn`, `externalId`, và `roleSessionName` là required ở cấp cao nhất. `roleSessionName` có
+giá trị mặc định thực tế trong UI n8n (`'n8n-session'`) không được schema phơi bày, nên nó nằm
+trong `CREDENTIAL_FIELD_DEFAULTS` như một fallback — cùng mẫu khoảng trống với
+`googlePalmApi.host`.
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `region` | `region` | string | |
+| `useSystemCredentialsForRole` | `useSystemCredentialsForRole` | boolean | khóa điều kiện: kiểm soát 3 trường `sts*` |
+| `stsAccessKeyId` | `stsAccessKeyId` | string | chỉ khi `useSystemCredentialsForRole: false` |
+| `stsSecretAccessKey` | `stsSecretAccessKey` | string | chỉ khi `useSystemCredentialsForRole: false` |
+| `stsSessionToken` | `stsSessionToken` | string | chỉ khi `useSystemCredentialsForRole: false` |
+| `roleArn` | `roleArn` | string | required |
+| `externalId` | `externalId` | string | required |
+| `roleSessionName` | `roleSessionName` | string | required; mặc định `'n8n-session'` |
+| `customEndpoints` + 7 trường endpoint | tương tự | | giống hệt `aws` ở trên |
+| `allowedHttpRequestDomains` / `allowedDomains` | tương tự | | giống hệt `aws` ở trên |
+
+---
+
 ### Xác Thực HTTP Chung
 
 #### Bearer Auth (`httpBearerAuth`)

@@ -334,6 +334,29 @@ Required fields by type:
 
 ---
 
+### 3.9b AWS (`aws`, `awsAssumeRole`)
+
+Both types carry the same `allowedHttpRequestDomains` branch as §3.8, plus a shared
+`customEndpoints` branch (7 VPC-endpoint override fields — `rekognitionEndpoint`,
+`lambdaEndpoint`, `snsEndpoint`, `sesEndpoint`, `sqsEndpoint`, `s3Endpoint`, `ssmEndpoint` — all
+gated by one boolean condition key, all prohibited when it's `false`).
+
+`aws` additionally has a `temporaryCredentials` branch gating `sessionToken` (STS temporary
+credentials). `awsAssumeRole` additionally has a `useSystemCredentialsForRole` branch gating the
+three `sts*` fields, and three top-level required fields (`roleArn`, `externalId`,
+`roleSessionName`) — the only AWS type in this batch with anything required at the top level.
+
+Neither type has a `host`/`region`-adjacent required field surfaced by the schema (`region` is
+optional with UI default `us-east-1`, not required) — the credential's own `authenticate()` method
+is what actually fails at request time on bad keys, not schema validation.
+
+**Generated defaults (`aws`)**:
+```json
+{ "region": "", "temporaryCredentials": false, "customEndpoints": false, "allowedHttpRequestDomains": "all" }
+```
+
+---
+
 ### 3.10 OAuth1 API (`oAuth1Api`)
 
 **One conditional branch**:
@@ -725,6 +748,8 @@ defaults[key] = def.default
 | `elasticsearchApi` / `supabaseApi` / `nocoDb` | flat | none | no | working |
 | `snowflake` | 1 branch (mutual exclusion) | `password` XOR `privateKey`/`passphrase` | no | working |
 | `sshPassword` / `sshPrivateKey` | flat | none | no | working (top-level required `host`/`port`) |
+| `aws` | 3 branches | `temporaryCredentials`→`sessionToken`, `customEndpoints`→7 endpoints, `allowedHttpRequestDomains` | no | working |
+| `awsAssumeRole` | 3 branches | `useSystemCredentialsForRole`→3 `sts*` fields, `customEndpoints`→7 endpoints, `allowedHttpRequestDomains` | no | working (top-level required `roleArn`/`externalId`/`roleSessionName`) |
 | `googleApi` | 3 branches | `delegatedEmail`, `httpWarning`, `scopes`, `allowedDomains` | no | working |
 | `mySql` | 2 branches | 10 conditional fields | no | working |
 | `postgres` | 2 branches (inverted default) | `ssl` always + 7 SSH fields | no | working |

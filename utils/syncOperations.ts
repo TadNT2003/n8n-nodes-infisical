@@ -211,6 +211,47 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 		{ param: 'privateKey', secretKey: 'privateKey' },
 		{ param: 'passphrase', secretKey: 'passphrase' },
 	],
+	// ── AWS ─────────────────────────────────────────────────────────────────────
+	aws: [
+		{ param: 'region', secretKey: 'region' },
+		{ param: 'accessKeyId', secretKey: 'accessKeyId' },
+		{ param: 'secretAccessKey', secretKey: 'secretAccessKey' },
+		// condition-controlling: temporaryCredentials drives sessionToken
+		{ param: 'temporaryCredentials', secretKey: 'temporaryCredentials' },
+		{ param: 'sessionToken', secretKey: 'sessionToken' },
+		// condition-controlling: customEndpoints drives the 7 endpoint fields
+		{ param: 'customEndpoints', secretKey: 'customEndpoints' },
+		{ param: 'rekognitionEndpoint', secretKey: 'rekognitionEndpoint' },
+		{ param: 'lambdaEndpoint', secretKey: 'lambdaEndpoint' },
+		{ param: 'snsEndpoint', secretKey: 'snsEndpoint' },
+		{ param: 'sesEndpoint', secretKey: 'sesEndpoint' },
+		{ param: 'sqsEndpoint', secretKey: 'sqsEndpoint' },
+		{ param: 's3Endpoint', secretKey: 's3Endpoint' },
+		{ param: 'ssmEndpoint', secretKey: 'ssmEndpoint' },
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
+	awsAssumeRole: [
+		{ param: 'region', secretKey: 'region' },
+		// condition-controlling: useSystemCredentialsForRole gates the sts* fields
+		{ param: 'useSystemCredentialsForRole', secretKey: 'useSystemCredentialsForRole' },
+		{ param: 'stsAccessKeyId', secretKey: 'stsAccessKeyId' },
+		{ param: 'stsSecretAccessKey', secretKey: 'stsSecretAccessKey' },
+		{ param: 'stsSessionToken', secretKey: 'stsSessionToken' },
+		{ param: 'roleArn', secretKey: 'roleArn' },
+		{ param: 'externalId', secretKey: 'externalId' },
+		{ param: 'roleSessionName', secretKey: 'roleSessionName' },
+		{ param: 'customEndpoints', secretKey: 'customEndpoints' },
+		{ param: 'rekognitionEndpoint', secretKey: 'rekognitionEndpoint' },
+		{ param: 'lambdaEndpoint', secretKey: 'lambdaEndpoint' },
+		{ param: 'snsEndpoint', secretKey: 'snsEndpoint' },
+		{ param: 'sesEndpoint', secretKey: 'sesEndpoint' },
+		{ param: 'sqsEndpoint', secretKey: 'sqsEndpoint' },
+		{ param: 's3Endpoint', secretKey: 's3Endpoint' },
+		{ param: 'ssmEndpoint', secretKey: 'ssmEndpoint' },
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
 	githubApi: [
 		{ param: 'server', secretKey: 'server' },
 		{ param: 'user', secretKey: 'user' },
@@ -429,6 +470,7 @@ const CREDENTIAL_FIELD_DEFAULTS: Record<string, Record<string, string>> = {
 	deepseekApi: { baseUrl: 'https://api.deepseek.com' },
 	telegramApi: { baseUrl: 'https://api.telegram.org' },
 	matrixApi: { homeserverUrl: 'https://matrix-client.matrix.org' },
+	awsAssumeRole: { roleSessionName: 'n8n-session' },
 };
 
 // Lossless encoding: [A-Za-z0-9-] pass through, _ → __, everything else → _XX hex sequences.

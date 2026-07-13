@@ -296,7 +296,7 @@ Both Infisical → n8n operations expose an **If Credential Missing** option for
 
 ### Supported Credential Types (Form Mode)
 
-Form mode supports **67 credential types**. JSON mode accepts any type registered in n8n.
+Form mode supports **69 credential types**. JSON mode accepts any type registered in n8n.
 
 #### AI / LLM
 
@@ -335,6 +335,12 @@ Form mode supports **67 credential types**. JSON mode accepts any type registere
 `sshPassword`, `sshPrivateKey`
 
 > **Note**: These are the standalone SSH credential types — distinct from the SSH-tunnel sub-fields already synced inside `mySql`/`postgres` for database connections routed through an SSH tunnel.
+
+#### Cloud / Infrastructure
+
+`aws`, `awsAssumeRole`
+
+> **Note**: `aws` and `awsAssumeRole` share the same `region` and custom-endpoint fields (7 VPC endpoint overrides gated by `customEndpoints`). `aws` supports temporary STS credentials via `temporaryCredentials`; `awsAssumeRole` assumes an IAM role via `roleArn`/`externalId` and can source its base credentials from n8n's own system credentials (`useSystemCredentialsForRole`) instead of static keys.
 
 #### Infrastructure
 
