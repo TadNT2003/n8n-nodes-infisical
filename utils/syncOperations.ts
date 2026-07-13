@@ -139,6 +139,78 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 	],
 	hubspotAppToken: [{ param: 'appToken', secretKey: 'appToken' }],
 	sendGridApi: [{ param: 'apiKey', secretKey: 'apiKey' }],
+	// ── Databases (Tier 3) ──────────────────────────────────────────────────────
+	// crateDb/questDb/timescaleDb are Postgres wire-compatible and share its host/
+	// database/user/password/port/ssl shape; timescaleDb additionally exposes
+	// allowUnauthorizedCerts like postgres. Neither carries SSH-tunnel support.
+	crateDb: [
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'database', secretKey: 'database' },
+		{ param: 'user', secretKey: 'user' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'ssl', secretKey: 'ssl' },
+		{ param: 'port', secretKey: 'port' },
+	],
+	questDb: [
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'database', secretKey: 'database' },
+		{ param: 'user', secretKey: 'user' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'ssl', secretKey: 'ssl' },
+		{ param: 'port', secretKey: 'port' },
+	],
+	timescaleDb: [
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'database', secretKey: 'database' },
+		{ param: 'user', secretKey: 'user' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'allowUnauthorizedCerts', secretKey: 'allowUnauthorizedCerts' },
+		{ param: 'ssl', secretKey: 'ssl' },
+		{ param: 'port', secretKey: 'port' },
+	],
+	elasticsearchApi: [
+		{ param: 'username', secretKey: 'username' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'baseUrl', secretKey: 'baseUrl' },
+		{ param: 'ignoreSSLIssues', secretKey: 'ignoreSSLIssues' },
+	],
+	supabaseApi: [
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'serviceRole', secretKey: 'serviceRole' },
+	],
+	nocoDb: [
+		{ param: 'apiToken', secretKey: 'apiToken' },
+		{ param: 'host', secretKey: 'host' },
+	],
+	snowflake: [
+		{ param: 'account', secretKey: 'account' },
+		{ param: 'database', secretKey: 'database' },
+		{ param: 'warehouse', secretKey: 'warehouse' },
+		// condition-controlling: authentication drives password vs privateKey/passphrase
+		{ param: 'authentication', secretKey: 'authentication' },
+		{ param: 'username', secretKey: 'username' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'privateKey', secretKey: 'privateKey' },
+		{ param: 'passphrase', secretKey: 'passphrase' },
+		{ param: 'schema', secretKey: 'schema' },
+		{ param: 'role', secretKey: 'role' },
+		{ param: 'clientSessionKeepAlive', secretKey: 'clientSessionKeepAlive' },
+	],
+	// Standalone SSH credentials (separate from the SSH-tunnel sub-fields already
+	// synced inside mySql/postgres, which are a different, embedded use case).
+	sshPassword: [
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'port', secretKey: 'port' },
+		{ param: 'username', secretKey: 'username' },
+		{ param: 'password', secretKey: 'password' },
+	],
+	sshPrivateKey: [
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'port', secretKey: 'port' },
+		{ param: 'username', secretKey: 'username' },
+		{ param: 'privateKey', secretKey: 'privateKey' },
+		{ param: 'passphrase', secretKey: 'passphrase' },
+	],
 	githubApi: [
 		{ param: 'server', secretKey: 'server' },
 		{ param: 'user', secretKey: 'user' },

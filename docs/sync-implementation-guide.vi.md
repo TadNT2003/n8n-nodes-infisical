@@ -734,6 +734,92 @@ Không cần entry trong `CREDENTIAL_FIELD_DEFAULTS`.
 | `database` | `database` | number | |
 | `ssl` | `ssl` | boolean | khóa điều kiện: kiểm soát `disableTlsVerification` |
 
+#### CrateDB / QuestDB (`crateDb`, `questDb`)
+
+Tương thích wire protocol với Postgres; cả hai schema đều phẳng, không có điều kiện `allOf` và
+không hỗ trợ SSH tunnel (khác với `mySql`/`postgres`).
+
+| `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `host` | `host` | string | mặc định `localhost` |
+| `database` | `database` | string | CrateDB mặc định `doc`, QuestDB mặc định `qdb` (mặc định UI n8n, không do schema ép buộc) |
+| `user` | `user` | string | CrateDB mặc định `crate`, QuestDB mặc định `admin` |
+| `password` | `password` | string | |
+| `ssl` | `ssl` | string (enum) | `allow`/`disable`/`require`, cùng hình dạng với `postgres` |
+| `port` | `port` | number | CrateDB 5432, QuestDB 8812 |
+
+#### TimescaleDB (`timescaleDb`)
+
+Tương thích wire protocol với Postgres, có cặp `ssl`/`allowUnauthorizedCerts` giống `postgres`
+nhưng không hỗ trợ SSH tunnel.
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `host` | `host` | string | |
+| `database` | `database` | string | mặc định `postgres` |
+| `user` | `user` | string | |
+| `password` | `password` | string | |
+| `allowUnauthorizedCerts` | `allowUnauthorizedCerts` | boolean | khóa điều kiện |
+| `ssl` | `ssl` | string (enum) | `allow`/`disable`/`require` |
+| `port` | `port` | number | |
+
+#### Elasticsearch (`elasticsearchApi`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `username` | `username` | string | |
+| `password` | `password` | string | |
+| `baseUrl` | `baseUrl` | string | |
+| `ignoreSSLIssues` | `ignoreSSLIssues` | boolean | |
+
+#### Supabase (`supabaseApi`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `host` | `host` | string | URL dự án, không có phần `/rest/v1` |
+| `serviceRole` | `serviceRole` | string | secret key của dự án |
+
+#### NocoDB (`nocoDb`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `apiToken` | `apiToken` | string | |
+| `host` | `host` | string | |
+
+#### Snowflake (`snowflake`)
+
+Schema n8n cục bộ (v2.21.5) không có thuộc tính `host` (có trong mã nguồn GitHub mới hơn) — field
+map tuân theo schema thực tế đang chạy, theo đúng quy tắc xác minh. `snowflakeOAuth2Api` trả về 404
+trên endpoint schema của instance này (được thêm vào n8n-nodes-base sau phiên bản 2.21.5) và **không**
+được hỗ trợ bởi package này vì lý do đó.
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `account` | `account` | string | |
+| `database` | `database` | string | |
+| `warehouse` | `warehouse` | string | |
+| `authentication` | `authentication` | string (enum) | khóa điều kiện: `'password'` hoặc `'keyPair'` |
+| `username` | `username` | string | |
+| `password` | `password` | string | chỉ khi `authentication: 'password'` |
+| `privateKey` | `privateKey` | string | chỉ khi `authentication: 'keyPair'` |
+| `passphrase` | `passphrase` | string | chỉ khi `authentication: 'keyPair'` |
+| `schema` | `schema` | string | |
+| `role` | `role` | string | |
+| `clientSessionKeepAlive` | `clientSessionKeepAlive` | boolean | |
+
+#### SSH (`sshPassword`, `sshPrivateKey`)
+
+Credential SSH độc lập — khác với các trường con SSH-tunnel đã được đồng bộ bên trong
+`mySql`/`postgres` (một trường hợp sử dụng khác, được nhúng vào cho kết nối DB đi qua tunnel).
+`host` và `port` là các trường required ở cấp cao nhất trên cả hai loại.
+
+| Loại n8n | `param` n8n | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `sshPassword` | `host`, `port` | string, number | required; `port` mặc định 22 |
+| `sshPassword` | `username`, `password` | string | |
+| `sshPrivateKey` | `host`, `port` | string, number | required; `port` mặc định 22 |
+| `sshPrivateKey` | `username`, `privateKey`, `passphrase` | string | |
+
 ---
 
 ### Google OAuth2 (Sheets / Drive / Docs)

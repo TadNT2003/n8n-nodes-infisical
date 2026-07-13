@@ -186,6 +186,40 @@ Nhánh thứ hai giống hệt mẫu SSH tunnel của MySQL.
 
 ---
 
+### 3.5b Cơ sở dữ liệu Tier 3 (`crateDb`, `questDb`, `timescaleDb`, `elasticsearchApi`, `supabaseApi`, `nocoDb`, `snowflake`, `sshPassword`, `sshPrivateKey`)
+
+`crateDb` và `questDb` tương thích wire protocol với Postgres, có hình dạng phẳng
+`host`/`database`/`user`/`password`/`ssl`/`port` giống hệt nhau và **không** có điều kiện `allOf`
+— khác với `postgres`, cả hai đều không hỗ trợ SSH tunnel. `timescaleDb` cũng tương thích wire
+protocol với Postgres và giữ cặp `allowUnauthorizedCerts`/`ssl` giống `postgres` (một nhánh,
+`allowUnauthorizedCerts = false` kích hoạt theo mặc định), cũng không có trường SSH tunnel.
+
+`elasticsearchApi`, `supabaseApi`, và `nocoDb` là các schema phẳng (mỗi loại chỉ mang nhánh
+`allowedHttpRequestDomains`/`allowedDomains` tiêu chuẩn chung cho mọi loại credential có khả năng
+HTTP-request — không được đưa vào field map, nhất quán với các loại SaaS đơn giản khác trong
+package này).
+
+`snowflake` có mẫu loại trừ lẫn nhau hai nhánh giống hệt hình dạng của `jwtAuth`:
+
+| Điều kiện | Then requires | Else prohibits |
+| --- | --- | --- |
+| `authentication = 'password'` | `password` | `password` |
+| `authentication = 'keyPair'` | `privateKey` | `privateKey`, `passphrase` |
+
+**Ghi chú xác minh**: instance n8n cục bộ này (v2.21.5) không phơi bày thuộc tính `host` trên
+`snowflake` dù nó xuất hiện trong mã nguồn GitHub mới hơn — field map tuân theo schema thực tế
+đang chạy, theo đúng quy tắc xác minh đã thiết lập. `snowflakeOAuth2Api` trả về 404 từ endpoint
+schema trên instance này (được thêm vào n8n-nodes-base sau phiên bản 2.21.5) và bị loại khỏi đợt
+này vì lý do đó — không thể xác minh được với phiên bản n8n mục tiêu.
+
+`sshPassword` và `sshPrivateKey` là các credential SSH độc lập — khác với các trường con
+SSH-tunnel đã được đồng bộ bên trong `mySql`/`postgres` cho kết nối DB đi qua tunnel. Cả hai đều
+có `host` và `port` là các trường **required ở cấp cao nhất** (không bị chi phối bởi nhánh
+`allOf` nào), nên không cần `CREDENTIAL_FIELD_DEFAULTS` — giá trị mặc định của chính trường Form
+UI (`port: 22`) đã đáp ứng yêu cầu khi trường đó bị bỏ trống.
+
+---
+
 ### 3.6 Google OAuth2 (`googleOAuth2Api`)
 
 **Bốn nhánh, hai sử dụng vacuous-truth condKeys**:
@@ -593,6 +627,11 @@ defaults[key] = def.default
 | `groqApi` / `cohereApi` / `huggingFaceApi` / `mistralCloudApi` / `googlePalmApi` | phẳng | không | không | hoạt động |
 | `microsoftSql` | phẳng | không | không | hoạt động |
 | `redis` | 1 nhánh | `disableTlsVerification` | không | hoạt động |
+| `crateDb` / `questDb` | phẳng | không | không | hoạt động |
+| `timescaleDb` | 1 nhánh | `allowUnauthorizedCerts` yêu cầu `ssl` | không | hoạt động |
+| `elasticsearchApi` / `supabaseApi` / `nocoDb` | phẳng | không | không | hoạt động |
+| `snowflake` | 1 nhánh (loại trừ lẫn nhau) | `password` đối lập `privateKey`/`passphrase` | không | hoạt động |
+| `sshPassword` / `sshPrivateKey` | phẳng | không | không | hoạt động (required cấp cao nhất `host`/`port`) |
 | `googleApi` | 3 nhánh | `delegatedEmail`, `httpWarning`, `scopes`, `allowedDomains` | không | hoạt động |
 | `mySql` | 2 nhánh | 10 trường điều kiện | không | hoạt động |
 | `postgres` | 2 nhánh (đảo ngược mặc định) | `ssl` luôn + 7 trường SSH | không | hoạt động |

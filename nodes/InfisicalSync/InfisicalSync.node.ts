@@ -185,11 +185,13 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Bitbucket (Access Token)', value: 'bitbucketAccessTokenApi' },
 					{ name: 'Bitbucket (App Password)', value: 'bitbucketApi' },
 					{ name: 'Cohere', value: 'cohereApi' },
+					{ name: 'CrateDB', value: 'crateDb' },
 					{ name: 'Custom Auth', value: 'httpCustomAuth' },
 					{ name: 'Digest Auth', value: 'httpDigestAuth' },
 					{ name: 'Discord Bot', value: 'discordBotApi' },
 					{ name: 'Discord OAuth2', value: 'discordOAuth2Api' },
 					{ name: 'Discord Webhook', value: 'discordWebhookApi' },
+					{ name: 'Elasticsearch', value: 'elasticsearchApi' },
 					{ name: 'Facebook Graph', value: 'facebookGraphApi' },
 					{ name: 'GitHub (API Key)', value: 'githubApi' },
 					{ name: 'GitHub OAuth2', value: 'githubOAuth2Api' },
@@ -217,6 +219,7 @@ export class InfisicalSync implements INodeType {
 					{ name: 'MongoDB', value: 'mongoDb' },
 					{ name: 'MySQL', value: 'mySql' },
 					{ name: 'n8n', value: 'n8nApi' },
+					{ name: 'NocoDB', value: 'nocoDb' },
 					{ name: 'Notion', value: 'notionApi' },
 					{ name: 'OAuth1 API', value: 'oAuth1Api' },
 					{ name: 'OAuth2 API', value: 'oAuth2Api' },
@@ -224,14 +227,20 @@ export class InfisicalSync implements INodeType {
 					{ name: 'PostgreSQL', value: 'postgres' },
 					{ name: 'Pushover', value: 'pushoverApi' },
 					{ name: 'Query Auth', value: 'httpQueryAuth' },
+					{ name: 'QuestDB', value: 'questDb' },
 					{ name: 'Redis', value: 'redis' },
 					{ name: 'Rocket.Chat', value: 'rocketchatApi' },
 					{ name: 'SendGrid', value: 'sendGridApi' },
 					{ name: 'Slack', value: 'slackApi' },
 					{ name: 'Slack OAuth2', value: 'slackOAuth2Api' },
+					{ name: 'Snowflake', value: 'snowflake' },
+					{ name: 'SSH (Password)', value: 'sshPassword' },
+					{ name: 'SSH (Private Key)', value: 'sshPrivateKey' },
 					{ name: 'SSL Certificates', value: 'httpSslAuth' },
 					{ name: 'Stripe', value: 'stripeApi' },
+					{ name: 'Supabase', value: 'supabaseApi' },
 					{ name: 'Telegram', value: 'telegramApi' },
+					{ name: 'TimescaleDB', value: 'timescaleDb' },
 					{ name: 'Twilio', value: 'twilioApi' },
 					{ name: 'Twitter/X OAuth1', value: 'twitterOAuth1Api' },
 					{ name: 'Twitter/X OAuth2', value: 'twitterOAuth2Api' },
@@ -877,7 +886,11 @@ export class InfisicalSync implements INodeType {
 				type: 'string',
 				default: '',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['bitbucketApi'] },
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['bitbucketApi', 'elasticsearchApi', 'snowflake', 'sshPassword', 'sshPrivateKey'],
+					},
 				},
 			},
 			{
@@ -902,7 +915,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'crateDb', 'questDb', 'timescaleDb', 'sshPassword', 'sshPrivateKey'],
 					},
 				},
 			},
@@ -924,7 +937,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth', 'crateDb', 'questDb', 'timescaleDb', 'snowflake'],
 					},
 				},
 			},
@@ -937,7 +950,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth', 'githubApi'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth', 'githubApi', 'crateDb', 'questDb', 'timescaleDb'],
 					},
 				},
 			},
@@ -951,7 +964,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth', 'crateDb', 'questDb', 'timescaleDb', 'sshPassword', 'elasticsearchApi'],
 					},
 				},
 			},
@@ -960,12 +973,12 @@ export class InfisicalSync implements INodeType {
 				name: 'port',
 				type: 'number',
 				default: 5432,
-				description: 'Default by type: MySQL 3306 · PostgreSQL 5432 · MongoDB 27017 · Redis 6379 · MSSQL 1433',
+				description: 'Default by type: MySQL 3306 · PostgreSQL 5432 · MongoDB 27017 · Redis 6379 · MSSQL 1433 · CrateDB 5432 · QuestDB 8812 · TimescaleDB 5432',
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'crateDb', 'questDb', 'timescaleDb'],
 					},
 				},
 			},
@@ -1047,7 +1060,7 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Require', value: 'require' },
 				],
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['postgres'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['postgres', 'crateDb', 'questDb', 'timescaleDb'] },
 				},
 			},
 			{
@@ -1057,7 +1070,7 @@ export class InfisicalSync implements INodeType {
 				default: false,
 				description: 'Whether to connect even if SSL certificate validation is not possible',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['postgres'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['postgres', 'timescaleDb'] },
 				},
 			},
 
@@ -1181,6 +1194,211 @@ export class InfisicalSync implements INodeType {
 						sshTunnel: [true],
 						sshAuthenticateWith: ['privateKey'],
 					},
+				},
+			},
+
+			// ── Elasticsearch ─────────────────────────────────────────────────────
+			{
+				displayName: 'Base URL',
+				name: 'baseUrl',
+				type: 'string',
+				default: '',
+				placeholder: 'https://mydeployment.es.us-central1.gcp.cloud.es.io:9243',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['elasticsearchApi'] },
+				},
+			},
+			{
+				displayName: 'Ignore SSL Issues (Insecure)',
+				name: 'ignoreSSLIssues',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['elasticsearchApi'] },
+				},
+			},
+
+			// ── Supabase ──────────────────────────────────────────────────────────
+			{
+				displayName: 'Host',
+				name: 'host',
+				type: 'string',
+				default: '',
+				placeholder: 'https://your_account.supabase.co',
+				description: 'Supabase project URL without the /rest/v1 path',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['supabaseApi'] },
+				},
+			},
+			{
+				displayName: 'Secret Key',
+				name: 'serviceRole',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				description: 'Supabase project secret key (legacy service_role secrets also supported)',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['supabaseApi'] },
+				},
+			},
+
+			// ── NocoDB ────────────────────────────────────────────────────────────
+			{
+				displayName: 'Host',
+				name: 'host',
+				type: 'string',
+				default: '',
+				placeholder: 'http(s)://localhost:8080',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['nocoDb'] },
+				},
+			},
+			{
+				displayName: 'API Token',
+				name: 'apiToken',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['nocoDb'] },
+				},
+			},
+
+			// ── Snowflake ─────────────────────────────────────────────────────────
+			{
+				displayName: 'Account',
+				name: 'account',
+				type: 'string',
+				default: '',
+				description: 'Snowflake account identifier',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['snowflake'] },
+				},
+			},
+			{
+				displayName: 'Warehouse',
+				name: 'warehouse',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['snowflake'] },
+				},
+			},
+			{
+				displayName: 'Schema',
+				name: 'schema',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['snowflake'] },
+				},
+			},
+			{
+				displayName: 'Role',
+				name: 'role',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['snowflake'] },
+				},
+			},
+			{
+				displayName: 'Authentication',
+				name: 'authentication',
+				type: 'options',
+				default: 'password',
+				options: [
+					{ name: 'Password', value: 'password' },
+					{ name: 'Key Pair', value: 'keyPair' },
+				],
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['snowflake'] },
+				},
+			},
+			{
+				displayName: 'Password',
+				name: 'password',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['snowflake'],
+						authentication: ['password'],
+					},
+				},
+			},
+			{
+				displayName: 'Private Key',
+				name: 'privateKey',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['snowflake'],
+						authentication: ['keyPair'],
+					},
+				},
+			},
+			{
+				displayName: 'Private Key Passphrase',
+				name: 'passphrase',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['snowflake'],
+						authentication: ['keyPair'],
+					},
+				},
+			},
+			{
+				displayName: 'Keep Session Alive',
+				name: 'clientSessionKeepAlive',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['snowflake'] },
+				},
+			},
+
+			// ── SSH (Password / Private Key) ─────────────────────────────────────
+			{
+				displayName: 'Port',
+				name: 'port',
+				type: 'number',
+				default: 22,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['sshPassword', 'sshPrivateKey'] },
+				},
+			},
+			{
+				displayName: 'Private Key',
+				name: 'privateKey',
+				type: 'string',
+				typeOptions: { password: true, rows: 4 },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['sshPrivateKey'] },
+				},
+			},
+			{
+				displayName: 'Passphrase',
+				name: 'passphrase',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				description: 'Passphrase used to create the key, if any',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['sshPrivateKey'] },
 				},
 			},
 

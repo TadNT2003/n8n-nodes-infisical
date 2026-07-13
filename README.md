@@ -296,7 +296,7 @@ Both Infisical → n8n operations expose an **If Credential Missing** option for
 
 ### Supported Credential Types (Form Mode)
 
-Form mode supports **58 credential types**. JSON mode accepts any type registered in n8n.
+Form mode supports **67 credential types**. JSON mode accepts any type registered in n8n.
 
 #### AI / LLM
 
@@ -326,7 +326,15 @@ Form mode supports **58 credential types**. JSON mode accepts any type registere
 
 #### Databases
 
-`mySql`, `postgres`, `mongoDb`, `microsoftSql`, `redis`
+`mySql`, `postgres`, `mongoDb`, `microsoftSql`, `redis`, `crateDb`, `questDb`, `timescaleDb`, `elasticsearchApi`, `supabaseApi`, `nocoDb`, `snowflake`
+
+> **Note**: `crateDb`/`questDb`/`timescaleDb` are Postgres wire-compatible and share its host/database/user/password/port/ssl shape. `snowflake` supports both password and key-pair authentication via its `authentication` field.
+
+#### SSH
+
+`sshPassword`, `sshPrivateKey`
+
+> **Note**: These are the standalone SSH credential types — distinct from the SSH-tunnel sub-fields already synced inside `mySql`/`postgres` for database connections routed through an SSH tunnel.
 
 #### Infrastructure
 

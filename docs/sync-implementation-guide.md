@@ -821,6 +821,92 @@ and no `server` field (Bitbucket Cloud only — no self-managed server variant).
 | `database` | `database` | number | |
 | `ssl` | `ssl` | boolean | condition key: controls `disableTlsVerification` |
 
+#### CrateDB / QuestDB (`crateDb`, `questDb`)
+
+Postgres wire-compatible; both schemas are flat with no `allOf` conditionals and no SSH-tunnel
+support (unlike `mySql`/`postgres`).
+
+| n8n `param` | Infisical `secretKey` | Type | Notes |
+| --- | --- | --- | --- |
+| `host` | `host` | string | defaults to `localhost` |
+| `database` | `database` | string | CrateDB defaults to `doc`, QuestDB to `qdb` (n8n UI default, not schema-enforced) |
+| `user` | `user` | string | CrateDB defaults to `crate`, QuestDB to `admin` |
+| `password` | `password` | string | |
+| `ssl` | `ssl` | string (enum) | `allow`/`disable`/`require`, same shape as `postgres` |
+| `port` | `port` | number | CrateDB 5432, QuestDB 8812 |
+
+#### TimescaleDB (`timescaleDb`)
+
+Postgres wire-compatible, with the same `ssl`/`allowUnauthorizedCerts` pair as `postgres` but no
+SSH-tunnel support.
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `host` | `host` | string | |
+| `database` | `database` | string | defaults to `postgres` |
+| `user` | `user` | string | |
+| `password` | `password` | string | |
+| `allowUnauthorizedCerts` | `allowUnauthorizedCerts` | boolean | condition key |
+| `ssl` | `ssl` | string (enum) | `allow`/`disable`/`require` |
+| `port` | `port` | number | |
+
+#### Elasticsearch (`elasticsearchApi`)
+
+| n8n `param` | Infisical `secretKey` | Type | Notes |
+| --- | --- | --- | --- |
+| `username` | `username` | string | |
+| `password` | `password` | string | |
+| `baseUrl` | `baseUrl` | string | |
+| `ignoreSSLIssues` | `ignoreSSLIssues` | boolean | |
+
+#### Supabase (`supabaseApi`)
+
+| n8n `param` | Infisical `secretKey` | Type | Notes |
+| --- | --- | --- | --- |
+| `host` | `host` | string | project URL without the `/rest/v1` path |
+| `serviceRole` | `serviceRole` | string | project secret key |
+
+#### NocoDB (`nocoDb`)
+
+| n8n `param` | Infisical `secretKey` | Type | Notes |
+| --- | --- | --- | --- |
+| `apiToken` | `apiToken` | string | |
+| `host` | `host` | string | |
+
+#### Snowflake (`snowflake`)
+
+Local n8n schema (v2.21.5) has no `host` property (present in newer GitHub source) — the field map
+follows the live runtime schema, per the verification rule. `snowflakeOAuth2Api` returns 404 on
+this instance's schema endpoint (added to n8n-nodes-base after 2.21.5) and is **not** supported by
+this package for that reason.
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `account` | `account` | string | |
+| `database` | `database` | string | |
+| `warehouse` | `warehouse` | string | |
+| `authentication` | `authentication` | string (enum) | condition key: `'password'` or `'keyPair'` |
+| `username` | `username` | string | |
+| `password` | `password` | string | only when `authentication: 'password'` |
+| `privateKey` | `privateKey` | string | only when `authentication: 'keyPair'` |
+| `passphrase` | `passphrase` | string | only when `authentication: 'keyPair'` |
+| `schema` | `schema` | string | |
+| `role` | `role` | string | |
+| `clientSessionKeepAlive` | `clientSessionKeepAlive` | boolean | |
+
+#### SSH (`sshPassword`, `sshPrivateKey`)
+
+Standalone SSH credentials — distinct from the SSH-tunnel sub-fields already synced inside
+`mySql`/`postgres` (a different, embedded use case for DB connections routed through a tunnel).
+`host` and `port` are top-level required fields on both types.
+
+| n8n type | n8n `param` | Type | Notes |
+| --- | --- | --- | --- |
+| `sshPassword` | `host`, `port` | string, number | required; `port` defaults to 22 |
+| `sshPassword` | `username`, `password` | string | |
+| `sshPrivateKey` | `host`, `port` | string, number | required; `port` defaults to 22 |
+| `sshPrivateKey` | `username`, `privateKey`, `passphrase` | string | |
+
 ---
 
 ### Google OAuth2 (Sheets / Drive / Docs)

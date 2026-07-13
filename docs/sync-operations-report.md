@@ -214,6 +214,40 @@ that branch 1's else now fires and **delete** `connectionString` before calling 
 
 ---
 
+### 3.5b Tier 3 databases (`crateDb`, `questDb`, `timescaleDb`, `elasticsearchApi`, `supabaseApi`, `nocoDb`, `snowflake`, `sshPassword`, `sshPrivateKey`)
+
+`crateDb` and `questDb` are Postgres wire-compatible with an identical flat `host`/`database`/
+`user`/`password`/`ssl`/`port` shape and **no** `allOf` conditionals — unlike `postgres`, neither
+exposes SSH-tunnel support. `timescaleDb` is also Postgres wire-compatible and keeps the same
+`allowUnauthorizedCerts`/`ssl` pair as `postgres` (one branch, `allowUnauthorizedCerts = false`
+fires by default), again without SSH-tunnel fields.
+
+`elasticsearchApi`, `supabaseApi`, and `nocoDb` are flat schemas (each carries only the standard
+`allowedHttpRequestDomains`/`allowedDomains` branch shared by every HTTP-request-capable
+credential type — not included in the field map, consistent with the rest of this package's simple
+SaaS types).
+
+`snowflake` has a two-branch mutual-exclusion pattern identical in shape to `jwtAuth`:
+
+| Condition | Then requires | Else prohibits |
+| --- | --- | --- |
+| `authentication = 'password'` | `password` | `password` |
+| `authentication = 'keyPair'` | `privateKey` | `privateKey`, `passphrase` |
+
+**Verification note**: this local n8n instance (v2.21.5) does not expose a `host` property on
+`snowflake` even though it appears in newer GitHub source — the field map follows the live schema,
+per the established verification rule. `snowflakeOAuth2Api` returns 404 from the schema endpoint on
+this instance (added to n8n-nodes-base after 2.21.5) and was excluded from this batch for that
+reason — it cannot be verified against the target n8n version.
+
+`sshPassword` and `sshPrivateKey` are standalone SSH credentials — distinct from the SSH-tunnel
+sub-fields already synced inside `mySql`/`postgres` for tunneled DB connections. Both have `host`
+and `port` as **top-level required** fields (not gated by any `allOf` branch), so
+`CREDENTIAL_FIELD_DEFAULTS` isn't needed — the Form UI's own field defaults (`port: 22`) satisfy
+the requirement whenever the field is left untouched.
+
+---
+
 ### 3.6 Google OAuth2 (`googleOAuth2Api`)
 
 **Four branches, two using vacuous-truth condKeys**:
@@ -686,6 +720,11 @@ defaults[key] = def.default
 | `groqApi` / `cohereApi` / `huggingFaceApi` / `mistralCloudApi` / `googlePalmApi` | flat | none | no | working |
 | `microsoftSql` | flat | none | no | working |
 | `redis` | 1 branch | `disableTlsVerification` | no | working |
+| `crateDb` / `questDb` | flat | none | no | working |
+| `timescaleDb` | 1 branch | `allowUnauthorizedCerts` requires `ssl` | no | working |
+| `elasticsearchApi` / `supabaseApi` / `nocoDb` | flat | none | no | working |
+| `snowflake` | 1 branch (mutual exclusion) | `password` XOR `privateKey`/`passphrase` | no | working |
+| `sshPassword` / `sshPrivateKey` | flat | none | no | working (top-level required `host`/`port`) |
 | `googleApi` | 3 branches | `delegatedEmail`, `httpWarning`, `scopes`, `allowedDomains` | no | working |
 | `mySql` | 2 branches | 10 conditional fields | no | working |
 | `postgres` | 2 branches (inverted default) | `ssl` always + 7 SSH fields | no | working |
