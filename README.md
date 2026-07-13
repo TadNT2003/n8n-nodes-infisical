@@ -296,7 +296,7 @@ Both Infisical → n8n operations expose an **If Credential Missing** option for
 
 ### Supported Credential Types (Form Mode)
 
-Form mode supports **69 credential types**. JSON mode accepts any type registered in n8n.
+Form mode supports **71 credential types**. JSON mode accepts any type registered in n8n.
 
 #### AI / LLM
 
@@ -335,6 +335,12 @@ Form mode supports **69 credential types**. JSON mode accepts any type registere
 `sshPassword`, `sshPrivateKey`
 
 > **Note**: These are the standalone SSH credential types — distinct from the SSH-tunnel sub-fields already synced inside `mySql`/`postgres` for database connections routed through an SSH tunnel.
+
+#### Email
+
+`smtp`, `imap`
+
+> **Note**: `smtp` has a conditional `disableStartTls` field that only applies when `secure: false`. Neither type has any top-level required field in the live schema.
 
 #### Cloud / Infrastructure
 

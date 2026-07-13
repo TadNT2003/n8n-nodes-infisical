@@ -903,6 +903,39 @@ trong `CREDENTIAL_FIELD_DEFAULTS` như một fallback — cùng mẫu khoảng t
 
 ---
 
+### Email
+
+Không loại nào có trường required ở cấp cao nhất trong schema thực tế đang chạy (v2.21.5) — khác
+với hàm type-guard của mã nguồn GitHub, vốn coi `user`/`password`/`host`/`port`/`secure` là
+required trên `imap`. Field map tuân theo schema thực tế, theo đúng quy tắc xác minh đã thiết lập.
+
+#### SMTP (`smtp`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `user` | `user` | string | |
+| `password` | `password` | string | |
+| `host` | `host` | string | |
+| `port` | `port` | number | mặc định 465 |
+| `secure` | `secure` | boolean | khóa điều kiện: kiểm soát `disableStartTls`; mặc định `true` |
+| `disableStartTls` | `disableStartTls` | boolean | chỉ khi `secure: false` |
+| `hostName` | `hostName` | string | tùy chọn, định danh client cho EHLO/HELO |
+
+#### IMAP (`imap`)
+
+Schema phẳng, không có điều kiện `allOf`.
+
+| `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `user` | `user` | string | |
+| `password` | `password` | string | |
+| `host` | `host` | string | |
+| `port` | `port` | number | mặc định 993 |
+| `secure` | `secure` | boolean | mặc định `true` |
+| `allowUnauthorizedCerts` | `allowUnauthorizedCerts` | boolean | |
+
+---
+
 ### Xác Thực HTTP Chung
 
 #### Bearer Auth (`httpBearerAuth`)

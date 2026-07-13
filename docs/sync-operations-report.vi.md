@@ -320,6 +320,37 @@ validate trước.
 
 ---
 
+### 3.9c Email (`smtp`, `imap`)
+
+`imap` là schema phẳng — không có điều kiện `allOf` — dù hàm type-guard của mã nguồn GitHub coi
+`user`/`password`/`host`/`port`/`secure` là required; schema thực tế đang chạy (v2.21.5) không
+đánh dấu required trường nào trong số đó, và field map tuân theo schema thực tế theo đúng quy tắc
+xác minh đã thiết lập.
+
+`smtp` có **một nhánh điều kiện**:
+
+| Điều kiện | Then requires | Else prohibits |
+| --- | --- | --- |
+| `secure = false` | `disableStartTls` | `disableStartTls` |
+
+`secure` mặc định là `true`, nên nhánh này **không kích hoạt theo mặc định** — `disableStartTls`
+bị loại khỏi defaults và vắng mặt trong cấu hình SMTP tiêu chuẩn (mã hóa ngay từ khi kết nối), giống
+mẫu "mặc định đảo ngược" đã thấy ở cặp `allowUnauthorizedCerts`/`ssl` của `postgres` (§3.4), chỉ
+khác cực tính (ở đó điều kiện ngoại lệ kích hoạt theo mặc định; ở đây thì không).
+
+**Giá trị mặc định được tạo (`smtp`)**:
+```json
+{ "user": "", "password": "", "host": "", "port": 0, "secure": false, "hostName": "" }
+```
+
+Lưu ý thuật toán sinh default chung gán `secure: false` (fallback boolean) dù mặc định UI thực tế
+của n8n là `true` — đây là cùng loại khoảng trống "mặc định UI ẩn" như `googlePalmApi.host`, nhưng
+vì `secure` không required ở cấp cao nhất, không cần entry `CREDENTIAL_FIELD_DEFAULTS`; mặc định
+của chính trường Form UI (`true`) xử lý đúng phía push, và giá trị từ Infisical luôn ghi đè fallback
+này ở phía pull.
+
+---
+
 ### 3.10 OAuth1 API (`oAuth1Api`)
 
 **Một nhánh điều kiện**:
@@ -658,6 +689,8 @@ defaults[key] = def.default
 | `sshPassword` / `sshPrivateKey` | phẳng | không | không | hoạt động (required cấp cao nhất `host`/`port`) |
 | `aws` | 3 nhánh | `temporaryCredentials`→`sessionToken`, `customEndpoints`→7 endpoint, `allowedHttpRequestDomains` | không | hoạt động |
 | `awsAssumeRole` | 3 nhánh | `useSystemCredentialsForRole`→3 trường `sts*`, `customEndpoints`→7 endpoint, `allowedHttpRequestDomains` | không | hoạt động (required cấp cao nhất `roleArn`/`externalId`/`roleSessionName`) |
+| `smtp` | 1 nhánh (không kích hoạt mặc định) | `secure = false`→`disableStartTls` | không | hoạt động |
+| `imap` | phẳng | không | không | hoạt động |
 | `googleApi` | 3 nhánh | `delegatedEmail`, `httpWarning`, `scopes`, `allowedDomains` | không | hoạt động |
 | `mySql` | 2 nhánh | 10 trường điều kiện | không | hoạt động |
 | `postgres` | 2 nhánh (đảo ngược mặc định) | `ssl` luôn + 7 trường SSH | không | hoạt động |

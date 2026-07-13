@@ -357,6 +357,37 @@ is what actually fails at request time on bad keys, not schema validation.
 
 ---
 
+### 3.9c Email (`smtp`, `imap`)
+
+`imap` is flat — no `allOf` conditionals — despite the GitHub source's own type-guard function
+treating `user`/`password`/`host`/`port`/`secure` as required; the live runtime schema (v2.21.5)
+marks none of them required, and the field map follows the live schema per the established
+verification rule.
+
+`smtp` has **one conditional branch**:
+
+| Condition | Then requires | Else prohibits |
+| --- | --- | --- |
+| `secure = false` | `disableStartTls` | `disableStartTls` |
+
+`secure` defaults to `true`, so the branch **does not fire by default** — `disableStartTls` is
+excluded from defaults and absent for a standard (encrypted-from-connect) SMTP setup, matching the
+inverted-default pattern already seen in `postgres`'s `allowUnauthorizedCerts`/`ssl` pair (§3.4),
+just the opposite polarity (there the exception condition fires by default; here it doesn't).
+
+**Generated defaults (`smtp`)**:
+```json
+{ "user": "", "password": "", "host": "", "port": 0, "secure": false, "hostName": "" }
+```
+
+Note the generic default-generation algorithm assigns `secure: false` (the boolean fallback) even
+though n8n's own UI default is `true` — this is the same class of "hidden UI default" gap as
+`googlePalmApi.host`, but since `secure` isn't top-level required, no `CREDENTIAL_FIELD_DEFAULTS`
+entry was needed; the Form UI's own field default (`true`) handles the push side correctly, and an
+Infisical-sourced value always overrides this fallback on pull.
+
+---
+
 ### 3.10 OAuth1 API (`oAuth1Api`)
 
 **One conditional branch**:
@@ -750,6 +781,8 @@ defaults[key] = def.default
 | `sshPassword` / `sshPrivateKey` | flat | none | no | working (top-level required `host`/`port`) |
 | `aws` | 3 branches | `temporaryCredentials`→`sessionToken`, `customEndpoints`→7 endpoints, `allowedHttpRequestDomains` | no | working |
 | `awsAssumeRole` | 3 branches | `useSystemCredentialsForRole`→3 `sts*` fields, `customEndpoints`→7 endpoints, `allowedHttpRequestDomains` | no | working (top-level required `roleArn`/`externalId`/`roleSessionName`) |
+| `smtp` | 1 branch (off by default) | `secure = false`→`disableStartTls` | no | working |
+| `imap` | flat | none | no | working |
 | `googleApi` | 3 branches | `delegatedEmail`, `httpWarning`, `scopes`, `allowedDomains` | no | working |
 | `mySql` | 2 branches | 10 conditional fields | no | working |
 | `postgres` | 2 branches (inverted default) | `ssl` always + 7 SSH fields | no | working |

@@ -209,6 +209,7 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Header Auth', value: 'httpHeaderAuth' },
 					{ name: 'HubSpot (App Token)', value: 'hubspotAppToken' },
 					{ name: 'HuggingFace', value: 'huggingFaceApi' },
+					{ name: 'IMAP', value: 'imap' },
 					{ name: 'Infisical', value: 'infisicalApi' },
 					{ name: 'Jira Software Cloud', value: 'jiraSoftwareCloudApi' },
 					{ name: 'JWT Auth', value: 'jwtAuth' },
@@ -235,6 +236,7 @@ export class InfisicalSync implements INodeType {
 					{ name: 'SendGrid', value: 'sendGridApi' },
 					{ name: 'Slack', value: 'slackApi' },
 					{ name: 'Slack OAuth2', value: 'slackOAuth2Api' },
+					{ name: 'SMTP', value: 'smtp' },
 					{ name: 'Snowflake', value: 'snowflake' },
 					{ name: 'SSH (Password)', value: 'sshPassword' },
 					{ name: 'SSH (Private Key)', value: 'sshPrivateKey' },
@@ -956,7 +958,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth', 'githubApi', 'crateDb', 'questDb', 'timescaleDb'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth', 'githubApi', 'crateDb', 'questDb', 'timescaleDb', 'smtp', 'imap'],
 					},
 				},
 			},
@@ -970,7 +972,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth', 'crateDb', 'questDb', 'timescaleDb', 'sshPassword', 'elasticsearchApi'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth', 'crateDb', 'questDb', 'timescaleDb', 'sshPassword', 'elasticsearchApi', 'smtp', 'imap'],
 					},
 				},
 			},
@@ -979,12 +981,12 @@ export class InfisicalSync implements INodeType {
 				name: 'port',
 				type: 'number',
 				default: 5432,
-				description: 'Default by type: MySQL 3306 · PostgreSQL 5432 · MongoDB 27017 · Redis 6379 · MSSQL 1433 · CrateDB 5432 · QuestDB 8812 · TimescaleDB 5432',
+				description: 'Default by type: MySQL 3306 · PostgreSQL 5432 · MongoDB 27017 · Redis 6379 · MSSQL 1433 · CrateDB 5432 · QuestDB 8812 · TimescaleDB 5432 · SMTP 465 · IMAP 993',
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'crateDb', 'questDb', 'timescaleDb'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'crateDb', 'questDb', 'timescaleDb', 'smtp', 'imap'],
 					},
 				},
 			},
@@ -1076,7 +1078,7 @@ export class InfisicalSync implements INodeType {
 				default: false,
 				description: 'Whether to connect even if SSL certificate validation is not possible',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['postgres', 'timescaleDb'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['postgres', 'timescaleDb', 'imap'] },
 				},
 			},
 
@@ -1662,6 +1664,62 @@ export class InfisicalSync implements INodeType {
 				default: 'n8n-session',
 				displayOptions: {
 					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['awsAssumeRole'] },
+				},
+			},
+
+			// ── Email (SMTP / IMAP) ───────────────────────────────────────────────
+			{
+				displayName: 'Host',
+				name: 'host',
+				type: 'string',
+				default: '',
+				placeholder: 'smtp.example.com',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['smtp'] },
+				},
+			},
+			{
+				displayName: 'Host',
+				name: 'host',
+				type: 'string',
+				default: '',
+				placeholder: 'imap.example.com',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['imap'] },
+				},
+			},
+			{
+				displayName: 'SSL/TLS',
+				name: 'secure',
+				type: 'boolean',
+				default: true,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['smtp', 'imap'] },
+				},
+			},
+			{
+				displayName: 'Disable STARTTLS',
+				name: 'disableStartTls',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to disable STARTTLS upgrade on an unencrypted connection',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['smtp'],
+						secure: [false],
+					},
+				},
+			},
+			{
+				displayName: 'Client Host Name',
+				name: 'hostName',
+				type: 'string',
+				default: '',
+				description: 'Optional client hostname used for EHLO/HELO identification',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['smtp'] },
 				},
 			},
 

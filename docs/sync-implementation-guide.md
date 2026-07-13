@@ -989,6 +989,39 @@ real n8n UI default (`'n8n-session'`) not exposed by the schema, so it's in
 
 ---
 
+### Email
+
+Neither type has any top-level required field in the live runtime schema (v2.21.5) — unlike the
+GitHub source's own type-guard function, which treats `user`/`password`/`host`/`port`/`secure` as
+required on `imap`. The field map follows the live schema, per the established verification rule.
+
+#### SMTP (`smtp`)
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `user` | `user` | string | |
+| `password` | `password` | string | |
+| `host` | `host` | string | |
+| `port` | `port` | number | defaults to 465 |
+| `secure` | `secure` | boolean | condition key: controls `disableStartTls`; defaults to `true` |
+| `disableStartTls` | `disableStartTls` | boolean | only when `secure: false` |
+| `hostName` | `hostName` | string | optional EHLO/HELO client identification |
+
+#### IMAP (`imap`)
+
+Flat schema, no `allOf` conditionals.
+
+| n8n `param` | Infisical `secretKey` | Type | Notes |
+| --- | --- | --- | --- |
+| `user` | `user` | string | |
+| `password` | `password` | string | |
+| `host` | `host` | string | |
+| `port` | `port` | number | defaults to 993 |
+| `secure` | `secure` | boolean | defaults to `true` |
+| `allowUnauthorizedCerts` | `allowUnauthorizedCerts` | boolean | |
+
+---
+
 ### Generic HTTP Auth
 
 #### Bearer Auth (`httpBearerAuth`)

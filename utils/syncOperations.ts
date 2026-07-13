@@ -231,6 +231,25 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
 		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
 	],
+	// ── Email ───────────────────────────────────────────────────────────────────
+	smtp: [
+		{ param: 'user', secretKey: 'user' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'port', secretKey: 'port' },
+		// condition-controlling: secure=false drives the disableStartTls branch
+		{ param: 'secure', secretKey: 'secure' },
+		{ param: 'disableStartTls', secretKey: 'disableStartTls' },
+		{ param: 'hostName', secretKey: 'hostName' },
+	],
+	imap: [
+		{ param: 'user', secretKey: 'user' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'port', secretKey: 'port' },
+		{ param: 'secure', secretKey: 'secure' },
+		{ param: 'allowUnauthorizedCerts', secretKey: 'allowUnauthorizedCerts' },
+	],
 	awsAssumeRole: [
 		{ param: 'region', secretKey: 'region' },
 		// condition-controlling: useSystemCredentialsForRole gates the sts* fields
