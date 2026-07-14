@@ -174,10 +174,13 @@ All Environment operations require: **Project ID**.
 | Operation | Description | Method | API endpoint |
 | --- | --- | --- | --- |
 | **Create** | Create a new environment in a project | `POST` | `/v1/projects/{projectId}/environments` |
-| **Get by Slug** | Fetch an environment by its slug | `GET` | `/v1/projects/{projectId}/environments/slug/{envSlug}` |
+| **Get** | Fetch an environment by its ID | `GET` | `/v1/projects/{projectId}/environments/{id}` |
+| **Get by Slug** | Fetch an environment by its slug¹ | `GET` | `/v1/projects/{projectId}/environments/slug/{envSlug}` |
 | **Update** | Update an environment by ID | `PATCH` | `/v1/projects/{projectId}/environments/{id}` |
 | **Delete** | Delete an environment by ID | `DELETE` | `/v1/projects/{projectId}/environments/{id}` |
-| **Restore** | Restore a soft-deleted environment by ID | `POST` | `/v1/projects/{projectId}/environments/{id}/restore` |
+| **Restore** | Restore a soft-deleted environment by ID¹ | `POST` | `/v1/projects/{projectId}/environments/{id}/restore` |
+
+> ¹ **Get by Slug** and **Restore** (plus the **Hard Delete** toggle's soft-delete behavior) rely on newer Infisical API features. Older self-hosted instances only expose get-by-ID and treat every delete as permanent; on those instances these operations return an error. Use **Get** (by ID) if **Get by Slug** is unavailable.
 
 #### Create Environment
 
@@ -189,9 +192,13 @@ Required: **Project ID**, **Environment Name** (1–255 characters), **Environme
 | --- | --- |
 | Position | Display position; the lowest number is shown first |
 
+#### Get Environment
+
+Required: **Project ID**, **Environment ID**
+
 #### Get Environment by Slug
 
-Required: **Project ID**, **Environment Slug**
+Required: **Project ID**, **Environment Slug**. Requires a newer Infisical version (see note above).
 
 #### Update Environment
 
@@ -227,12 +234,31 @@ Restores a previously soft-deleted environment.
 
 | Operation | Description | Method | API endpoint |
 | --- | --- | --- | --- |
+| **Create** | Create a new project | `POST` | `/v1/projects` |
 | **Get** | Fetch a project by ID | `GET` | `/v1/projects/{id}` |
 | **Get by Slug** | Fetch a project by slug | `GET` | `/v1/projects/slug/{slug}` |
 | **Get Many** | List all accessible projects | `GET` | `/v1/projects` |
 | **Get Secret Snapshots** | List secret snapshots for a project environment | `GET` | `/v1/projects/{id}/secret-snapshots` |
 | **Get User Memberships** | List all user memberships in a project | `GET` | `/v1/projects/{id}/memberships` |
 | **Get User by Username** | Fetch a project member by username | `POST` | `/v1/projects/{id}/memberships/details` |
+| **Update** | Update a project by ID | `PATCH` | `/v1/projects/{id}` |
+| **Delete** | Delete a project by ID | `DELETE` | `/v1/projects/{id}` |
+
+#### Create Project
+
+Required: **Project Name** (max 64 characters).
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Description | An optional description for the project (max 1024 characters) |
+| Slug | A URL-friendly slug for the project (5–64 characters) |
+| KMS Key ID | The ID of the KMS key to use for encryption |
+| Template | The name of the project template to apply (default: `default`) |
+| Type | Project type: Secret Manager (default), Cert Manager, KMS, SSH, Secret Scanning, PAM, or AI |
+| Create Default Environments | Create the default dev, staging, and prod environments (default: on) |
+| Delete Protection | Prevent the project from being deleted (default: off) |
 
 #### Get Project
 
@@ -269,6 +295,28 @@ Returns each membership as a separate output item.
 #### Get User by Username
 
 Required: **Project ID**, **Username**
+
+#### Update Project
+
+Required: **Project ID**
+
+**Update Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Name | A new name for the project (max 64 characters) |
+| Description | A new description for the project (max 1024 characters) |
+| Slug | A new slug (max 64 characters, unique within the organization) |
+| Auto Capitalization | Enable auto-capitalization of secret keys |
+| Delete Protection | Prevent the project from being deleted |
+| Secret Sharing | Allow secret sharing in the project |
+| PIT Version Limit | Number of point-in-time secret versions to retain (1–100) |
+
+#### Delete Project
+
+Required: **Project ID**
+
+> **Warning:** Deleting a project is irreversible and removes all associated data.
 
 ---
 

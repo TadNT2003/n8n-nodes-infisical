@@ -36,7 +36,22 @@ export async function executeEnvironmentOperation(
 		const env = ((response as IDataObject).environment ?? response) as IDataObject;
 		result.push({ json: env, pairedItem: { item: i } });
 
+	// ── get (by ID) ───────────────────────────────────────────────────────
+	} else if (operation === 'get') {
+		const environmentId = ctx.getNodeParameter('environmentId', i) as string;
+
+		const response = await ctx.helpers.httpRequest({
+			method: 'GET',
+			url: `${basePath}/${encodeURIComponent(environmentId)}`,
+			headers: baseHeaders,
+		});
+
+		const env = ((response as IDataObject).environment ?? response) as IDataObject;
+		result.push({ json: env, pairedItem: { item: i } });
+
 	// ── getBySlug ─────────────────────────────────────────────────────────
+	// Note: requires a newer Infisical version; older self-hosted instances
+	// only expose get-by-ID and will return 404 for this route.
 	} else if (operation === 'getBySlug') {
 		const slug = ctx.getNodeParameter('environmentSlug', i) as string;
 

@@ -76,15 +76,21 @@ export class Infisical implements INodeType {
 						action: 'Delete an environment',
 					},
 					{
+						name: 'Get',
+						value: 'get',
+						description: 'Get an environment by its ID',
+						action: 'Get an environment',
+					},
+					{
 						name: 'Get By Slug',
 						value: 'getBySlug',
-						description: 'Get an environment by its slug',
+						description: 'Get an environment by its slug (requires a newer Infisical version)',
 						action: 'Get an environment by slug',
 					},
 					{
 						name: 'Restore',
 						value: 'restore',
-						description: 'Restore a soft-deleted environment by ID',
+						description: 'Restore a soft-deleted environment by ID (requires a newer Infisical version)',
 						action: 'Restore an environment',
 					},
 					{
@@ -94,7 +100,7 @@ export class Infisical implements INodeType {
 						action: 'Update an environment',
 					},
 				],
-				default: 'getBySlug',
+				default: 'get',
 			},
 
 			// ─── Environment fields ──────────────────────────────────────────────────
@@ -143,7 +149,7 @@ export class Infisical implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['environment'],
-						operation: ['update', 'delete', 'restore'],
+						operation: ['get', 'update', 'delete', 'restore'],
 					},
 				},
 				default: '',
@@ -302,6 +308,18 @@ export class Infisical implements INodeType {
 				displayOptions: { show: { resource: ['project'] } },
 				options: [
 					{
+						name: 'Create',
+						value: 'create',
+						description: 'Create a new project',
+						action: 'Create a project',
+					},
+					{
+						name: 'Delete',
+						value: 'delete',
+						description: 'Delete a project by ID',
+						action: 'Delete a project',
+					},
+					{
 						name: 'Get',
 						value: 'get',
 						description: 'Get a project by ID',
@@ -337,6 +355,12 @@ export class Infisical implements INodeType {
 						description: 'List all user memberships in a project',
 						action: 'Get user memberships',
 					},
+					{
+						name: 'Update',
+						value: 'update',
+						description: 'Update a project by ID',
+						action: 'Update a project',
+					},
 				],
 				default: 'getAll',
 			},
@@ -350,7 +374,7 @@ export class Infisical implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['project'],
-						operation: ['get', 'getSecretSnapshots', 'getUserMemberships', 'getUserByUsername'],
+						operation: ['get', 'getSecretSnapshots', 'getUserMemberships', 'getUserByUsername', 'update', 'delete'],
 					},
 				},
 				default: '',
@@ -397,6 +421,158 @@ export class Infisical implements INodeType {
 				},
 				default: '',
 				description: 'The username of the project member to retrieve',
+			},
+			{
+				displayName: 'Project Name',
+				name: 'projectName',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['create'],
+					},
+				},
+				default: '',
+				description: 'The name of the project to create (max 64 characters)',
+			},
+			{
+				displayName: 'Additional Fields',
+				name: 'createProjectOptions',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['create'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Create Default Environments',
+						name: 'shouldCreateDefaultEnvs',
+						type: 'boolean',
+						default: true,
+						description: 'Whether to create the default dev, staging, and prod environments',
+					},
+					{
+						displayName: 'Delete Protection',
+						name: 'hasDeleteProtection',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to prevent the project from being deleted',
+					},
+					{
+						displayName: 'Description',
+						name: 'projectDescription',
+						type: 'string',
+						default: '',
+						description: 'An optional description for the project (max 1024 characters)',
+					},
+					{
+						displayName: 'KMS Key ID',
+						name: 'kmsKeyId',
+						type: 'string',
+						default: '',
+						description: 'The ID of the KMS key to use for encryption',
+					},
+					{
+						displayName: 'Slug',
+						name: 'slug',
+						type: 'string',
+						default: '',
+						description: 'A URL-friendly slug for the project (5-64 characters)',
+					},
+					{
+						displayName: 'Template',
+						name: 'template',
+						type: 'string',
+						default: 'default',
+						description: 'The name of the project template to apply',
+					},
+					{
+						displayName: 'Type',
+						name: 'type',
+						type: 'options',
+						options: [
+							{ name: 'Secret Manager', value: 'secret-manager' },
+							{ name: 'Cert Manager', value: 'cert-manager' },
+							{ name: 'KMS', value: 'kms' },
+							{ name: 'SSH', value: 'ssh' },
+							{ name: 'Secret Scanning', value: 'secret-scanning' },
+							{ name: 'PAM', value: 'pam' },
+							{ name: 'AI', value: 'ai' },
+						],
+						default: 'secret-manager',
+						description: 'The type of project to create',
+					},
+				],
+			},
+			{
+				displayName: 'Update Fields',
+				name: 'updateProjectOptions',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['update'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Auto Capitalization',
+						name: 'autoCapitalization',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to enable auto-capitalization of secret keys',
+					},
+					{
+						displayName: 'Delete Protection',
+						name: 'hasDeleteProtection',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to prevent the project from being deleted',
+					},
+					{
+						displayName: 'Description',
+						name: 'description',
+						type: 'string',
+						default: '',
+						description: 'A new description for the project (max 1024 characters)',
+					},
+					{
+						displayName: 'Name',
+						name: 'name',
+						type: 'string',
+						default: '',
+						description: 'A new name for the project (max 64 characters)',
+					},
+					{
+						displayName: 'PIT Version Limit',
+						name: 'pitVersionLimit',
+						type: 'number',
+						default: 10,
+						typeOptions: { minValue: 1, maxValue: 100 },
+						description: 'The number of point-in-time secret versions to retain (1-100)',
+					},
+					{
+						displayName: 'Secret Sharing',
+						name: 'secretSharing',
+						type: 'boolean',
+						default: true,
+						description: 'Whether to allow secret sharing in the project',
+					},
+					{
+						displayName: 'Slug',
+						name: 'slug',
+						type: 'string',
+						default: '',
+						description: 'A new URL-friendly slug for the project (max 64 characters, unique within the organization)',
+					},
+				],
 			},
 			{
 				displayName: 'Additional Fields',
