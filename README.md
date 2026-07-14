@@ -167,6 +167,62 @@ Add secrets using the repeatable **Secrets** list. Each entry requires **Secret 
 
 ---
 
+### Environment
+
+All Environment operations require: **Project ID**.
+
+| Operation | Description | Method | API endpoint |
+| --- | --- | --- | --- |
+| **Create** | Create a new environment in a project | `POST` | `/v1/projects/{projectId}/environments` |
+| **Get by Slug** | Fetch an environment by its slug | `GET` | `/v1/projects/{projectId}/environments/slug/{envSlug}` |
+| **Update** | Update an environment by ID | `PATCH` | `/v1/projects/{projectId}/environments/{id}` |
+| **Delete** | Delete an environment by ID | `DELETE` | `/v1/projects/{projectId}/environments/{id}` |
+| **Restore** | Restore a soft-deleted environment by ID | `POST` | `/v1/projects/{projectId}/environments/{id}/restore` |
+
+#### Create Environment
+
+Required: **Project ID**, **Environment Name** (1–255 characters), **Environment Slug** (1–64 characters).
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Position | Display position; the lowest number is shown first |
+
+#### Get Environment by Slug
+
+Required: **Project ID**, **Environment Slug**
+
+#### Update Environment
+
+Required: **Project ID**, **Environment ID**
+
+**Update Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Name | The new display name (1–255 characters) |
+| Slug | The new slug (1–64 characters) |
+| Position | The new display position; the lowest number is shown first |
+
+#### Delete Environment
+
+Required: **Project ID**, **Environment ID**
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Hard Delete | Permanently delete the environment. If disabled, it is soft-deleted and can be restored. |
+
+#### Restore Environment
+
+Required: **Project ID**, **Environment ID**
+
+Restores a previously soft-deleted environment.
+
+---
+
 ### Project
 
 | Operation | Description | Method | API endpoint |
