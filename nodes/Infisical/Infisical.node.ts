@@ -16,6 +16,8 @@ import { executeSecretOperation } from '../../utils/secretOperations';
 import { executeProjectOperation } from '../../utils/projectOperations';
 import { executeFolderOperation } from '../../utils/folderOperations';
 import { executeEnvironmentOperation } from '../../utils/environmentOperations';
+import { executeSecretImportOperation } from '../../utils/secretImportOperations';
+import { executeSecretTagOperation } from '../../utils/secretTagOperations';
 import { getInfisicalToken } from '../../utils/auth';
 
 export class Infisical implements INodeType {
@@ -51,6 +53,8 @@ export class Infisical implements INodeType {
 					{ name: 'Folder', value: 'folder' },
 					{ name: 'Project', value: 'project' },
 					{ name: 'Secret', value: 'secret' },
+					{ name: 'Secret Import', value: 'secretImport' },
+					{ name: 'Secret Tag', value: 'secretTag' },
 				],
 				default: 'secret',
 			},
@@ -239,6 +243,241 @@ export class Infisical implements INodeType {
 				],
 			},
 
+			// ─── Secret Import operations ─────────────────────────────────────────────
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: { show: { resource: ['secretImport'] } },
+				options: [
+					{ name: 'Create', value: 'create', description: 'Create a secret import', action: 'Create a secret import' },
+					{ name: 'Delete', value: 'delete', description: 'Delete a secret import', action: 'Delete a secret import' },
+					{ name: 'List', value: 'list', description: 'List secret imports at a path', action: 'List secret imports' },
+					{ name: 'Update', value: 'update', description: 'Update a secret import', action: 'Update a secret import' },
+				],
+				default: 'list',
+			},
+			// ─── Secret Import fields ─────────────────────────────────────────────────
+			{
+				displayName: 'Project ID',
+				name: 'projectId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['secretImport'],
+					},
+				},
+				default: "",
+				description: 'The ID of the destination Infisical project',
+			},
+			{
+				displayName: 'Environment',
+				name: 'environment',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['secretImport'],
+					},
+				},
+				default: "dev",
+				description: 'The destination environment slug (e.g., dev, staging, prod)',
+			},
+			{
+				displayName: 'Secret Path',
+				name: 'secretPath',
+				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['secretImport'],
+					},
+				},
+				default: "/",
+				description: 'The destination folder path (default: /)',
+			},
+			{
+				displayName: 'Import From Environment',
+				name: 'importEnvironment',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['secretImport'],
+						operation: ['create'],
+					},
+				},
+				default: "",
+				description: 'The source environment slug to import secrets from',
+			},
+			{
+				displayName: 'Import From Path',
+				name: 'importPath',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['secretImport'],
+						operation: ['create'],
+					},
+				},
+				default: "/",
+				description: 'The source folder path to import secrets from',
+			},
+			{
+				displayName: 'Additional Fields',
+				name: 'createImportOptions',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['secretImport'],
+						operation: ['create'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Is Replication',
+						name: 'isReplication',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to automatically sync new secrets from the source into the destination',
+					},
+					{
+						displayName: 'Source Project ID',
+						name: 'sourceProjectId',
+						type: 'string',
+						default: "",
+						description: 'The source project ID (defaults to the destination project when omitted)',
+					},
+				],
+			},
+			{
+				displayName: 'Secret Import ID',
+				name: 'secretImportId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['secretImport'],
+						operation: ['update', 'delete'],
+					},
+				},
+				default: "",
+				description: 'The ID of the secret import',
+			},
+			{
+				displayName: 'Update Fields',
+				name: 'updateImportOptions',
+				type: 'collection',
+				placeholder: 'Add Field',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['secretImport'],
+						operation: ['update'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Import From Environment',
+						name: 'importEnvironment',
+						type: 'string',
+						default: "",
+						description: 'The new source environment slug to import from',
+					},
+					{
+						displayName: 'Import From Path',
+						name: 'importPath',
+						type: 'string',
+						default: "",
+						description: 'The new source path to import from',
+					},
+					{
+						displayName: 'Position',
+						name: 'position',
+						type: 'number',
+						typeOptions: { minValue: 1 },
+						default: 1,
+						description: 'The new position; the lowest number is displayed first',
+					},
+				],
+			},
+			// ─── Secret Tag operations ────────────────────────────────────────────────
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: { show: { resource: ['secretTag'] } },
+				options: [
+					{ name: 'Create', value: 'create', description: 'Create a secret tag', action: 'Create a secret tag' },
+					{ name: 'Delete', value: 'delete', description: 'Delete a secret tag by ID', action: 'Delete a secret tag' },
+					{ name: 'Get', value: 'get', description: 'Get a secret tag by ID', action: 'Get a secret tag' },
+					{ name: 'Get By Slug', value: 'getBySlug', description: 'Get a secret tag by slug', action: 'Get a secret tag by slug' },
+					{ name: 'List', value: 'list', description: 'List all tags in a project', action: 'List secret tags' },
+					{ name: 'Update', value: 'update', description: 'Update a secret tag by ID', action: 'Update a secret tag' },
+				],
+				default: 'list',
+			},
+			// ─── Secret Tag fields ────────────────────────────────────────────────────
+			{
+				displayName: 'Project ID',
+				name: 'projectId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['secretTag'],
+					},
+				},
+				default: "",
+				description: 'The ID of the Infisical project',
+			},
+			{
+				displayName: 'Tag Slug',
+				name: 'tagSlug',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['secretTag'],
+						operation: ['create', 'update', 'getBySlug'],
+					},
+				},
+				default: "",
+				description: 'The slug of the tag (1-64 characters)',
+			},
+			{
+				displayName: 'Tag Color',
+				name: 'tagColor',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['secretTag'],
+						operation: ['create', 'update'],
+					},
+				},
+				default: "#bec2c8",
+				description: 'The color of the tag (hex code, e.g. #bec2c8)',
+			},
+			{
+				displayName: 'Tag ID',
+				name: 'tagId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['secretTag'],
+						operation: ['get', 'update', 'delete'],
+					},
+				},
+				default: "",
+				description: 'The ID of the tag',
+			},
 			// ─── Secret operations ───────────────────────────────────────────────────
 			{
 				displayName: 'Operation',
@@ -1479,6 +1718,16 @@ export class Infisical implements INodeType {
 				// ── Environment resource ──────────────────────────────────────────────
 				} else if (resource === 'environment') {
 					const results = await executeEnvironmentOperation(this, apiUrl, baseHeaders, operation, i);
+					returnData.push(...results);
+
+				// ── Secret Import resource ────────────────────────────────────────────
+				} else if (resource === 'secretImport') {
+					const results = await executeSecretImportOperation(this, apiUrl, baseHeaders, operation, i);
+					returnData.push(...results);
+
+				// ── Secret Tag resource ───────────────────────────────────────────────
+				} else if (resource === 'secretTag') {
+					const results = await executeSecretTagOperation(this, apiUrl, baseHeaders, operation, i);
 					returnData.push(...results);
 				}
 			} catch (error) {

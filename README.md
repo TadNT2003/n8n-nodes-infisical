@@ -381,6 +381,91 @@ Required: **Project ID**, **Environment**, **Folder Path**, **Folder ID or Name*
 
 ---
 
+### Secret Import
+
+A secret import links secrets from a source environment/path into a destination environment/path. All Secret Import operations require: **Project ID**, **Environment** (destination), **Secret Path** (destination, default: `/`).
+
+| Operation | Description | Method | API endpoint |
+| --- | --- | --- | --- |
+| **Create** | Create a secret import | `POST` | `/v2/secret-imports` |
+| **List** | List secret imports at a path | `GET` | `/v2/secret-imports` |
+| **Update** | Update a secret import | `PATCH` | `/v2/secret-imports/{id}` |
+| **Delete** | Delete a secret import | `DELETE` | `/v2/secret-imports/{id}` |
+
+#### Create Secret Import
+
+Required: **Project ID**, **Environment**, **Import From Environment** (source), **Import From Path** (source).
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Source Project ID | Import from a different project (defaults to the destination project) |
+| Is Replication | Automatically sync new secrets from the source into the destination |
+
+#### List Secret Imports
+
+Required: **Project ID**, **Environment**, **Secret Path**. Returns each import as a separate output item.
+
+#### Update Secret Import
+
+Required: **Project ID**, **Environment**, **Secret Import ID**.
+
+**Update Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Import From Environment | The new source environment slug |
+| Import From Path | The new source path |
+| Position | Display position; the lowest number is shown first |
+
+#### Delete Secret Import
+
+Required: **Project ID**, **Environment**, **Secret Import ID**.
+
+---
+
+### Secret Tag
+
+Tags are project-scoped labels that can be attached to secrets. All Secret Tag operations require: **Project ID**.
+
+> **Note:** Infisical's tag endpoints are workspace-scoped (`/v1/workspace/{projectId}/tags`) — this is the legacy path segment (`workspace` == `project`) and is the only documented tags API. It remains functional.
+
+| Operation | Description | Method | API endpoint |
+| --- | --- | --- | --- |
+| **Create** | Create a tag | `POST` | `/v1/workspace/{projectId}/tags` |
+| **Get** | Fetch a tag by ID | `GET` | `/v1/workspace/{projectId}/tags/{tagId}` |
+| **Get by Slug** | Fetch a tag by slug | `GET` | `/v1/workspace/{projectId}/tags/slug/{tagSlug}` |
+| **List** | List all tags in a project | `GET` | `/v1/workspace/{projectId}/tags` |
+| **Update** | Update a tag by ID | `PATCH` | `/v1/workspace/{projectId}/tags/{tagId}` |
+| **Delete** | Delete a tag by ID | `DELETE` | `/v1/workspace/{projectId}/tags/{tagId}` |
+
+#### Create Tag
+
+Required: **Project ID**, **Tag Slug** (1–64 characters), **Tag Color** (hex code, e.g. `#bec2c8`).
+
+#### Get Tag
+
+Required: **Project ID**, **Tag ID**.
+
+#### Get Tag by Slug
+
+Required: **Project ID**, **Tag Slug**.
+
+#### List Tags
+
+Required: **Project ID**. Returns each tag as a separate output item.
+
+#### Update Tag
+
+Required: **Project ID**, **Tag ID**, **Tag Slug**, **Tag Color**.
+
+#### Delete Tag
+
+Required: **Project ID**, **Tag ID**.
+
+---
+
 ## InfisicalSync
 
 The **InfisicalSync** node provides bidirectional sync between n8n credentials and Infisical secrets. It requires an **InfisicalApi** credential (to authenticate to Infisical) and optionally an **n8nApi** credential (to read and write n8n credentials via the REST API).
