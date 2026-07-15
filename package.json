@@ -22,7 +22,7 @@
   },
   "scripts": {
     "build": "tsc && tsc-alias && gulp build",
-    "dev": "tsc --watch",
+    "dev": "tsc && concurrently \"tsc --watch\" \"tsc-alias --watch\"",
     "format": "prettier nodes credentials --write",
     "lint": "eslint nodes credentials package.json",
     "lintfix": "eslint nodes credentials package.json --fix",
@@ -44,6 +44,7 @@
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.45.0",
+    "concurrently": "^10.0.3",
     "eslint": "^8.29.0",
     "eslint-plugin-n8n-nodes-base": "^1.11.0",
     "gulp": "^4.0.2",
