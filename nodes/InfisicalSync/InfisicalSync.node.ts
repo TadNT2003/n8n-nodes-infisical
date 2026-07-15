@@ -12,8 +12,8 @@ import {
 	NodeOperationError,
 	ensureError,
 } from 'n8n-workflow';
-import { getInfisicalToken } from '../../utils/auth';
-import { executeSyncOperation } from '../../utils/syncOperations';
+import { getInfisicalToken } from '@utils/auth';
+import { executeSyncOperation } from '@utils/syncOperations';
 
 export class InfisicalSync implements INodeType {
 	description: INodeTypeDescription = {

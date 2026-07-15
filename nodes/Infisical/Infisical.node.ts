@@ -12,10 +12,10 @@ import {
 	NodeOperationError,
 	ensureError,
 } from 'n8n-workflow';
-import { executeSecretOperation } from '../../utils/secretOperations';
-import { executeProjectOperation } from '../../utils/projectOperations';
-import { executeFolderOperation } from '../../utils/folderOperations';
-import { getInfisicalToken } from '../../utils/auth';
+import { executeSecretOperation } from '@utils/secretOperations';
+import { executeProjectOperation } from '@utils/projectOperations';
+import { executeFolderOperation } from '@utils/folderOperations';
+import { getInfisicalToken } from '@utils/auth';
 
 export class Infisical implements INodeType {
 	description: INodeTypeDescription = {
