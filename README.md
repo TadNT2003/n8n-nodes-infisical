@@ -483,6 +483,25 @@ Both Infisical → n8n operations expose an **If Credential Missing** option for
 - **Create New Credential** (default) — recreate it using the `n8n_credential_type` metadata tag stored on the folder's secrets.
 - **Skip** — leave n8n untouched and report the item as skipped instead of creating or erroring.
 
+#### OAuth Credential Handling (Auto Sync only)
+
+OAuth1/OAuth2 credentials obtain their access token through an interactive browser consent, stored by n8n in an `oauthTokenData` field that **is not synced**. Because updating a credential replaces its stored data, blindly re-syncing an already-connected OAuth credential would wipe its token and force re-authorization. **Auto Sync from Infisical** therefore exposes an **OAuth Credential Handling** option:
+
+- **Create Only** (default) — create OAuth credentials that don't exist yet, but never update existing ones, so a connected credential's token is never overwritten. You still authorize each newly created OAuth credential once in n8n.
+- **Skip** — never create or update OAuth credentials; report them as skipped for manual handling.
+- **Update All** — treat OAuth credentials like any other. ⚠️ Under **Full Replace** update strategy, updating an already-connected OAuth credential clears its saved access token and requires re-authorization. Under **Partial Merge** (default), the token is preserved.
+
+Non-OAuth credentials are unaffected by this option and always create/update per **If Credential Missing**.
+
+#### Update Strategy (Sync from / Auto Sync)
+
+Controls how existing n8n credentials are updated when syncing Infisical → n8n:
+
+Both strategies send a complete, schema-valid payload (n8n validates `data` against the full credential schema before applying it, regardless of the flag). The difference is what happens to fields the sync doesn't track:
+
+- **Partial Merge** (default) — sets `isPartialData: true` so n8n **merges** the payload into the existing credential. Fields n8n manages but Infisical does not — notably **OAuth access tokens** (`oauthTokenData`) — are preserved instead of wiped. Requires a recent n8n version that supports partial credential updates.
+- **Full Replace** — overwrites the entire credential data object. Use for older n8n versions that don't support partial updates. ⚠️ Wipes fields not included in the sync, including **OAuth access tokens** (the credential must be re-authorized).
+
 ### Supported Credential Types (Form Mode)
 
 Form mode supports **75 credential types**. JSON mode accepts any type registered in n8n.
