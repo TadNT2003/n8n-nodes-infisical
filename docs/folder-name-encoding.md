@@ -50,7 +50,8 @@ function toFolderName(name: string): string {
     return [...name].map(c => {
         if (/[A-Za-z0-9-]/.test(c)) return c;
         if (c === '_') return '__';
-        return encodeURIComponent(c).replace(/%/g, '_');
+        const bytes = unescape(encodeURIComponent(c));
+        return [...bytes].map((b) => '_' + b.charCodeAt(0).toString(16).padStart(2, '0').toUpperCase()).join('');
     }).join('');
 }
 
@@ -63,6 +64,8 @@ function fromFolderName(slug: string): string {
 ```
 
 `toFolderName` is called in `buildSecretPath` (used by `syncToInfisical`) and when creating the Infisical folder. `fromFolderName` is called in `autoSyncFromInfisical` before the credential name lookup and before the credential create call, so n8n always stores the original human-readable name.
+
+**Gotcha — `encodeURIComponent` is not a complete UTF-8-byte escaper.** An earlier version of `toFolderName` computed each byte segment as `encodeURIComponent(c).replace(/%/g, '_')` directly. `encodeURIComponent` deliberately leaves `! ' ( ) * . ~` unescaped (they're valid in a URI component), so a name containing e.g. `(` produced a literal `(` in the folder name instead of `_28` — invalid per Infisical's `[a-zA-Z0-9_-]` rule, causing a 422 on folder creation for names like `"Google Gemini(PaLM) Api account"`. The fix routes every non-passthrough character through `unescape(encodeURIComponent(c))` first, which yields a raw UTF-8 byte string with no "safe" exceptions, then hex-encodes every byte of that string unconditionally.
 
 ## Why Not Percent Encoding Directly?
 

@@ -20,6 +20,7 @@ types.
 6. [Supported Credentials and Field Mapping Reference](#6-supported-credentials-and-field-mapping-reference)
 7. [Adding a New Credential Type](#7-adding-a-new-credential-type)
 8. [syncToInfisical: JSON Input Mode and Validation](#8-synctoinfisical-json-input-mode-and-validation)
+9. [Missing-Credential Handling](#9-missing-credential-handling)
 
 ---
 
@@ -30,8 +31,8 @@ Three operations, two directions:
 | Operation | Direction | What it does |
 | --- | --- | --- |
 | `syncToInfisical` | n8n → Infisical | Reads from an n8n credential **form** or a **JSON object** and upserts each field as a secret in a named Infisical folder. Attaches `n8n_credential_type` metadata to every secret for later auto-discovery. When `n8nApi` is configured, validates input against the credential schema before writing. |
-| `syncFromInfisical` | Infisical → n8n | Reads all secrets from a named folder, then PATCHes a specific n8n credential by ID. |
-| `autoSyncFromInfisical` | Infisical → n8n | Discovers all subfolders under a root path, reads each folder's secrets, and creates or updates matching n8n credentials by name. This is the most complex operation. |
+| `syncFromInfisical` | Infisical → n8n | Reads all secrets from a named folder, then PATCHes a specific n8n credential by ID. If that credential no longer exists, falls back to create-or-skip per the `ifCredentialMissing` parameter (see [§9](#9-missing-credential-handling)). |
+| `autoSyncFromInfisical` | Infisical → n8n | Discovers all subfolders under a root path, reads each folder's secrets, and creates or updates matching n8n credentials by name. When no name match exists, creates or skips per the `ifCredentialMissing` parameter (see [§9](#9-missing-credential-handling)). This is the most complex operation. |
 
 The sync module itself does not authenticate — that is handled by `utils/auth.ts`, which resolves
 an `InfisicalApi` credential to `{ apiUrl, accessToken }` before the sync module is called.
@@ -611,6 +612,37 @@ All `param` names were verified against the actual schema from `GET /api/v1/cred
 | `discordBotApi` | `botToken` | `botToken` | string | |
 | `discordWebhookApi` | `webhookUri` | `webhookUri` | string | |
 
+### Code Hosting
+
+| n8n type | n8n `param` | Infisical `secretKey` | Type | Notes |
+| --- | --- | --- | --- | --- |
+| `githubApi` | `server` | `server` | string | GitHub Enterprise URL; defaults to `https://api.github.com` |
+| `githubApi` | `user` | `user` | string | |
+| `githubApi` | `accessToken` | `accessToken` | string | personal access token |
+| `githubOAuth2Api` | `server` | `server` | string | GitHub Enterprise URL; defaults to `https://api.github.com` |
+| `githubOAuth2Api` | `clientId` | `clientId` | string | |
+| `githubOAuth2Api` | `clientSecret` | `clientSecret` | string | |
+| `gitlabApi` | `server` | `server` | string | GitLab server URL; defaults to `https://gitlab.com` |
+| `gitlabApi` | `accessToken` | `accessToken` | string | personal access token |
+| `gitlabOAuth2Api` | `server` | `server` | string | GitLab server URL; defaults to `https://gitlab.com` |
+| `gitlabOAuth2Api` | `clientId` | `clientId` | string | |
+| `gitlabOAuth2Api` | `clientSecret` | `clientSecret` | string | |
+| `bitbucketApi` | `username` | `username` | string | |
+| `bitbucketApi` | `appPassword` | `appPassword` | string | not the account password |
+| `bitbucketAccessTokenApi` | `email` | `email` | string | |
+| `bitbucketAccessTokenApi` | `accessToken` | `accessToken` | string | |
+
+`githubOAuth2Api` and `gitlabOAuth2Api` both extend `oAuth2Api` but override `grantType`,
+`authUrl`, `accessTokenUrl`, `scope`, `authQueryParameters`, and `authentication` as `hidden`
+schema fields with fixed/computed defaults (`authUrl`/`accessTokenUrl` are derived from `server`
+via an n8n expression). None of those are user-editable, so they are intentionally excluded from
+the field map — only `server` and the OAuth client credentials are synced. Unlike `githubApi`,
+`gitlabApi` has no `user` field.
+
+`bitbucketApi` and `bitbucketAccessTokenApi` are both flat schemas with no `allOf` conditionals
+and no `server` field (Bitbucket Cloud only — no self-managed server variant). No
+`CREDENTIAL_FIELD_DEFAULTS` entries are needed.
+
 ### Google
 
 | n8n type | n8n `param` | Infisical `secretKey` | Type | Notes |
@@ -892,7 +924,7 @@ branch fires.
 
 #### Form mode (default)
 
-Displays individual fields for the selected credential type. Supports the 31 types in
+Displays individual fields for the selected credential type. Supports the 37 types in
 `CREDENTIAL_FIELD_MAPS`. Field values are read via `ctx.getNodeParameter(param, i, '')` and mapped
 to Infisical secret keys per the field map.
 
@@ -936,3 +968,62 @@ skipped and the operation proceeds without it.
 When a schema is successfully fetched, any JSON key not declared in `schema.properties` is
 **silently dropped** before writing to Infisical — it does not cause a validation error and is
 not stored. If no schema is available (n8nApi not configured), all keys are written as-is.
+
+---
+
+## 9. Missing-Credential Handling
+
+### 9.1 The problem
+
+Both Infisical → n8n operations resolve a target credential before writing to it:
+`syncFromInfisical` by an explicit `n8nCredentialId`, `autoSyncFromInfisical` by matching the
+Infisical folder name against existing n8n credential names. If the n8n credential was deleted
+since the last sync (or, for `autoSyncFromInfisical`, never existed), the naive behavior differed
+per operation and was not configurable:
+
+- `syncFromInfisical` issued a bare `PATCH /api/v1/credentials/{id}` with no error handling. A 404
+  propagated as an unhandled `NodeApiError`, aborting the whole execution (or just the item, with
+  "Continue on Fail" enabled).
+- `autoSyncFromInfisical` always created a replacement credential under a new ID when no name
+  match was found — silent, unconditional recreation.
+
+### 9.2 The `ifCredentialMissing` parameter
+
+Both operations now expose an **If Credential Missing** node parameter:
+
+| Value | Behavior |
+| --- | --- |
+| `create` (default) | Create a new n8n credential using the `n8n_credential_type` metadata tag stored on the folder's secrets (attached by `syncToInfisical` — see §1). Matches the pre-existing `autoSyncFromInfisical` behavior. |
+| `skip` | Leave n8n untouched and return an item reporting `action: "skipped"` with a `reason`. |
+
+### 9.3 Implementation
+
+`autoSyncFromInfisical` already builds `credentialData` and a cached `SchemaInfo` for every folder
+while scanning for a name match. When no match is found, the loop now branches on
+`ifCredentialMissing` before falling into the pre-existing create path.
+
+`syncFromInfisical` performs the `PATCH` inside a `try/catch`. A non-404 error is rethrown
+unchanged. On 404:
+
+- `skip` → returns `{ success: false, action: 'skipped', reason, credentialName, secretPath }`.
+- `create` → reads `n8n_credential_type` from the already-fetched secrets' metadata (via the
+  shared `findCredentialType` helper), fetches that type's schema, and `POST`s a new credential —
+  the same create path `autoSyncFromInfisical` uses.
+
+If `create` is requested but no `n8n_credential_type` metadata is present (the folder predates the
+metadata tag, or was populated by hand), `syncFromInfisical` throws a `NodeOperationError` — there
+is no type to create against. `autoSyncFromInfisical` degrades to its existing skip-with-reason
+result in the same situation.
+
+### 9.4 Shared helpers
+
+To keep create-path payload construction identical between the two operations (schema defaults,
+`CREDENTIAL_FIELD_DEFAULTS`, and the post-merge conditional-branch step from
+[§5](#5-dealing-with-the-validator-full-algorithm)), the logic was extracted into:
+
+- `findCredentialType(secrets)` — scans a folder's secrets for the `n8n_credential_type` metadata
+  entry.
+- `mergeCredentialData(credentialType, credentialData, schemaInfo)` — builds `fullData` the same
+  way for both operations' create paths (and `autoSyncFromInfisical`'s update path).
+- `getErrorStatus(err)` — reads the HTTP status off an `httpRequest` rejection regardless of
+  whether it surfaces as `response.status` or a top-level `statusCode`.

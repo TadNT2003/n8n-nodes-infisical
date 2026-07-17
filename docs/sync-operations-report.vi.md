@@ -14,9 +14,9 @@ Ba thao tác được cung cấp:
 
 | Thao tác | Chiều | Mô tả |
 | --- | --- | --- |
-| `syncToInfisical` | n8n → Infisical | Đọc từ form credential n8n **hoặc một đối tượng JSON**, ghi vào thư mục secret Infisical. Hỗ trợ hai chế độ nhập: **form** (31 loại được định sẵn) và **JSON** (bất kỳ loại credential nào). Khi `n8nApi` được cấu hình, xác thực dữ liệu đầu vào theo credential schema trước khi ghi. |
-| `syncFromInfisical` | Infisical → n8n | Đọc một thư mục cụ thể theo tên, cập nhật credential n8n đích theo ID |
-| `autoSyncFromInfisical` | Infisical → n8n | Tự động phát hiện tất cả thư mục credential dưới một đường dẫn gốc, tạo hoặc cập nhật credential n8n tương ứng |
+| `syncToInfisical` | n8n → Infisical | Đọc từ form credential n8n **hoặc một đối tượng JSON**, ghi vào thư mục secret Infisical. Hỗ trợ hai chế độ nhập: **form** (37 loại được định sẵn) và **JSON** (bất kỳ loại credential nào). Khi `n8nApi` được cấu hình, xác thực dữ liệu đầu vào theo credential schema trước khi ghi. |
+| `syncFromInfisical` | Infisical → n8n | Đọc một thư mục cụ thể theo tên, cập nhật credential n8n đích theo ID. Nếu credential đó đã bị xóa, chuyển sang tạo mới hoặc bỏ qua theo tham số `ifCredentialMissing` (§9). |
+| `autoSyncFromInfisical` | Infisical → n8n | Tự động phát hiện tất cả thư mục credential dưới một đường dẫn gốc, tạo hoặc cập nhật credential n8n tương ứng. Khi không tìm thấy credential n8n khớp, tạo mới hoặc bỏ qua theo tham số `ifCredentialMissing` (§9). |
 
 `autoSyncFromInfisical` là thao tác phức tạp nhất vì nó phải thỏa mãn bộ kiểm tra schema của n8n khi CREATE — và đây là nguồn gốc của mọi lỗi không tầm thường.
 
@@ -66,6 +66,40 @@ Khi khóa điều kiện `if` **vắng mặt trong `schema.properties`** — ngh
 Các schema này có `properties` phẳng không có điều kiện `allOf`. Tất cả các trường nhạy cảm đều nằm trong `required`. Không cần giá trị mặc định khi tạo; chỉ cần truyền giá trị trường từ Infisical.
 
 **Hành vi bộ kiểm tra**: đơn giản — các trường required phải có mặt, không có gì khác.
+
+---
+
+### 3.1b GitHub (`githubApi`, `githubOAuth2Api`)
+
+**`githubApi`**: schema phẳng, không có `allOf`. Trường `server` có giá trị mặc định được khai
+báo (`https://api.github.com`) nhưng không phải required và không được endpoint schema công khai
+(giống lỗ hổng của `host` ở `googlePalmApi`), nên được hardcode trong `CREDENTIAL_FIELD_DEFAULTS`
+như một giá trị dự phòng.
+
+**`githubOAuth2Api`**: kế thừa từ `oAuth2Api` nhưng ghi đè `grantType`, `authUrl`,
+`accessTokenUrl`, `scope`, `authQueryParameters`, và `authentication` thành các trường `hidden`
+với giá trị mặc định cố định/được tính toán — `authUrl`/`accessTokenUrl` được suy ra từ `server`
+qua một expression của n8n. Không trường hidden nào do người dùng chỉnh sửa được, nên chỉ
+`server`, `clientId`, và `clientSecret` được đồng bộ.
+
+---
+
+### 3.1c GitLab (`gitlabApi`, `gitlabOAuth2Api`)
+
+Về cấu trúc giống hệt cặp GitHub: `gitlabApi` là schema phẳng với cùng lỗ hổng giá trị mặc định
+không được khai báo trên `server` (mặc định `https://gitlab.com`), và `gitlabOAuth2Api` ghi đè
+cùng sáu trường của `oAuth2Api` thành `hidden`/được tính toán. Điểm khác biệt duy nhất là
+`gitlabApi` không có trường `user` — chỉ có `server` và `accessToken`.
+
+---
+
+### 3.1d Bitbucket (`bitbucketApi`, `bitbucketAccessTokenApi`)
+
+Cả hai đều là schema phẳng không có `allOf` và không có trường `server` — chỉ hỗ trợ Bitbucket
+Cloud, không có biến thể tự quản lý, nên khác với GitHub/GitLab, không có lỗ hổng giá trị mặc
+định không được khai báo và không cần entry trong `CREDENTIAL_FIELD_DEFAULTS`. `bitbucketApi`
+dùng `username`/`appPassword`; `bitbucketAccessTokenApi` dùng `email`/`accessToken`. Không loại
+nào có biến thể OAuth2.
 
 ---
 
@@ -396,7 +430,7 @@ else:
 
 #### Chế độ form (mặc định)
 
-Người dùng chọn loại credential từ dropdown gồm 31 loại được định sẵn và điền từng trường riêng lẻ. Các trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo `CREDENTIAL_FIELD_MAPS`. Chỉ hỗ trợ 31 loại có entry trong `CREDENTIAL_FIELD_MAPS`.
+Người dùng chọn loại credential từ dropdown gồm 37 loại được định sẵn và điền từng trường riêng lẻ. Các trường được đọc qua `ctx.getNodeParameter(param, i, '')` và ánh xạ sang khóa secret Infisical theo `CREDENTIAL_FIELD_MAPS`. Chỉ hỗ trợ 37 loại có entry trong `CREDENTIAL_FIELD_MAPS`.
 
 #### Chế độ JSON
 
@@ -543,3 +577,30 @@ defaults[key] = def.default
 | `oAuth1Api` | 1 nhánh | `allowedDomains` | không | hoạt động |
 | `oAuth2Api` | 2 nhánh | `authUrl` (theo grantType), `allowedDomains` | không | hoạt động |
 | `jwtAuth` | 2 nhánh (loại trừ lẫn nhau) | `secret` XOR `privateKey`/`publicKey` | không | hoạt động |
+
+---
+
+## 9. Xử Lý Credential Bị Thiếu (`ifCredentialMissing`)
+
+Cả hai thao tác Infisical → n8n giờ đây có thêm tham số node **If Credential Missing**
+(mặc định `create`, hoặc `skip`) kiểm soát điều gì xảy ra khi không thể xác định được credential
+n8n đích — đã bị xóa kể từ lần sync trước (`syncFromInfisical`, xác định theo ID) hoặc chưa từng
+được tạo (`autoSyncFromInfisical`, xác định theo khớp tên).
+
+- `create` — xây dựng payload credential mới theo đúng cách đường dẫn create sẵn có của
+  `autoSyncFromInfisical` (giá trị mặc định schema + `applyCondBranches`, xem §5–§6), dùng
+  metadata `n8n_credential_type` được lưu trên secrets của thư mục để xác định loại. Ném lỗi nếu
+  thiếu metadata này (`syncFromInfisical`) hoặc báo cáo bỏ qua kèm lý do (`autoSyncFromInfisical`).
+- `skip` — không đụng đến n8n và trả về/đẩy vào kết quả một item với `action: "skipped"` kèm
+  `reason`.
+
+`syncFromInfisical` phát hiện trường hợp credential bị thiếu bằng cách bắt lỗi 404 từ lệnh gọi
+`PATCH /api/v1/credentials/{id}` (trước đây không được xử lý — bất kỳ lỗi nào ở đó đều làm hỏng
+item). `autoSyncFromInfisical` phát hiện theo cách nó vẫn luôn làm: không có entry trong
+`credByName` cho tên đã giải mã của thư mục.
+
+Việc xây dựng payload trên đường dẫn create (giá trị mặc định schema, `CREDENTIAL_FIELD_DEFAULTS`,
+điều chỉnh điều kiện post-merge) được chia sẻ giữa cả hai thao tác qua một helper mới
+`mergeCredentialData`, thay thế logic trước đây bị trùng lặp inline trong các nhánh update và
+create của `autoSyncFromInfisical`. Xem [Hướng Dẫn Triển Khai §9](sync-implementation-guide.vi.md#9-xử-lý-credential-bị-thiếu)
+để biết lý do thiết kế đầy đủ và giải thích chi tiết ở mức code.

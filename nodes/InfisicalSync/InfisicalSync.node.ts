@@ -122,6 +122,30 @@ export class InfisicalSync implements INodeType {
 				displayOptions: { show: { operation: ['syncFromInfisical'] } },
 			},
 
+			// ── Infisical → n8n: missing-credential behavior (shared) ─────────────
+			{
+				displayName: 'If Credential Missing',
+				name: 'ifCredentialMissing',
+				type: 'options',
+				noDataExpression: true,
+				default: 'create',
+				options: [
+					{
+						name: 'Create New Credential',
+						value: 'create',
+						description: 'Create a new n8n credential using the "n8n_credential_type" metadata stored on the secrets',
+					},
+					{
+						name: 'Skip',
+						value: 'skip',
+						description: 'Leave it alone and report the item as skipped',
+					},
+				],
+				description:
+					'What to do when the target n8n credential cannot be found (e.g. it was deleted, or no credential with this name exists yet)',
+				displayOptions: { show: { operation: ['syncFromInfisical', 'autoSyncFromInfisical'] } },
+			},
+
 			// ── Input mode (syncToInfisical only) ─────────────────────────────────
 			{
 				displayName: 'Input Mode',
@@ -157,11 +181,17 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Anthropic', value: 'anthropicApi' },
 					{ name: 'Basic Auth', value: 'httpBasicAuth' },
 					{ name: 'Bearer Auth', value: 'httpBearerAuth' },
+					{ name: 'Bitbucket (Access Token)', value: 'bitbucketAccessTokenApi' },
+					{ name: 'Bitbucket (App Password)', value: 'bitbucketApi' },
 					{ name: 'Cohere', value: 'cohereApi' },
 					{ name: 'Custom Auth', value: 'httpCustomAuth' },
 					{ name: 'Digest Auth', value: 'httpDigestAuth' },
 					{ name: 'Discord Bot', value: 'discordBotApi' },
 					{ name: 'Discord Webhook', value: 'discordWebhookApi' },
+					{ name: 'GitHub (API Key)', value: 'githubApi' },
+					{ name: 'GitHub OAuth2', value: 'githubOAuth2Api' },
+					{ name: 'GitLab (API Key)', value: 'gitlabApi' },
+					{ name: 'GitLab OAuth2', value: 'gitlabOAuth2Api' },
 					{ name: 'Google Docs (OAuth2)', value: 'googleDocsOAuth2Api' },
 					{ name: 'Google Drive (OAuth2)', value: 'googleDriveOAuth2Api' },
 					{ name: 'Google OAuth2', value: 'googleOAuth2Api' },
@@ -311,6 +341,8 @@ export class InfisicalSync implements INodeType {
 							'googleDocsOAuth2Api',
 							'infisicalApi',
 							'oAuth2Api',
+							'githubOAuth2Api',
+							'gitlabOAuth2Api',
 						],
 					},
 				},
@@ -332,6 +364,8 @@ export class InfisicalSync implements INodeType {
 							'googleDocsOAuth2Api',
 							'infisicalApi',
 							'oAuth2Api',
+							'githubOAuth2Api',
+							'gitlabOAuth2Api',
 						],
 					},
 				},
@@ -458,7 +492,7 @@ export class InfisicalSync implements INodeType {
 				},
 			},
 
-			// ── Shared: email (Google SA + Jira) ──────────────────────────────────
+			// ── Shared: email (Google SA + Jira + Bitbucket Access Token) ─────────
 			{
 				displayName: 'Email',
 				name: 'email',
@@ -468,7 +502,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['googleApi', 'jiraSoftwareCloudApi'],
+						credentialType: ['googleApi', 'jiraSoftwareCloudApi', 'bitbucketAccessTokenApi'],
 					},
 				},
 			},
@@ -513,6 +547,67 @@ export class InfisicalSync implements INodeType {
 				default: '',
 				displayOptions: {
 					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['discordWebhookApi'] },
+				},
+			},
+
+			// ── GitHub ────────────────────────────────────────────────────────────
+			{
+				displayName: 'Server',
+				name: 'server',
+				type: 'string',
+				default: 'https://api.github.com',
+				description: 'GitHub Enterprise server URL — leave default for github.com',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['githubApi', 'githubOAuth2Api'] },
+				},
+			},
+			{
+				displayName: 'Access Token',
+				name: 'accessToken',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				description: 'Personal access token',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['githubApi', 'gitlabApi', 'bitbucketAccessTokenApi'],
+					},
+				},
+			},
+
+			// ── GitLab ────────────────────────────────────────────────────────────
+			{
+				displayName: 'Server',
+				name: 'server',
+				type: 'string',
+				default: 'https://gitlab.com',
+				description: 'GitLab self-managed server URL — leave default for gitlab.com',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['gitlabApi', 'gitlabOAuth2Api'] },
+				},
+			},
+
+			// ── Bitbucket ─────────────────────────────────────────────────────────
+			{
+				displayName: 'Username',
+				name: 'username',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['bitbucketApi'] },
+				},
+			},
+			{
+				displayName: 'App Password',
+				name: 'appPassword',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				description: 'App password (not the account password)',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['bitbucketApi'] },
 				},
 			},
 
@@ -561,7 +656,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth', 'githubApi'],
 					},
 				},
 			},

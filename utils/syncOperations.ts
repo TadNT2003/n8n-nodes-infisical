@@ -36,8 +36,43 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 	cohereApi: [{ param: 'apiKey', secretKey: 'apiKey' }],
 	huggingFaceApi: [{ param: 'apiKey', secretKey: 'apiKey' }],
 	mistralCloudApi: [{ param: 'apiKey', secretKey: 'apiKey' }],
+	googlePalmApi: [
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'apiKey', secretKey: 'apiKey' },
+	],
 	discordBotApi: [{ param: 'botToken', secretKey: 'botToken' }],
 	discordWebhookApi: [{ param: 'webhookUri', secretKey: 'webhookUri' }],
+	githubApi: [
+		{ param: 'server', secretKey: 'server' },
+		{ param: 'user', secretKey: 'user' },
+		{ param: 'accessToken', secretKey: 'accessToken' },
+	],
+	// scope/authUrl/accessTokenUrl are `hidden` fields with fixed/computed defaults on this
+	// credential type (not user-editable), so only server + OAuth client fields are synced.
+	githubOAuth2Api: [
+		{ param: 'server', secretKey: 'server' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+	],
+	gitlabApi: [
+		{ param: 'server', secretKey: 'server' },
+		{ param: 'accessToken', secretKey: 'accessToken' },
+	],
+	// scope/authUrl/accessTokenUrl are `hidden` fields with fixed/computed defaults on this
+	// credential type (not user-editable), so only server + OAuth client fields are synced.
+	gitlabOAuth2Api: [
+		{ param: 'server', secretKey: 'server' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+	],
+	bitbucketApi: [
+		{ param: 'username', secretKey: 'username' },
+		{ param: 'appPassword', secretKey: 'appPassword' },
+	],
+	bitbucketAccessTokenApi: [
+		{ param: 'email', secretKey: 'email' },
+		{ param: 'accessToken', secretKey: 'accessToken' },
+	],
 	mySql: [
 		{ param: 'host', secretKey: 'host' },
 		{ param: 'database', secretKey: 'database' },
@@ -210,13 +245,31 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 	],
 };
 
+// n8n's credential schema endpoint (GET /credentials/schema/{type}) doesn't expose a field's
+// `default` value — only type/enum/required — and a credential saved via the n8n UI with a
+// field left untouched omits that key from its stored data entirely (confirmed for
+// googlePalmApi: a credential saved with only "API Key" filled in has no "host" key at all
+// in its decrypted export). There's nothing in n8n's API for us to recover that value from,
+// so known UI defaults for required fields are hardcoded here as a last-resort fallback.
+const CREDENTIAL_FIELD_DEFAULTS: Record<string, Record<string, string>> = {
+	googlePalmApi: { host: 'https://generativelanguage.googleapis.com' },
+	githubApi: { server: 'https://api.github.com' },
+	githubOAuth2Api: { server: 'https://api.github.com' },
+	gitlabApi: { server: 'https://gitlab.com' },
+	gitlabOAuth2Api: { server: 'https://gitlab.com' },
+	deepseekApi: { baseUrl: 'https://api.deepseek.com' },
+};
+
 // Lossless encoding: [A-Za-z0-9-] pass through, _ → __, everything else → _XX hex sequences.
 // Infisical folder names only allow [a-zA-Z0-9_-], so % cannot be used as an escape character.
+// Bytes are hex-encoded directly rather than via `encodeURIComponent(c).replace(/%/g, '_')`,
+// which leaves `! ' ( ) * . ~` unescaped — none of those are valid in an Infisical folder name.
 function toFolderName(name: string): string {
 	return [...name].map(c => {
 		if (/[A-Za-z0-9-]/.test(c)) return c;
 		if (c === '_') return '__';
-		return encodeURIComponent(c).replace(/%/g, '_');
+		const bytes = unescape(encodeURIComponent(c));
+		return [...bytes].map((b) => '_' + b.charCodeAt(0).toString(16).padStart(2, '0').toUpperCase()).join('');
 	}).join('');
 }
 
@@ -329,6 +382,40 @@ function validateAgainstSchema(
 	return errors;
 }
 
+// Extract the `n8n_credential_type` tag stored on secrets by syncToInfisical.
+function findCredentialType(secrets: IDataObject[]): string | undefined {
+	for (const secret of secrets) {
+		const meta = (secret.secretMetadata ?? []) as IDataObject[];
+		const entry = meta.find((m) => m.key === 'n8n_credential_type');
+		if (entry) return entry.value as string;
+	}
+	return undefined;
+}
+
+// Merge schema defaults + conditional-branch rules into the raw Infisical-derived credential
+// data. Shared by the autoSync create/update paths and the syncFromInfisical missing-credential
+// fallback so create/update payloads are built identically everywhere.
+function mergeCredentialData(
+	credentialType: string | undefined,
+	credentialData: IDataObject,
+	schemaInfo?: SchemaInfo,
+): IDataObject {
+	const fullData: IDataObject = {
+		...(credentialType ? CREDENTIAL_FIELD_DEFAULTS[credentialType] : undefined),
+		...(schemaInfo?.defaults ?? {}),
+		...credentialData,
+	};
+	if (schemaInfo) applyCondBranches(fullData, schemaInfo);
+	return fullData;
+}
+
+// Read the HTTP status code off an error thrown by ctx.helpers.httpRequest, regardless of
+// whether it surfaces as an Axios-style `response.status` or a top-level `statusCode`.
+function getErrorStatus(err: unknown): number | undefined {
+	const e = err as { response?: { status?: number }; statusCode?: number };
+	return e?.response?.status ?? e?.statusCode;
+}
+
 async function syncFromInfisical(
 	ctx: IExecuteFunctions,
 	apiUrl: string,
@@ -340,10 +427,12 @@ async function syncFromInfisical(
 	const rootPath = (ctx.getNodeParameter('rootPath', i, '/') as string) || '/';
 	const credentialName = ctx.getNodeParameter('credentialName', i) as string;
 	const n8nCredentialId = ctx.getNodeParameter('n8nCredentialId', i) as string;
+	const ifCredentialMissing = ctx.getNodeParameter('ifCredentialMissing', i, 'create') as string;
 
 	const n8nCreds = await ctx.getCredentials('n8nApi');
 	const n8nApiUrl = ((n8nCreds.baseUrl as string) || 'http://localhost:5678').replace(/\/$/, '').replace(/\/api\/v1$/, '');
 	const n8nApiKey = n8nCreds.apiKey as string;
+	const n8nHeaders = { 'X-N8N-API-KEY': n8nApiKey, 'Content-Type': 'application/json' };
 
 	const secretPath = buildSecretPath(rootPath, credentialName);
 
@@ -371,14 +460,58 @@ async function syncFromInfisical(
 	}
 
 	// 3. Update the n8n credential via its REST API
-	const updated = await ctx.helpers.httpRequest({
-		method: 'PATCH',
-		url: `${n8nApiUrl}/api/v1/credentials/${n8nCredentialId}`,
-		headers: { 'X-N8N-API-KEY': n8nApiKey, 'Content-Type': 'application/json' },
-		body: { data: credentialData },
-	});
+	try {
+		const updated = await ctx.helpers.httpRequest({
+			method: 'PATCH',
+			url: `${n8nApiUrl}/api/v1/credentials/${n8nCredentialId}`,
+			headers: n8nHeaders,
+			body: { data: credentialData },
+		});
 
-	return [{ json: updated as IDataObject, pairedItem: { item: i } }];
+		return [{ json: updated as IDataObject, pairedItem: { item: i } }];
+	} catch (err: unknown) {
+		if (getErrorStatus(err) !== 404) throw err;
+
+		// The target credential no longer exists (e.g. it was deleted in n8n).
+		if (ifCredentialMissing === 'skip') {
+			return [{
+				json: {
+					success: false,
+					action: 'skipped',
+					reason: `n8n credential "${n8nCredentialId}" was not found`,
+					credentialName,
+					secretPath,
+				},
+				pairedItem: { item: i },
+			}];
+		}
+
+		const credentialType = findCredentialType(secrets);
+		if (!credentialType) {
+			throw new NodeOperationError(
+				ctx.getNode(),
+				`n8n credential "${n8nCredentialId}" was not found, and no "n8n_credential_type" metadata is present on its secrets to create a replacement`,
+				{ itemIndex: i },
+			);
+		}
+
+		let schemaInfo: SchemaInfo | undefined;
+		try {
+			schemaInfo = await fetchN8nSchema(n8nApiUrl, credentialType, n8nHeaders, ctx);
+		} catch {
+			// proceed without schema — no coercion or defaults applied
+		}
+		const fullData = mergeCredentialData(credentialType, credentialData, schemaInfo);
+
+		const created = await ctx.helpers.httpRequest({
+			method: 'POST',
+			url: `${n8nApiUrl}/api/v1/credentials`,
+			headers: n8nHeaders,
+			body: { name: credentialName, type: credentialType, data: fullData },
+		}) as IDataObject;
+
+		return [{ json: { ...created, action: 'created' }, pairedItem: { item: i } }];
+	}
 }
 
 // Collect field names from then/else allOf sub-schemas.
@@ -528,6 +661,7 @@ async function autoSyncFromInfisical(
 	const projectId = ctx.getNodeParameter('projectId', i) as string;
 	const environment = ctx.getNodeParameter('environment', i) as string;
 	const rootPath = (ctx.getNodeParameter('rootPath', i, '/') as string) || '/';
+	const ifCredentialMissing = ctx.getNodeParameter('ifCredentialMissing', i, 'create') as string;
 
 	const n8nCreds = await ctx.getCredentials('n8nApi');
 	const n8nApiUrl = ((n8nCreds.baseUrl as string) || 'http://localhost:5678').replace(/\/$/, '').replace(/\/api\/v1$/, '');
@@ -598,12 +732,7 @@ async function autoSyncFromInfisical(
 		}
 
 		// Extract n8n_credential_type from any secret's metadata
-		let credentialType: string | undefined;
-		for (const secret of secrets) {
-			const meta = (secret.secretMetadata ?? []) as IDataObject[];
-			const entry = meta.find((m) => m.key === 'n8n_credential_type');
-			if (entry) { credentialType = entry.value as string; break; }
-		}
+		const credentialType = findCredentialType(secrets);
 
 		// Fix 7.3: use cached schema when available
 		let schemaInfo: SchemaInfo | undefined;
@@ -647,8 +776,7 @@ async function autoSyncFromInfisical(
 			// Fix 7.2: apply the same fullData build logic as the create path so that condition-key
 			// changes (e.g. ssl:false→true) get their required fields filled and their prohibited
 			// fields removed, preventing spurious 422 errors on update.
-			const fullData: IDataObject = { ...(schemaInfo?.defaults ?? {}), ...credentialData };
-			if (schemaInfo) applyCondBranches(fullData, schemaInfo);
+			const fullData = mergeCredentialData(credentialType, credentialData, schemaInfo);
 
 			const updated = await ctx.helpers.httpRequest({
 				method: 'PATCH',
@@ -658,6 +786,11 @@ async function autoSyncFromInfisical(
 			}) as IDataObject;
 			results.push({
 				json: { ...updated, action: 'updated', secretPath, secretCount: secrets.length },
+				pairedItem: { item: i },
+			});
+		} else if (ifCredentialMissing === 'skip') {
+			results.push({
+				json: { folderName, secretPath, action: 'skipped', reason: 'no matching n8n credential and "If Credential Missing" is set to Skip' },
 				pairedItem: { item: i },
 			});
 		} else {
@@ -672,8 +805,7 @@ async function autoSyncFromInfisical(
 			// Merge schema defaults (Infisical values take precedence) then apply
 			// conditional field rules: fill any still-missing then-required fields,
 			// and remove any fields prohibited by else blocks given actual merged values.
-			const fullData: IDataObject = { ...(schemaInfo?.defaults ?? {}), ...credentialData };
-			if (schemaInfo) applyCondBranches(fullData, schemaInfo);
+			const fullData = mergeCredentialData(credentialType, credentialData, schemaInfo);
 
 			const created = await ctx.helpers.httpRequest({
 				method: 'POST',
@@ -730,6 +862,18 @@ export async function executeSyncOperation(
 		} catch {
 			throw new NodeOperationError(ctx.getNode(), 'Credential Fields (JSON) is not valid JSON', { itemIndex: i });
 		}
+
+		// A credential exported straight from n8n omits any field left at its UI default
+		// (see CREDENTIAL_FIELD_DEFAULTS above), so fill those in before validation/collection
+		// runs — otherwise a perfectly valid credential fails "required but not provided".
+		const fieldDefaults = CREDENTIAL_FIELD_DEFAULTS[credentialType];
+		if (fieldDefaults) {
+			for (const [key, value] of Object.entries(fieldDefaults)) {
+				if (parsedJson[key] === undefined || parsedJson[key] === null || parsedJson[key] === '') {
+					parsedJson[key] = value;
+				}
+			}
+		}
 	}
 
 	// Validate against the n8n credential schema if n8nApi credentials are available.
@@ -752,8 +896,9 @@ export async function executeSyncOperation(
 			const fieldMap = CREDENTIAL_FIELD_MAPS[credentialType];
 			if (fieldMap) {
 				availableFormFields = new Set(fieldMap.map((f) => f.param));
+				const fieldDefaults = CREDENTIAL_FIELD_DEFAULTS[credentialType];
 				for (const { param } of fieldMap) {
-					validationData[param] = ctx.getNodeParameter(param, i, '');
+					validationData[param] = ctx.getNodeParameter(param, i, fieldDefaults?.[param] ?? '');
 				}
 			}
 		}
@@ -783,9 +928,20 @@ export async function executeSyncOperation(
 			body: { projectId, environment, name: toFolderName(credentialName), path: folderPath },
 		});
 	} catch (err: unknown) {
-		const e = err as { response?: { status?: number }; statusCode?: number; message?: string };
+		const e = err as {
+			response?: { status?: number; data?: { message?: unknown } };
+			statusCode?: number;
+			message?: unknown;
+		};
 		const status = e?.response?.status ?? e?.statusCode;
-		if (status !== 409 && !e?.message?.toLowerCase().includes('already exist')) {
+		// Infisical returns 400 (not 409) with a descriptive body message for a duplicate
+		// folder name; the generic Axios error message doesn't contain it, so check the
+		// actual response body before falling back to the top-level message.
+		// `message` isn't always a string — validation-failure responses (e.g. 422) return
+		// an array of issue objects instead, so it must be coerced before calling string methods.
+		const rawMessage = e?.response?.data?.message ?? e?.message;
+		const bodyMessage = typeof rawMessage === 'string' ? rawMessage : undefined;
+		if (status !== 409 && !bodyMessage?.toLowerCase().includes('already exist')) {
 			throw err;
 		}
 	}
@@ -812,8 +968,9 @@ export async function executeSyncOperation(
 				{ itemIndex: i },
 			);
 		}
+		const fieldDefaults = CREDENTIAL_FIELD_DEFAULTS[credentialType];
 		for (const { param, secretKey } of fieldMap) {
-			const value = ctx.getNodeParameter(param, i, '') as unknown;
+			const value = ctx.getNodeParameter(param, i, fieldDefaults?.[param] ?? '') as unknown;
 			if (value === null || value === undefined) continue;
 			secrets.push({ secretKey, secretValue: String(value), secretMetadata });
 		}
