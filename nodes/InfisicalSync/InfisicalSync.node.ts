@@ -178,16 +178,24 @@ export class InfisicalSync implements INodeType {
 				description: 'The n8n credential type to sync',
 				displayOptions: { show: { operation: ['syncToInfisical'], inputMode: ['form'] } },
 				options: [
+					{ name: 'Airtable', value: 'airtableTokenApi' },
 					{ name: 'Anthropic', value: 'anthropicApi' },
+					{ name: 'AWS (IAM)', value: 'aws' },
+					{ name: 'AWS (Assume Role)', value: 'awsAssumeRole' },
 					{ name: 'Basic Auth', value: 'httpBasicAuth' },
 					{ name: 'Bearer Auth', value: 'httpBearerAuth' },
 					{ name: 'Bitbucket (Access Token)', value: 'bitbucketAccessTokenApi' },
 					{ name: 'Bitbucket (App Password)', value: 'bitbucketApi' },
 					{ name: 'Cohere', value: 'cohereApi' },
+					{ name: 'CrateDB', value: 'crateDb' },
 					{ name: 'Custom Auth', value: 'httpCustomAuth' },
 					{ name: 'Digest Auth', value: 'httpDigestAuth' },
 					{ name: 'Discord Bot', value: 'discordBotApi' },
+					{ name: 'Discord OAuth2', value: 'discordOAuth2Api' },
 					{ name: 'Discord Webhook', value: 'discordWebhookApi' },
+					{ name: 'Dropbox OAuth2', value: 'dropboxOAuth2Api' },
+					{ name: 'Elasticsearch', value: 'elasticsearchApi' },
+					{ name: 'Facebook Graph', value: 'facebookGraphApi' },
 					{ name: 'GitHub (API Key)', value: 'githubApi' },
 					{ name: 'GitHub OAuth2', value: 'githubOAuth2Api' },
 					{ name: 'GitLab (API Key)', value: 'gitlabApi' },
@@ -195,26 +203,56 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Google Docs (OAuth2)', value: 'googleDocsOAuth2Api' },
 					{ name: 'Google Drive (OAuth2)', value: 'googleDriveOAuth2Api' },
 					{ name: 'Google OAuth2', value: 'googleOAuth2Api' },
+					{ name: 'Google PaLM / Gemini', value: 'googlePalmApi' },
 					{ name: 'Google Service Account', value: 'googleApi' },
 					{ name: 'Google Sheets (OAuth2)', value: 'googleSheetsOAuth2Api' },
 					{ name: 'Groq', value: 'groqApi' },
 					{ name: 'Header Auth', value: 'httpHeaderAuth' },
+					{ name: 'HubSpot (App Token)', value: 'hubspotAppToken' },
+					{ name: 'HubSpot OAuth2', value: 'hubspotOAuth2Api' },
 					{ name: 'HuggingFace', value: 'huggingFaceApi' },
+					{ name: 'IMAP', value: 'imap' },
 					{ name: 'Infisical', value: 'infisicalApi' },
 					{ name: 'Jira Software Cloud', value: 'jiraSoftwareCloudApi' },
 					{ name: 'JWT Auth', value: 'jwtAuth' },
+					{ name: 'LinkedIn OAuth2', value: 'linkedInOAuth2Api' },
+					{ name: 'Mattermost', value: 'mattermostApi' },
+					{ name: 'Matrix', value: 'matrixApi' },
 					{ name: 'Microsoft SQL Server', value: 'microsoftSql' },
+					{ name: 'Microsoft Teams OAuth2', value: 'microsoftTeamsOAuth2Api' },
 					{ name: 'Mistral', value: 'mistralCloudApi' },
 					{ name: 'MongoDB', value: 'mongoDb' },
 					{ name: 'MySQL', value: 'mySql' },
 					{ name: 'n8n', value: 'n8nApi' },
+					{ name: 'NocoDB', value: 'nocoDb' },
+					{ name: 'Notion', value: 'notionApi' },
 					{ name: 'OAuth1 API', value: 'oAuth1Api' },
 					{ name: 'OAuth2 API', value: 'oAuth2Api' },
 					{ name: 'OpenAI', value: 'openAiApi' },
 					{ name: 'PostgreSQL', value: 'postgres' },
+					{ name: 'Pushover', value: 'pushoverApi' },
 					{ name: 'Query Auth', value: 'httpQueryAuth' },
+					{ name: 'QuestDB', value: 'questDb' },
 					{ name: 'Redis', value: 'redis' },
+					{ name: 'Rocket.Chat', value: 'rocketchatApi' },
+					{ name: 'Salesforce OAuth2', value: 'salesforceOAuth2Api' },
+					{ name: 'SendGrid', value: 'sendGridApi' },
+					{ name: 'Slack', value: 'slackApi' },
+					{ name: 'Slack OAuth2', value: 'slackOAuth2Api' },
+					{ name: 'SMTP', value: 'smtp' },
+					{ name: 'Snowflake', value: 'snowflake' },
+					{ name: 'Spotify OAuth2', value: 'spotifyOAuth2Api' },
+					{ name: 'SSH (Password)', value: 'sshPassword' },
+					{ name: 'SSH (Private Key)', value: 'sshPrivateKey' },
 					{ name: 'SSL Certificates', value: 'httpSslAuth' },
+					{ name: 'Stripe', value: 'stripeApi' },
+					{ name: 'Supabase', value: 'supabaseApi' },
+					{ name: 'Telegram', value: 'telegramApi' },
+					{ name: 'TimescaleDB', value: 'timescaleDb' },
+					{ name: 'Twilio', value: 'twilioApi' },
+					{ name: 'Twitter/X OAuth1', value: 'twitterOAuth1Api' },
+					{ name: 'Twitter/X OAuth2', value: 'twitterOAuth2Api' },
+					{ name: 'WhatsApp', value: 'whatsAppApi' },
 				],
 			},
 
@@ -260,8 +298,12 @@ export class InfisicalSync implements INodeType {
 							'cohereApi',
 							'huggingFaceApi',
 							'mistralCloudApi',
+							'googlePalmApi',
 							'n8nApi',
 							'infisicalApi',
+							'pushoverApi',
+							'notionApi',
+							'sendGridApi',
 						],
 					},
 				},
@@ -288,6 +330,16 @@ export class InfisicalSync implements INodeType {
 						inputMode: ['form'],
 						credentialType: ['openAiApi', 'anthropicApi'],
 					},
+				},
+			},
+			{
+				displayName: 'Host',
+				name: 'host',
+				type: 'string',
+				default: 'https://generativelanguage.googleapis.com',
+				description: 'Google PaLM / Gemini API host',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googlePalmApi'] },
 				},
 			},
 
@@ -323,8 +375,52 @@ export class InfisicalSync implements INodeType {
 					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleApi'] },
 				},
 			},
+			{
+				displayName: 'Impersonate a User',
+				name: 'inpersonate',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to impersonate a user via domain-wide delegation',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleApi'] },
+				},
+			},
+			{
+				displayName: 'Set up for use in HTTP Request node',
+				name: 'httpNode',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleApi'] },
+				},
+			},
 
 			// ── Google OAuth2 ─────────────────────────────────────────────────────
+			{
+				displayName: 'Server URL',
+				name: 'serverUrl',
+				type: 'string',
+				default: '',
+				description: 'OAuth2 server URL',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: [
+							'googleOAuth2Api',
+							'slackOAuth2Api',
+							'microsoftTeamsOAuth2Api',
+							'twitterOAuth2Api',
+							'linkedInOAuth2Api',
+							'discordOAuth2Api',
+							'salesforceOAuth2Api',
+							'hubspotOAuth2Api',
+							'dropboxOAuth2Api',
+							'spotifyOAuth2Api',
+						],
+					},
+				},
+			},
 			{
 				displayName: 'Client ID',
 				name: 'clientId',
@@ -343,6 +439,15 @@ export class InfisicalSync implements INodeType {
 							'oAuth2Api',
 							'githubOAuth2Api',
 							'gitlabOAuth2Api',
+							'slackOAuth2Api',
+							'microsoftTeamsOAuth2Api',
+							'twitterOAuth2Api',
+							'linkedInOAuth2Api',
+							'discordOAuth2Api',
+							'salesforceOAuth2Api',
+							'hubspotOAuth2Api',
+							'dropboxOAuth2Api',
+							'spotifyOAuth2Api',
 						],
 					},
 				},
@@ -366,6 +471,15 @@ export class InfisicalSync implements INodeType {
 							'oAuth2Api',
 							'githubOAuth2Api',
 							'gitlabOAuth2Api',
+							'slackOAuth2Api',
+							'microsoftTeamsOAuth2Api',
+							'twitterOAuth2Api',
+							'linkedInOAuth2Api',
+							'discordOAuth2Api',
+							'salesforceOAuth2Api',
+							'hubspotOAuth2Api',
+							'dropboxOAuth2Api',
+							'spotifyOAuth2Api',
 						],
 					},
 				},
@@ -409,6 +523,8 @@ export class InfisicalSync implements INodeType {
 							'httpCustomAuth',
 							'oAuth1Api',
 							'oAuth2Api',
+							'aws',
+							'awsAssumeRole',
 						],
 					},
 				},
@@ -437,6 +553,8 @@ export class InfisicalSync implements INodeType {
 							'httpCustomAuth',
 							'oAuth1Api',
 							'oAuth2Api',
+							'aws',
+							'awsAssumeRole',
 						],
 						allowedHttpRequestDomains: ['domains'],
 					},
@@ -520,7 +638,7 @@ export class InfisicalSync implements INodeType {
 			},
 			{
 				displayName: 'Jira Domain',
-				name: 'jiraDomain',
+				name: 'domain',
 				type: 'string',
 				default: '',
 				placeholder: 'yourcompany.atlassian.net',
@@ -537,7 +655,7 @@ export class InfisicalSync implements INodeType {
 				typeOptions: { password: true },
 				default: '',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['discordBotApi'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['discordBotApi', 'discordOAuth2Api'] },
 				},
 			},
 			{
@@ -547,6 +665,191 @@ export class InfisicalSync implements INodeType {
 				default: '',
 				displayOptions: {
 					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['discordWebhookApi'] },
+				},
+			},
+
+			// ── Messaging / social ────────────────────────────────────────────────
+			{
+				displayName: 'Signature Secret',
+				name: 'signatureSecret',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				description: 'Optional signing/webhook secret for verifying request signatures',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['slackApi', 'slackOAuth2Api', 'stripeApi'] },
+				},
+			},
+			{
+				displayName: 'Base URL',
+				name: 'baseUrl',
+				type: 'string',
+				default: 'https://api.telegram.org',
+				description: 'Telegram Bot API endpoint — leave default unless using a proxy',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['telegramApi'] },
+				},
+			},
+			{
+				displayName: 'Base URL',
+				name: 'baseUrl',
+				type: 'string',
+				default: '',
+				placeholder: 'https://mattermost.example.com/api/v4',
+				description: 'Mattermost server API base URL',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['mattermostApi'] },
+				},
+			},
+			{
+				displayName: 'Ignore SSL Issues (Insecure)',
+				name: 'allowUnauthorizedCerts',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to connect even if SSL certificate validation is not possible',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['mattermostApi'] },
+				},
+			},
+			{
+				displayName: 'Homeserver URL',
+				name: 'homeserverUrl',
+				type: 'string',
+				default: 'https://matrix-client.matrix.org',
+				description: 'Matrix homeserver base URL',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['matrixApi'] },
+				},
+			},
+			// ── Twilio (authType drives which secret fields apply) ────────────────
+			{
+				displayName: 'Authentication Type',
+				name: 'authType',
+				type: 'options',
+				default: 'authToken',
+				options: [
+					{ name: 'Auth Token', value: 'authToken' },
+					{ name: 'API Key', value: 'apiKey' },
+				],
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['twilioApi'] },
+				},
+			},
+			{
+				displayName: 'Account SID',
+				name: 'accountSid',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['twilioApi'] },
+				},
+			},
+			{
+				displayName: 'Auth Token',
+				name: 'authToken',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['twilioApi'],
+						authType: ['authToken'],
+					},
+				},
+			},
+			{
+				displayName: 'API Key SID',
+				name: 'apiKeySid',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['twilioApi'],
+						authType: ['apiKey'],
+					},
+				},
+			},
+			{
+				displayName: 'API Key Secret',
+				name: 'apiKeySecret',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['twilioApi'],
+						authType: ['apiKey'],
+					},
+				},
+			},
+			// ── Rocket.Chat ───────────────────────────────────────────────────────
+			{
+				displayName: 'User ID',
+				name: 'userId',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['rocketchatApi'] },
+				},
+			},
+			{
+				displayName: 'Auth Key',
+				name: 'authKey',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['rocketchatApi'] },
+				},
+			},
+			{
+				displayName: 'Domain',
+				name: 'domain',
+				type: 'string',
+				default: '',
+				placeholder: 'https://n8n.rocket.chat',
+				description: 'Rocket.Chat server URL',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['rocketchatApi'] },
+				},
+			},
+			// ── WhatsApp ──────────────────────────────────────────────────────────
+			{
+				displayName: 'Business Account ID',
+				name: 'businessAccountId',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['whatsAppApi'] },
+				},
+			},
+
+			// ── Productivity / SaaS ─────────────────────────────────────────────────
+			{
+				displayName: 'Secret Key',
+				name: 'secretKey',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['stripeApi'] },
+				},
+			},
+			{
+				displayName: 'App Token',
+				name: 'appToken',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['hubspotAppToken'] },
 				},
 			},
 
@@ -572,7 +875,18 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['githubApi', 'gitlabApi', 'bitbucketAccessTokenApi'],
+						credentialType: [
+							'githubApi',
+							'gitlabApi',
+							'bitbucketAccessTokenApi',
+							'slackApi',
+							'telegramApi',
+							'mattermostApi',
+							'matrixApi',
+							'whatsAppApi',
+							'facebookGraphApi',
+							'airtableTokenApi',
+						],
 					},
 				},
 			},
@@ -596,7 +910,11 @@ export class InfisicalSync implements INodeType {
 				type: 'string',
 				default: '',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['bitbucketApi'] },
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['bitbucketApi', 'elasticsearchApi', 'snowflake', 'sshPassword', 'sshPrivateKey'],
+					},
 				},
 			},
 			{
@@ -621,7 +939,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'crateDb', 'questDb', 'timescaleDb', 'sshPassword', 'sshPrivateKey'],
 					},
 				},
 			},
@@ -643,7 +961,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth', 'crateDb', 'questDb', 'timescaleDb', 'snowflake'],
 					},
 				},
 			},
@@ -656,7 +974,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth', 'githubApi'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth', 'githubApi', 'crateDb', 'questDb', 'timescaleDb', 'smtp', 'imap'],
 					},
 				},
 			},
@@ -670,7 +988,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'httpBasicAuth', 'httpDigestAuth', 'crateDb', 'questDb', 'timescaleDb', 'sshPassword', 'elasticsearchApi', 'smtp', 'imap'],
 					},
 				},
 			},
@@ -679,12 +997,12 @@ export class InfisicalSync implements INodeType {
 				name: 'port',
 				type: 'number',
 				default: 5432,
-				description: 'Default by type: MySQL 3306 · PostgreSQL 5432 · MongoDB 27017 · Redis 6379 · MSSQL 1433',
+				description: 'Default by type: MySQL 3306 · PostgreSQL 5432 · MongoDB 27017 · Redis 6379 · MSSQL 1433 · CrateDB 5432 · QuestDB 8812 · TimescaleDB 5432 · SMTP 465 · IMAP 993',
 				displayOptions: {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql'],
+						credentialType: ['mySql', 'postgres', 'mongoDb', 'redis', 'microsoftSql', 'crateDb', 'questDb', 'timescaleDb', 'smtp', 'imap'],
 					},
 				},
 			},
@@ -723,7 +1041,7 @@ export class InfisicalSync implements INodeType {
 			// ── Microsoft SQL specific ────────────────────────────────────────────
 			{
 				displayName: 'Windows Domain',
-				name: 'mssqlDomain',
+				name: 'domain',
 				type: 'string',
 				default: '',
 				description: 'Optional Windows authentication domain',
@@ -734,7 +1052,7 @@ export class InfisicalSync implements INodeType {
 
 			// ── SSL/TLS ───────────────────────────────────────────────────────────
 			{
-				displayName: 'SSL/TLS',
+				displayName: 'SSL',
 				name: 'ssl',
 				type: 'boolean',
 				default: false,
@@ -742,13 +1060,22 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['mySql', 'mongoDb', 'redis'],
+						credentialType: ['mySql', 'redis'],
 					},
 				},
 			},
 			{
-				displayName: 'SSL Mode',
-				name: 'sslMode',
+				displayName: 'TLS',
+				name: 'tls',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['mongoDb'] },
+				},
+			},
+			{
+				displayName: 'SSL',
+				name: 'ssl',
 				type: 'options',
 				default: 'disable',
 				options: [
@@ -757,7 +1084,17 @@ export class InfisicalSync implements INodeType {
 					{ name: 'Require', value: 'require' },
 				],
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['postgres'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['postgres', 'crateDb', 'questDb', 'timescaleDb'] },
+				},
+			},
+			{
+				displayName: 'Ignore SSL Issues (Insecure)',
+				name: 'allowUnauthorizedCerts',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to connect even if SSL certificate validation is not possible',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['postgres', 'timescaleDb', 'imap'] },
 				},
 			},
 
@@ -829,7 +1166,576 @@ export class InfisicalSync implements INodeType {
 						inputMode: ['form'],
 						credentialType: ['mySql', 'postgres'],
 						sshTunnel: [true],
+						sshAuthenticateWith: ['password'],
 					},
+				},
+			},
+			{
+				displayName: 'SSH Authenticate With',
+				name: 'sshAuthenticateWith',
+				type: 'options',
+				default: 'password',
+				options: [
+					{ name: 'Password', value: 'password' },
+					{ name: 'Private Key', value: 'privateKey' },
+				],
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['mySql', 'postgres'],
+						sshTunnel: [true],
+					},
+				},
+			},
+			{
+				displayName: 'SSH Private Key',
+				name: 'privateKey',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['mySql', 'postgres'],
+						sshTunnel: [true],
+						sshAuthenticateWith: ['privateKey'],
+					},
+				},
+			},
+			{
+				displayName: 'SSH Private Key Passphrase',
+				name: 'passphrase',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['mySql', 'postgres'],
+						sshTunnel: [true],
+						sshAuthenticateWith: ['privateKey'],
+					},
+				},
+			},
+
+			// ── Elasticsearch ─────────────────────────────────────────────────────
+			{
+				displayName: 'Base URL',
+				name: 'baseUrl',
+				type: 'string',
+				default: '',
+				placeholder: 'https://mydeployment.es.us-central1.gcp.cloud.es.io:9243',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['elasticsearchApi'] },
+				},
+			},
+			{
+				displayName: 'Ignore SSL Issues (Insecure)',
+				name: 'ignoreSSLIssues',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['elasticsearchApi'] },
+				},
+			},
+
+			// ── Supabase ──────────────────────────────────────────────────────────
+			{
+				displayName: 'Host',
+				name: 'host',
+				type: 'string',
+				default: '',
+				placeholder: 'https://your_account.supabase.co',
+				description: 'Supabase project URL without the /rest/v1 path',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['supabaseApi'] },
+				},
+			},
+			{
+				displayName: 'Secret Key',
+				name: 'serviceRole',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				description: 'Supabase project secret key (legacy service_role secrets also supported)',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['supabaseApi'] },
+				},
+			},
+
+			// ── NocoDB ────────────────────────────────────────────────────────────
+			{
+				displayName: 'Host',
+				name: 'host',
+				type: 'string',
+				default: '',
+				placeholder: 'http(s)://localhost:8080',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['nocoDb'] },
+				},
+			},
+			{
+				displayName: 'API Token',
+				name: 'apiToken',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['nocoDb'] },
+				},
+			},
+
+			// ── Snowflake ─────────────────────────────────────────────────────────
+			{
+				displayName: 'Account',
+				name: 'account',
+				type: 'string',
+				default: '',
+				description: 'Snowflake account identifier',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['snowflake'] },
+				},
+			},
+			{
+				displayName: 'Warehouse',
+				name: 'warehouse',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['snowflake'] },
+				},
+			},
+			{
+				displayName: 'Schema',
+				name: 'schema',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['snowflake'] },
+				},
+			},
+			{
+				displayName: 'Role',
+				name: 'role',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['snowflake'] },
+				},
+			},
+			{
+				displayName: 'Authentication',
+				name: 'authentication',
+				type: 'options',
+				default: 'password',
+				options: [
+					{ name: 'Password', value: 'password' },
+					{ name: 'Key Pair', value: 'keyPair' },
+				],
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['snowflake'] },
+				},
+			},
+			{
+				displayName: 'Password',
+				name: 'password',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['snowflake'],
+						authentication: ['password'],
+					},
+				},
+			},
+			{
+				displayName: 'Private Key',
+				name: 'privateKey',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['snowflake'],
+						authentication: ['keyPair'],
+					},
+				},
+			},
+			{
+				displayName: 'Private Key Passphrase',
+				name: 'passphrase',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['snowflake'],
+						authentication: ['keyPair'],
+					},
+				},
+			},
+			{
+				displayName: 'Keep Session Alive',
+				name: 'clientSessionKeepAlive',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['snowflake'] },
+				},
+			},
+
+			// ── SSH (Password / Private Key) ─────────────────────────────────────
+			{
+				displayName: 'Port',
+				name: 'port',
+				type: 'number',
+				default: 22,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['sshPassword', 'sshPrivateKey'] },
+				},
+			},
+			{
+				displayName: 'Private Key',
+				name: 'privateKey',
+				type: 'string',
+				typeOptions: { password: true, rows: 4 },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['sshPrivateKey'] },
+				},
+			},
+			{
+				displayName: 'Passphrase',
+				name: 'passphrase',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				description: 'Passphrase used to create the key, if any',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['sshPrivateKey'] },
+				},
+			},
+
+			// ── AWS (shared: IAM + Assume Role) ────────────────────────────────────
+			{
+				displayName: 'Region',
+				name: 'region',
+				type: 'string',
+				default: 'us-east-1',
+				placeholder: 'us-east-1',
+				description: 'AWS region code',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['aws', 'awsAssumeRole'] },
+				},
+			},
+			{
+				displayName: 'Custom Endpoints',
+				name: 'customEndpoints',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['aws', 'awsAssumeRole'] },
+				},
+			},
+			{
+				displayName: 'Rekognition Endpoint',
+				name: 'rekognitionEndpoint',
+				type: 'string',
+				default: '',
+				placeholder: 'https://rekognition.{region}.amazonaws.com',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws', 'awsAssumeRole'],
+						customEndpoints: [true],
+					},
+				},
+			},
+			{
+				displayName: 'Lambda Endpoint',
+				name: 'lambdaEndpoint',
+				type: 'string',
+				default: '',
+				placeholder: 'https://lambda.{region}.amazonaws.com',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws', 'awsAssumeRole'],
+						customEndpoints: [true],
+					},
+				},
+			},
+			{
+				displayName: 'SNS Endpoint',
+				name: 'snsEndpoint',
+				type: 'string',
+				default: '',
+				placeholder: 'https://sns.{region}.amazonaws.com',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws', 'awsAssumeRole'],
+						customEndpoints: [true],
+					},
+				},
+			},
+			{
+				displayName: 'SES Endpoint',
+				name: 'sesEndpoint',
+				type: 'string',
+				default: '',
+				placeholder: 'https://email.{region}.amazonaws.com',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws', 'awsAssumeRole'],
+						customEndpoints: [true],
+					},
+				},
+			},
+			{
+				displayName: 'SQS Endpoint',
+				name: 'sqsEndpoint',
+				type: 'string',
+				default: '',
+				placeholder: 'https://sqs.{region}.amazonaws.com',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws', 'awsAssumeRole'],
+						customEndpoints: [true],
+					},
+				},
+			},
+			{
+				displayName: 'S3 Endpoint',
+				name: 's3Endpoint',
+				type: 'string',
+				default: '',
+				placeholder: 'https://s3.{region}.amazonaws.com',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws', 'awsAssumeRole'],
+						customEndpoints: [true],
+					},
+				},
+			},
+			{
+				displayName: 'SSM Endpoint',
+				name: 'ssmEndpoint',
+				type: 'string',
+				default: '',
+				placeholder: 'https://ssm.{region}.amazonaws.com',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws', 'awsAssumeRole'],
+						customEndpoints: [true],
+					},
+				},
+			},
+
+			// ── AWS (IAM) ─────────────────────────────────────────────────────────
+			{
+				displayName: 'Access Key ID',
+				name: 'accessKeyId',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['aws'] },
+				},
+			},
+			{
+				displayName: 'Secret Access Key',
+				name: 'secretAccessKey',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['aws'] },
+				},
+			},
+			{
+				displayName: 'Temporary Security Credentials',
+				name: 'temporaryCredentials',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to use temporary credentials from AWS STS',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['aws'] },
+				},
+			},
+			{
+				displayName: 'Session Token',
+				name: 'sessionToken',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['aws'],
+						temporaryCredentials: [true],
+					},
+				},
+			},
+
+			// ── AWS (Assume Role) ─────────────────────────────────────────────────
+			{
+				displayName: 'Use System Credentials for Role',
+				name: 'useSystemCredentialsForRole',
+				type: 'boolean',
+				default: false,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['awsAssumeRole'] },
+				},
+			},
+			{
+				displayName: 'STS Access Key ID',
+				name: 'stsAccessKeyId',
+				type: 'string',
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['awsAssumeRole'],
+						useSystemCredentialsForRole: [false],
+					},
+				},
+			},
+			{
+				displayName: 'STS Secret Access Key',
+				name: 'stsSecretAccessKey',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['awsAssumeRole'],
+						useSystemCredentialsForRole: [false],
+					},
+				},
+			},
+			{
+				displayName: 'STS Session Token',
+				name: 'stsSessionToken',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['awsAssumeRole'],
+						useSystemCredentialsForRole: [false],
+					},
+				},
+			},
+			{
+				displayName: 'Role ARN',
+				name: 'roleArn',
+				type: 'string',
+				default: '',
+				placeholder: 'arn:aws:iam::123456789012:role/MyRole',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['awsAssumeRole'] },
+				},
+			},
+			{
+				displayName: 'External ID',
+				name: 'externalId',
+				type: 'string',
+				typeOptions: { password: true },
+				default: '',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['awsAssumeRole'] },
+				},
+			},
+			{
+				displayName: 'Role Session Name',
+				name: 'roleSessionName',
+				type: 'string',
+				default: 'n8n-session',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['awsAssumeRole'] },
+				},
+			},
+
+			// ── Email (SMTP / IMAP) ───────────────────────────────────────────────
+			{
+				displayName: 'Host',
+				name: 'host',
+				type: 'string',
+				default: '',
+				placeholder: 'smtp.example.com',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['smtp'] },
+				},
+			},
+			{
+				displayName: 'Host',
+				name: 'host',
+				type: 'string',
+				default: '',
+				placeholder: 'imap.example.com',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['imap'] },
+				},
+			},
+			{
+				displayName: 'SSL/TLS',
+				name: 'secure',
+				type: 'boolean',
+				default: true,
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['smtp', 'imap'] },
+				},
+			},
+			{
+				displayName: 'Disable STARTTLS',
+				name: 'disableStartTls',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to disable STARTTLS upgrade on an unencrypted connection',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['smtp'],
+						secure: [false],
+					},
+				},
+			},
+			{
+				displayName: 'Client Host Name',
+				name: 'hostName',
+				type: 'string',
+				default: '',
+				description: 'Optional client hostname used for EHLO/HELO identification',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['smtp'] },
 				},
 			},
 
@@ -943,7 +1849,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['oAuth1Api', 'oAuth2Api'],
+						credentialType: ['oAuth1Api', 'oAuth2Api', 'microsoftTeamsOAuth2Api'],
 					},
 				},
 			},
@@ -956,7 +1862,7 @@ export class InfisicalSync implements INodeType {
 					show: {
 						operation: ['syncToInfisical'],
 						inputMode: ['form'],
-						credentialType: ['oAuth1Api', 'oAuth2Api'],
+						credentialType: ['oAuth1Api', 'oAuth2Api', 'microsoftTeamsOAuth2Api'],
 					},
 				},
 			},
@@ -968,7 +1874,7 @@ export class InfisicalSync implements INodeType {
 				type: 'string',
 				default: '',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth1Api'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth1Api', 'twitterOAuth1Api'] },
 				},
 			},
 			{
@@ -978,7 +1884,7 @@ export class InfisicalSync implements INodeType {
 				typeOptions: { password: true },
 				default: '',
 				displayOptions: {
-					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth1Api'] },
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth1Api', 'twitterOAuth1Api'] },
 				},
 			},
 			{
@@ -1042,6 +1948,114 @@ export class InfisicalSync implements INodeType {
 				],
 				displayOptions: {
 					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['oAuth2Api'] },
+				},
+			},
+
+			// ── Messaging / social OAuth2 (service-specific editable fields) ──────────
+			{
+				displayName: 'Graph API Base URL',
+				name: 'graphApiBaseUrl',
+				type: 'string',
+				default: 'https://graph.microsoft.com',
+				description: 'Microsoft Graph API base URL',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['microsoftTeamsOAuth2Api'] },
+				},
+			},
+			{
+				displayName: 'Organization Support',
+				name: 'organizationSupport',
+				type: 'boolean',
+				default: true,
+				description: 'Whether to request permissions for posting as an organization',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['linkedInOAuth2Api'] },
+				},
+			},
+			{
+				displayName: 'Legacy',
+				name: 'legacy',
+				type: 'boolean',
+				default: true,
+				description: 'Whether to use the legacy LinkedIn API version',
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['linkedInOAuth2Api'] },
+				},
+			},
+			{
+				displayName: 'Custom Scopes',
+				name: 'customScopes',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to use custom scopes instead of the defaults',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['slackOAuth2Api', 'microsoftTeamsOAuth2Api', 'discordOAuth2Api'],
+					},
+				},
+			},
+			{
+				displayName: 'User Scope',
+				name: 'userScope',
+				type: 'string',
+				default: '',
+				description: 'Space-separated Slack user scopes (only when Custom Scopes is enabled)',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['slackOAuth2Api'],
+						customScopes: [true],
+					},
+				},
+			},
+			{
+				displayName: 'Enabled Scopes',
+				name: 'enabledScopes',
+				type: 'string',
+				default: '',
+				description: 'Space-separated scopes to request (only when Custom Scopes is enabled)',
+				displayOptions: {
+					show: {
+						operation: ['syncToInfisical'],
+						inputMode: ['form'],
+						credentialType: ['microsoftTeamsOAuth2Api', 'discordOAuth2Api'],
+						customScopes: [true],
+					},
+				},
+			},
+
+			// ── SaaS OAuth2 (Salesforce / Dropbox editable extras) ────────────────
+			{
+				// Named 'salesforceEnvironment' (not 'environment') to avoid colliding
+				// with the node's top-level "Environment" parameter (Infisical
+				// environment slug), which is shown for every syncToInfisical
+				// credentialType and would otherwise share this field's stored value.
+				displayName: 'Environment',
+				name: 'salesforceEnvironment',
+				type: 'options',
+				default: 'production',
+				options: [
+					{ name: 'Production', value: 'production' },
+					{ name: 'Sandbox', value: 'sandbox' },
+				],
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['salesforceOAuth2Api'] },
+				},
+			},
+			{
+				displayName: 'APP Access Type',
+				name: 'accessType',
+				type: 'options',
+				default: 'full',
+				options: [
+					{ name: 'App Folder', value: 'folder' },
+					{ name: 'Full Dropbox', value: 'full' },
+				],
+				displayOptions: {
+					show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['dropboxOAuth2Api'] },
 				},
 			},
 

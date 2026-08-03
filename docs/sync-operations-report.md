@@ -74,12 +74,21 @@ not in `schema.properties`, so all four `allOf` branches fire simultaneously, an
 ### 3.1 Simple API-key types
 
 **Types**: `anthropicApi`, `openAiApi`, `groqApi`, `cohereApi`, `huggingFaceApi`,
-`mistralCloudApi`, `discordBotApi`, `discordWebhookApi`, `jiraSoftwareCloudApi`
+`mistralCloudApi`, `googlePalmApi`, `discordBotApi`, `discordWebhookApi`, `jiraSoftwareCloudApi`,
+`slackApi`, `telegramApi`, `mattermostApi`, `matrixApi`, `rocketchatApi`, `whatsAppApi`,
+`facebookGraphApi`, `pushoverApi`, `airtableTokenApi`, `notionApi`, `stripeApi`,
+`hubspotAppToken`, `sendGridApi`
 
 These schemas have flat `properties` with no `allOf` conditionals. All sensitive fields are in
-`required`. No defaults needed for creation; just pass the field values from Infisical.
+`required`. No defaults needed for creation; just pass the field values from Infisical. A few carry
+a host/base-URL default recorded in `CREDENTIAL_FIELD_DEFAULTS` (`googlePalmApi.host`,
+`telegramApi.baseUrl`, `matrixApi.homeserverUrl`).
 
 **Validator behavior**: straightforward — required fields must be present, nothing else.
+
+The one messaging/social type that is **not** flat is `twilioApi`: it has an `authType` condition
+key (`authToken` vs `apiKey`) that gates `authToken` against `apiKeySid`/`apiKeySecret` — the same
+`allOf` pattern as `infisicalApi`.
 
 ---
 
@@ -205,6 +214,40 @@ that branch 1's else now fires and **delete** `connectionString` before calling 
 
 ---
 
+### 3.5b Tier 3 databases (`crateDb`, `questDb`, `timescaleDb`, `elasticsearchApi`, `supabaseApi`, `nocoDb`, `snowflake`, `sshPassword`, `sshPrivateKey`)
+
+`crateDb` and `questDb` are Postgres wire-compatible with an identical flat `host`/`database`/
+`user`/`password`/`ssl`/`port` shape and **no** `allOf` conditionals — unlike `postgres`, neither
+exposes SSH-tunnel support. `timescaleDb` is also Postgres wire-compatible and keeps the same
+`allowUnauthorizedCerts`/`ssl` pair as `postgres` (one branch, `allowUnauthorizedCerts = false`
+fires by default), again without SSH-tunnel fields.
+
+`elasticsearchApi`, `supabaseApi`, and `nocoDb` are flat schemas (each carries only the standard
+`allowedHttpRequestDomains`/`allowedDomains` branch shared by every HTTP-request-capable
+credential type — not included in the field map, consistent with the rest of this package's simple
+SaaS types).
+
+`snowflake` has a two-branch mutual-exclusion pattern identical in shape to `jwtAuth`:
+
+| Condition | Then requires | Else prohibits |
+| --- | --- | --- |
+| `authentication = 'password'` | `password` | `password` |
+| `authentication = 'keyPair'` | `privateKey` | `privateKey`, `passphrase` |
+
+**Verification note**: this local n8n instance (v2.21.5) does not expose a `host` property on
+`snowflake` even though it appears in newer GitHub source — the field map follows the live schema,
+per the established verification rule. `snowflakeOAuth2Api` returns 404 from the schema endpoint on
+this instance (added to n8n-nodes-base after 2.21.5) and was excluded from this batch for that
+reason — it cannot be verified against the target n8n version.
+
+`sshPassword` and `sshPrivateKey` are standalone SSH credentials — distinct from the SSH-tunnel
+sub-fields already synced inside `mySql`/`postgres` for tunneled DB connections. Both have `host`
+and `port` as **top-level required** fields (not gated by any `allOf` branch), so
+`CREDENTIAL_FIELD_DEFAULTS` isn't needed — the Form UI's own field defaults (`port: 22`) satisfy
+the requirement whenever the field is left untouched.
+
+---
+
 ### 3.6 Google OAuth2 (`googleOAuth2Api`)
 
 **Four branches, two using vacuous-truth condKeys**:
@@ -291,6 +334,60 @@ Required fields by type:
 
 ---
 
+### 3.9b AWS (`aws`, `awsAssumeRole`)
+
+Both types carry the same `allowedHttpRequestDomains` branch as §3.8, plus a shared
+`customEndpoints` branch (7 VPC-endpoint override fields — `rekognitionEndpoint`,
+`lambdaEndpoint`, `snsEndpoint`, `sesEndpoint`, `sqsEndpoint`, `s3Endpoint`, `ssmEndpoint` — all
+gated by one boolean condition key, all prohibited when it's `false`).
+
+`aws` additionally has a `temporaryCredentials` branch gating `sessionToken` (STS temporary
+credentials). `awsAssumeRole` additionally has a `useSystemCredentialsForRole` branch gating the
+three `sts*` fields, and three top-level required fields (`roleArn`, `externalId`,
+`roleSessionName`) — the only AWS type in this batch with anything required at the top level.
+
+Neither type has a `host`/`region`-adjacent required field surfaced by the schema (`region` is
+optional with UI default `us-east-1`, not required) — the credential's own `authenticate()` method
+is what actually fails at request time on bad keys, not schema validation.
+
+**Generated defaults (`aws`)**:
+```json
+{ "region": "", "temporaryCredentials": false, "customEndpoints": false, "allowedHttpRequestDomains": "all" }
+```
+
+---
+
+### 3.9c Email (`smtp`, `imap`)
+
+`imap` is flat — no `allOf` conditionals — despite the GitHub source's own type-guard function
+treating `user`/`password`/`host`/`port`/`secure` as required; the live runtime schema (v2.21.5)
+marks none of them required, and the field map follows the live schema per the established
+verification rule.
+
+`smtp` has **one conditional branch**:
+
+| Condition | Then requires | Else prohibits |
+| --- | --- | --- |
+| `secure = false` | `disableStartTls` | `disableStartTls` |
+
+`secure` defaults to `true`, so the branch **does not fire by default** — `disableStartTls` is
+excluded from defaults and absent for a standard (encrypted-from-connect) SMTP setup, matching the
+inverted-default pattern already seen in `postgres`'s `allowUnauthorizedCerts`/`ssl` pair (§3.4),
+just the opposite polarity (there the exception condition fires by default; here it doesn't).
+
+**Generated defaults (`smtp`)**:
+```json
+{ "user": "", "password": "", "host": "", "port": 0, "secure": false, "hostName": "" }
+```
+
+Note the generic default-generation algorithm assigns `secure: false` (the boolean fallback) even
+though n8n's own UI default is `true` — this is the same class of "hidden UI default" gap as
+`googlePalmApi.host`, but since `secure` isn't top-level required, no `CREDENTIAL_FIELD_DEFAULTS`
+entry was needed; the Form UI's own field default (`true`) handles the push side correctly, and an
+Infisical-sourced value always overrides this fallback on pull.
+
+---
+
 ### 3.10 OAuth1 API (`oAuth1Api`)
 
 **One conditional branch**:
@@ -327,6 +424,44 @@ Required fields: `accessTokenUrl`, `clientId`, `clientSecret`, `scope`. `authent
 ```json
 { "grantType": "authorizationCode", "authUrl": "", "authQueryParameters": "", "authentication": "header", "allowedHttpRequestDomains": "all" }
 ```
+
+---
+
+### 3.11b Messaging / social OAuth2 (`slackOAuth2Api`, `microsoftTeamsOAuth2Api`, `twitterOAuth2Api`, `twitterOAuth1Api`, `linkedInOAuth2Api`, `discordOAuth2Api`)
+
+Unlike the generic `oAuth2Api`, these service-specific types keep `grantType`, `scope`, `authUrl`,
+`accessTokenUrl`, `authQueryParameters`, and `authentication` as **`hidden`** fields with
+fixed/computed defaults — so only the user-editable app-registration fields are synced
+(`clientId`/`clientSecret`, or `consumerKey`/`consumerSecret` for the OAuth1 Twitter/X type), plus
+service-specific config: `signatureSecret` (Slack), `botToken` (Discord), `graphApiBaseUrl` +
+editable `authUrl`/`accessTokenUrl` (Microsoft — tenant-specific), `organizationSupport`/`legacy`
+(LinkedIn), and the `customScopes` → `userScope`/`enabledScopes` scope-customisation branch (Slack,
+Teams, Discord).
+
+**`oauthTokenData` is intentionally not synced.** That JSON blob holds the access/refresh tokens
+minted by the browser consent flow; it is not in the field map, so a pulled credential is created
+without it (the schema default of `{}` applies) and must be re-authorised in the target n8n with a
+single "Connect" click. This matches the existing OAuth2 pattern (`googleOAuth2Api`,
+`githubOAuth2Api`, …) which also sync only the app-registration fields.
+
+---
+
+### 3.11c SaaS OAuth2 (`salesforceOAuth2Api`, `hubspotOAuth2Api`, `dropboxOAuth2Api`, `spotifyOAuth2Api`)
+
+Same shape and same non-sync of `oauthTokenData` as §3.11b — the only difference is which
+service-specific fields exist. `salesforceOAuth2Api` adds `environment` (`'production'` or
+`'sandbox'`, driving which auth/token URLs the hidden fields resolve to); `dropboxOAuth2Api` adds
+`accessType` (`'folder'` or `'full'`, controlling the OAuth scope requested). Both are flat
+enum fields, not `allOf` condition keys — the schema doesn't gate any *other* field's
+required/prohibited status on their value, unlike `twilioApi.authType` or `snowflake.authentication`.
+`hubspotOAuth2Api` and `spotifyOAuth2Api` have no user-editable fields beyond the standard
+`serverUrl`/`clientId`/`clientSecret` triplet.
+
+`salesforceOAuth2Api.environment` collided with the node's own top-level "Environment" parameter
+(the Infisical environment slug, shown for every credential type) — Form-mode push silently fed the
+credential's `'sandbox'`/`'production'` value into the Infisical API call instead. Fixed by giving
+the Form field a distinct internal name (`salesforceEnvironment`) while keeping `secretKey:
+'environment'`; see [Implementation Guide §4.5](sync-implementation-guide.md#45-parameter-name-collision-with-the-nodes-own-top-level-fields).
 
 ---
 
@@ -373,6 +508,10 @@ map entry, all secrets are passed through as-is (the fallback path for unmapped 
 | `microsoftSql` | `domain` | `domain` | UI label is "Windows Domain" but the schema property is `domain` |
 | `mongoDb` | `tls` | `tls` | Earlier version incorrectly used `ssl`; MongoDB schema uses `tls` |
 | `postgres` | `ssl` | `ssl` | Earlier version incorrectly used `sslMode`; schema uses `ssl` |
+
+The `syncToInfisical` **Form** UI fields were realigned to match these `param` names as well (the
+form field must be named exactly like the `param` or its value is never read). Every mapped type
+now has complete Form fields — see [Implementation Guide §4.4](sync-implementation-guide.md#44-form-mode-field-parity).
 
 ### 4.3 Type coercion
 
@@ -647,10 +786,22 @@ defaults[key] = def.default
 | `anthropicApi` | flat | none | no | working |
 | `openAiApi` | flat | none | no | working |
 | `discordBotApi` / `discordWebhookApi` | flat | none | no | working |
+| `slackApi` / `telegramApi` / `mattermostApi` / `matrixApi` / `rocketchatApi` / `whatsAppApi` / `facebookGraphApi` / `pushoverApi` | flat | none | no | working |
+| `airtableTokenApi` / `notionApi` / `stripeApi` / `hubspotAppToken` / `sendGridApi` | flat | none | no | working |
+| `twilioApi` | 1 branch | `authToken` XOR `apiKeySid`/`apiKeySecret` | no | working |
 | `jiraSoftwareCloudApi` | flat | none | no | working |
-| `groqApi` / `cohereApi` / `huggingFaceApi` / `mistralCloudApi` | flat | none | no | working |
+| `groqApi` / `cohereApi` / `huggingFaceApi` / `mistralCloudApi` / `googlePalmApi` | flat | none | no | working |
 | `microsoftSql` | flat | none | no | working |
 | `redis` | 1 branch | `disableTlsVerification` | no | working |
+| `crateDb` / `questDb` | flat | none | no | working |
+| `timescaleDb` | 1 branch | `allowUnauthorizedCerts` requires `ssl` | no | working |
+| `elasticsearchApi` / `supabaseApi` / `nocoDb` | flat | none | no | working |
+| `snowflake` | 1 branch (mutual exclusion) | `password` XOR `privateKey`/`passphrase` | no | working |
+| `sshPassword` / `sshPrivateKey` | flat | none | no | working (top-level required `host`/`port`) |
+| `aws` | 3 branches | `temporaryCredentials`→`sessionToken`, `customEndpoints`→7 endpoints, `allowedHttpRequestDomains` | no | working |
+| `awsAssumeRole` | 3 branches | `useSystemCredentialsForRole`→3 `sts*` fields, `customEndpoints`→7 endpoints, `allowedHttpRequestDomains` | no | working (top-level required `roleArn`/`externalId`/`roleSessionName`) |
+| `smtp` | 1 branch (off by default) | `secure = false`→`disableStartTls` | no | working |
+| `imap` | flat | none | no | working |
 | `googleApi` | 3 branches | `delegatedEmail`, `httpWarning`, `scopes`, `allowedDomains` | no | working |
 | `mySql` | 2 branches | 10 conditional fields | no | working |
 | `postgres` | 2 branches (inverted default) | `ssl` always + 7 SSH fields | no | working |
@@ -663,6 +814,11 @@ defaults[key] = def.default
 | `httpSslAuth` | flat | none | no | working |
 | `oAuth1Api` | 1 branch | `allowedDomains` | no | working |
 | `oAuth2Api` | 2 branches | `authUrl` (grantType-driven), `allowedDomains` | no | working |
+| `slackOAuth2Api` / `microsoftTeamsOAuth2Api` / `discordOAuth2Api` | branches | `customScopes` drives `userScope`/`enabledScopes` | yes | working (clientId/secret only, no `oauthTokenData`) |
+| `twitterOAuth2Api` / `linkedInOAuth2Api` | branches | none synced | yes | working (clientId/secret only, no `oauthTokenData`) |
+| `twitterOAuth1Api` | 1 branch | `allowedDomains` | no | working (consumerKey/secret only, no `oauthTokenData`) |
+| `salesforceOAuth2Api` / `dropboxOAuth2Api` | branches | `allowedDomains`; `environment`/`accessType` are flat enums, not condition keys | yes | working (clientId/secret only, no `oauthTokenData`) |
+| `hubspotOAuth2Api` / `spotifyOAuth2Api` | branches | `allowedDomains` | yes | working (clientId/secret only, no `oauthTokenData`) |
 | `jwtAuth` | 2 branches (mutual exclusion) | `secret` XOR `privateKey`/`publicKey` | no | working |
 
 ---

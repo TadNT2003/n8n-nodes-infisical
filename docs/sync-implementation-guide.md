@@ -493,6 +493,78 @@ The `n8nApi` credential must therefore use the Docker service name for `baseUrl`
 `http://n8n-patch-enterprise:5678/api/v1` — which the proxy correctly forwards to the n8n service
 on the internal Docker network.
 
+### 4.4 Form-mode field parity
+
+`syncToInfisical` **Form** mode reads each field via `getNodeParameter(param, …)`, where `param` is
+the `CREDENTIAL_FIELD_MAPS` name. A form field is therefore only wired if its property `name`
+**exactly equals** that `param`. Several fields had a `name` that differed from the map `param`, so
+Form mode silently sent an empty value for them (the field map, JSON mode, and auto-sync were
+unaffected). These were corrected so the form property `name` matches the `param`:
+
+| Type | Old form field `name` | Corrected `name` (= `param`) |
+| --- | --- | --- |
+| `jiraSoftwareCloudApi` | `jiraDomain` | `domain` |
+| `microsoftSql` | `mssqlDomain` | `domain` |
+| `postgres` | `sslMode` | `ssl` (options `allow`/`disable`/`require`) |
+| `mongoDb` | `ssl` | `tls` |
+
+In addition, every mapped `param` now has a matching Form field so that **all supported credential
+types are fully editable in Form mode** (previously some were reachable only through JSON mode).
+Fields added to close the gap: `telegramApi.accessToken`; `httpBasicAuth`/`httpDigestAuth`
+`password`; `googleApi` `inpersonate`/`httpNode`; `googleOAuth2Api.serverUrl`; `postgres`
+`allowUnauthorizedCerts`; `mySql`/`postgres` `sshAuthenticateWith`/`privateKey`/`passphrase`; and
+`googlePalmApi` (`host` + `apiKey`, also added to the Credential Type dropdown). A coverage check
+now confirms 47/47 mapped types have complete Form fields.
+
+**Rule going forward**: when adding a field-map entry, also add a Form property whose `name` equals
+the `param`, or the value cannot be entered in Form mode.
+
+### 4.5 Parameter-name collision with the node's own top-level fields
+
+**Problem**
+
+`salesforceOAuth2Api` has a real, live-schema property literally named `environment` (its OAuth
+sandbox/production selector). The `InfisicalSync` node's own top-level "Environment" parameter —
+the Infisical environment slug (`dev`/`staging`/`prod`), shown for every `syncToInfisical`
+credential type regardless of which one is selected — is *also* named `environment`. n8n node
+parameters are a flat namespace keyed by `name`; two properties sharing a `name` only work safely
+if their `displayOptions.show` are mutually exclusive. Here they weren't: the top-level field has no
+`credentialType` restriction at all, so it and the Salesforce-specific field were simultaneously
+"live" whenever `credentialType: salesforceOAuth2Api` was selected in Form mode.
+
+**Symptom**
+
+Pushing a Salesforce OAuth2 credential in Form mode with sandbox mode selected caused
+`ctx.getNodeParameter('environment', i)` — used for the **Infisical target environment slug** — to
+read back `'sandbox'` instead of the real slug (e.g. `'dev'`), which then failed against Infisical's
+API with `Environment with slug 'sandbox' in project with ID '…' not found`. The `autoSyncFromInfisical`
+pull path was unaffected — it reads field values from the fetched Infisical secrets object (keyed by
+`secretKey`), not from `getNodeParameter`, so the collision only bites the Form-mode push path.
+
+**Fix**
+
+Renamed the internal Form parameter to `salesforceEnvironment` while keeping `secretKey: 'environment'`
+(the actual n8n/Infisical storage key is unaffected):
+
+```typescript
+salesforceOAuth2Api: [
+  // ...
+  { param: 'salesforceEnvironment', secretKey: 'environment' },  // was: 'environment'
+],
+```
+
+and the Form field's `name` was updated to match. This is the mirror image of §4.2's `domain`
+fix — there, the map `param` had to be *renamed to match* the schema; here, the map `param` had to
+be *deliberately different* from the schema's `secretKey` to avoid colliding with an unrelated,
+always-visible node parameter.
+
+**Rule going forward**: before adding a field-map entry whose `param` matches a common word, check
+it against the node's other top-level (non-`credentialType`-gated) parameter names — `projectId`,
+`environment`, `rootPath`, `credentialName`, `ifCredentialMissing`, `inputMode`,
+`credentialType`/`credentialTypeJson`, `credentialJson`, `n8nCredentialId`. If it collides, keep
+`secretKey` matching the real schema property but choose a distinct, type-prefixed `param` name for
+the Form field.
+
 ---
 
 ## 5. Dealing with the Validator: Full Algorithm
@@ -596,21 +668,98 @@ All `param` names were verified against the actual schema from `GET /api/v1/cred
 | `cohereApi` | `apiKey` | `apiKey` | string | |
 | `huggingFaceApi` | `apiKey` | `apiKey` | string | |
 | `mistralCloudApi` | `apiKey` | `apiKey` | string | |
+| `googlePalmApi` | `host` | `host` | string | Google PaLM / Gemini host; defaults to `https://generativelanguage.googleapis.com` (in `CREDENTIAL_FIELD_DEFAULTS`) |
+| `googlePalmApi` | `apiKey` | `apiKey` | string | required |
 
-### Productivity / Project Management
+### Productivity / Project Management / SaaS
 
 | n8n type | n8n `param` | Infisical `secretKey` | Type | Notes |
 | --- | --- | --- | --- | --- |
 | `jiraSoftwareCloudApi` | `email` | `email` | string | |
 | `jiraSoftwareCloudApi` | `apiToken` | `apiToken` | string | |
 | `jiraSoftwareCloudApi` | `domain` | `domain` | string | schema property is `domain`, not `jiraDomain` |
+| `airtableTokenApi` | `accessToken` | `accessToken` | string | personal access token |
+| `notionApi` | `apiKey` | `apiKey` | string | internal integration secret |
+| `stripeApi` | `secretKey` | `secretKey` | string | required |
+| `stripeApi` | `signatureSecret` | `signatureSecret` | string | optional webhook signing secret |
+| `hubspotAppToken` | `appToken` | `appToken` | string | required |
+| `sendGridApi` | `apiKey` | `apiKey` | string | |
 
-### Messaging / Webhooks
+### Messaging / Social
 
 | n8n type | n8n `param` | Infisical `secretKey` | Type | Notes |
 | --- | --- | --- | --- | --- |
 | `discordBotApi` | `botToken` | `botToken` | string | |
 | `discordWebhookApi` | `webhookUri` | `webhookUri` | string | |
+| `slackApi` | `accessToken` | `accessToken` | string | bot/user token (required) |
+| `slackApi` | `signatureSecret` | `signatureSecret` | string | optional signing secret |
+| `telegramApi` | `accessToken` | `accessToken` | string | required |
+| `telegramApi` | `baseUrl` | `baseUrl` | string | defaults to `https://api.telegram.org` (in `CREDENTIAL_FIELD_DEFAULTS`) |
+| `mattermostApi` | `accessToken` | `accessToken` | string | |
+| `mattermostApi` | `baseUrl` | `baseUrl` | string | server API base URL |
+| `mattermostApi` | `allowUnauthorizedCerts` | `allowUnauthorizedCerts` | boolean | |
+| `matrixApi` | `accessToken` | `accessToken` | string | |
+| `matrixApi` | `homeserverUrl` | `homeserverUrl` | string | defaults to `https://matrix-client.matrix.org` (in `CREDENTIAL_FIELD_DEFAULTS`) |
+| `rocketchatApi` | `userId` | `userId` | string | |
+| `rocketchatApi` | `authKey` | `authKey` | string | |
+| `rocketchatApi` | `domain` | `domain` | string | server URL |
+| `whatsAppApi` | `accessToken` | `accessToken` | string | |
+| `whatsAppApi` | `businessAccountId` | `businessAccountId` | string | |
+| `facebookGraphApi` | `accessToken` | `accessToken` | string | |
+| `pushoverApi` | `apiKey` | `apiKey` | string | app token |
+
+`twilioApi` is conditional and listed separately below.
+
+#### Twilio (`twilioApi`)
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `authType` | `authType` | string (enum) | condition key: `'authToken'` or `'apiKey'` |
+| `accountSid` | `accountSid` | string | |
+| `authToken` | `authToken` | string | only when `authType: 'authToken'` |
+| `apiKeySid` | `apiKeySid` | string | only when `authType: 'apiKey'` |
+| `apiKeySecret` | `apiKeySecret` | string | only when `authType: 'apiKey'` |
+
+### Messaging / Social (OAuth2)
+
+Only the user-editable app-registration and scope-config fields are synced. `grantType`,
+`scope`, `authQueryParameters`, and `authentication` are `hidden` (fixed/computed) on these types
+and excluded. **`oauthTokenData`** (the browser-consent access/refresh tokens) is intentionally
+**not** synced — a pulled credential must be re-authorised in the target n8n. `authUrl` and
+`accessTokenUrl` are hidden on most services but user-editable (tenant-specific) on Microsoft, so
+they are synced only for `microsoftTeamsOAuth2Api`.
+
+| n8n type | n8n `param` | Type | Notes |
+| --- | --- | --- | --- |
+| `slackOAuth2Api` | `serverUrl`, `clientId`, `clientSecret`, `signatureSecret` | string | |
+| `slackOAuth2Api` | `customScopes` | boolean | condition key: drives `userScope` |
+| `slackOAuth2Api` | `userScope` | string | only when `customScopes: true` |
+| `microsoftTeamsOAuth2Api` | `serverUrl`, `authUrl`, `accessTokenUrl`, `clientId`, `clientSecret`, `graphApiBaseUrl` | string | `authUrl`/`accessTokenUrl` editable (tenant-specific) |
+| `microsoftTeamsOAuth2Api` | `customScopes` | boolean | condition key: drives `enabledScopes` |
+| `microsoftTeamsOAuth2Api` | `enabledScopes` | string | only when `customScopes: true` |
+| `twitterOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `twitterOAuth1Api` | `consumerKey`, `consumerSecret` | string | both required |
+| `linkedInOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `linkedInOAuth2Api` | `organizationSupport`, `legacy` | boolean | |
+| `discordOAuth2Api` | `serverUrl`, `clientId`, `clientSecret`, `botToken` | string | |
+| `discordOAuth2Api` | `customScopes` | boolean | condition key: drives `enabledScopes` |
+| `discordOAuth2Api` | `enabledScopes` | string | only when `customScopes: true` |
+
+### SaaS (OAuth2)
+
+Same pattern as the messaging/social OAuth2 group above: only user-editable app-registration and
+service-specific config fields are synced; `grantType`/`authUrl`/`accessTokenUrl`/`scope`/
+`authQueryParameters`/`authentication` are `hidden` on all four, and `oauthTokenData` is
+intentionally not synced.
+
+| n8n type | n8n `param` | Type | Notes |
+| --- | --- | --- | --- |
+| `salesforceOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `salesforceOAuth2Api` | `environment` | string (enum) | `'production'` or `'sandbox'`; internal Form param is `salesforceEnvironment` — see §4.5 |
+| `hubspotOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | no extra user-editable fields |
+| `dropboxOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `dropboxOAuth2Api` | `accessType` | string (enum) | `'folder'` (App Folder) or `'full'` (Full Dropbox) |
+| `spotifyOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | no extra user-editable fields |
 
 ### Code Hosting
 
@@ -653,6 +802,7 @@ and no `server` field (Bitbucket Cloud only — no self-managed server variant).
 | `googleApi` | `scopes` | `scopes` | string | only when `httpNode: true` |
 | `googleApi` | `inpersonate` | `inpersonate` | boolean | condition key: controls delegatedEmail branch |
 | `googleApi` | `httpNode` | `httpNode` | boolean | condition key: controls scopes branch |
+| `googleOAuth2Api` | `serverUrl` | `serverUrl` | string | inherited from `oAuth2Api` |
 | `googleOAuth2Api` | `clientId` | `clientId` | string | |
 | `googleOAuth2Api` | `clientSecret` | `clientSecret` | string | |
 | `googleOAuth2Api` | `scope` | `scope` | string | |
@@ -733,6 +883,92 @@ and no `server` field (Bitbucket Cloud only — no self-managed server variant).
 | `database` | `database` | number | |
 | `ssl` | `ssl` | boolean | condition key: controls `disableTlsVerification` |
 
+#### CrateDB / QuestDB (`crateDb`, `questDb`)
+
+Postgres wire-compatible; both schemas are flat with no `allOf` conditionals and no SSH-tunnel
+support (unlike `mySql`/`postgres`).
+
+| n8n `param` | Infisical `secretKey` | Type | Notes |
+| --- | --- | --- | --- |
+| `host` | `host` | string | defaults to `localhost` |
+| `database` | `database` | string | CrateDB defaults to `doc`, QuestDB to `qdb` (n8n UI default, not schema-enforced) |
+| `user` | `user` | string | CrateDB defaults to `crate`, QuestDB to `admin` |
+| `password` | `password` | string | |
+| `ssl` | `ssl` | string (enum) | `allow`/`disable`/`require`, same shape as `postgres` |
+| `port` | `port` | number | CrateDB 5432, QuestDB 8812 |
+
+#### TimescaleDB (`timescaleDb`)
+
+Postgres wire-compatible, with the same `ssl`/`allowUnauthorizedCerts` pair as `postgres` but no
+SSH-tunnel support.
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `host` | `host` | string | |
+| `database` | `database` | string | defaults to `postgres` |
+| `user` | `user` | string | |
+| `password` | `password` | string | |
+| `allowUnauthorizedCerts` | `allowUnauthorizedCerts` | boolean | condition key |
+| `ssl` | `ssl` | string (enum) | `allow`/`disable`/`require` |
+| `port` | `port` | number | |
+
+#### Elasticsearch (`elasticsearchApi`)
+
+| n8n `param` | Infisical `secretKey` | Type | Notes |
+| --- | --- | --- | --- |
+| `username` | `username` | string | |
+| `password` | `password` | string | |
+| `baseUrl` | `baseUrl` | string | |
+| `ignoreSSLIssues` | `ignoreSSLIssues` | boolean | |
+
+#### Supabase (`supabaseApi`)
+
+| n8n `param` | Infisical `secretKey` | Type | Notes |
+| --- | --- | --- | --- |
+| `host` | `host` | string | project URL without the `/rest/v1` path |
+| `serviceRole` | `serviceRole` | string | project secret key |
+
+#### NocoDB (`nocoDb`)
+
+| n8n `param` | Infisical `secretKey` | Type | Notes |
+| --- | --- | --- | --- |
+| `apiToken` | `apiToken` | string | |
+| `host` | `host` | string | |
+
+#### Snowflake (`snowflake`)
+
+Local n8n schema (v2.21.5) has no `host` property (present in newer GitHub source) — the field map
+follows the live runtime schema, per the verification rule. `snowflakeOAuth2Api` returns 404 on
+this instance's schema endpoint (added to n8n-nodes-base after 2.21.5) and is **not** supported by
+this package for that reason.
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `account` | `account` | string | |
+| `database` | `database` | string | |
+| `warehouse` | `warehouse` | string | |
+| `authentication` | `authentication` | string (enum) | condition key: `'password'` or `'keyPair'` |
+| `username` | `username` | string | |
+| `password` | `password` | string | only when `authentication: 'password'` |
+| `privateKey` | `privateKey` | string | only when `authentication: 'keyPair'` |
+| `passphrase` | `passphrase` | string | only when `authentication: 'keyPair'` |
+| `schema` | `schema` | string | |
+| `role` | `role` | string | |
+| `clientSessionKeepAlive` | `clientSessionKeepAlive` | boolean | |
+
+#### SSH (`sshPassword`, `sshPrivateKey`)
+
+Standalone SSH credentials — distinct from the SSH-tunnel sub-fields already synced inside
+`mySql`/`postgres` (a different, embedded use case for DB connections routed through a tunnel).
+`host` and `port` are top-level required fields on both types.
+
+| n8n type | n8n `param` | Type | Notes |
+| --- | --- | --- | --- |
+| `sshPassword` | `host`, `port` | string, number | required; `port` defaults to 22 |
+| `sshPassword` | `username`, `password` | string | |
+| `sshPrivateKey` | `host`, `port` | string, number | required; `port` defaults to 22 |
+| `sshPrivateKey` | `username`, `privateKey`, `passphrase` | string | |
+
 ---
 
 ### Google OAuth2 (Sheets / Drive / Docs)
@@ -764,6 +1000,87 @@ These three types share identical schema structure.
 | `infisicalApi` | `clientSecret` | `clientSecret` | string | only when `authType: 'universalAuth'` |
 | `infisicalApi` | `organizationSlug` | `organizationSlug` | string | optional, universalAuth only |
 | `infisicalApi` | `apiKey` | `apiKey` | string | only when `authType: 'serviceToken'` |
+
+---
+
+### AWS
+
+`aws` and `awsAssumeRole` share the same `region` and 7 custom-endpoint fields (all gated by the
+`customEndpoints` condition key). Neither has any top-level required field in the live runtime
+schema (v2.21.5) — the credential's own `authenticate()` method fails at request time if the keys
+are wrong, rather than the schema enforcing it upfront.
+
+#### AWS (IAM) (`aws`)
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `region` | `region` | string | defaults to `us-east-1` |
+| `accessKeyId` | `accessKeyId` | string | |
+| `secretAccessKey` | `secretAccessKey` | string | |
+| `temporaryCredentials` | `temporaryCredentials` | boolean | condition key: controls `sessionToken` |
+| `sessionToken` | `sessionToken` | string | only when `temporaryCredentials: true` |
+| `customEndpoints` | `customEndpoints` | boolean | condition key: controls the 7 endpoint fields below |
+| `rekognitionEndpoint` | `rekognitionEndpoint` | string | only when `customEndpoints: true` |
+| `lambdaEndpoint` | `lambdaEndpoint` | string | only when `customEndpoints: true` |
+| `snsEndpoint` | `snsEndpoint` | string | only when `customEndpoints: true` |
+| `sesEndpoint` | `sesEndpoint` | string | only when `customEndpoints: true` |
+| `sqsEndpoint` | `sqsEndpoint` | string | only when `customEndpoints: true` |
+| `s3Endpoint` | `s3Endpoint` | string | only when `customEndpoints: true` |
+| `ssmEndpoint` | `ssmEndpoint` | string | only when `customEndpoints: true` |
+| `allowedHttpRequestDomains` | same | string (enum) | condition key: controls `allowedDomains` |
+| `allowedDomains` | same | string | only when `allowedHttpRequestDomains: 'domains'` |
+
+#### AWS (Assume Role) (`awsAssumeRole`)
+
+`roleArn`, `externalId`, and `roleSessionName` are top-level required. `roleSessionName` has a
+real n8n UI default (`'n8n-session'`) not exposed by the schema, so it's in
+`CREDENTIAL_FIELD_DEFAULTS` as a fallback — same gap pattern as `googlePalmApi.host`.
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `region` | `region` | string | |
+| `useSystemCredentialsForRole` | `useSystemCredentialsForRole` | boolean | condition key: controls the 3 `sts*` fields |
+| `stsAccessKeyId` | `stsAccessKeyId` | string | only when `useSystemCredentialsForRole: false` |
+| `stsSecretAccessKey` | `stsSecretAccessKey` | string | only when `useSystemCredentialsForRole: false` |
+| `stsSessionToken` | `stsSessionToken` | string | only when `useSystemCredentialsForRole: false` |
+| `roleArn` | `roleArn` | string | required |
+| `externalId` | `externalId` | string | required |
+| `roleSessionName` | `roleSessionName` | string | required; default `'n8n-session'` |
+| `customEndpoints` + 7 endpoint fields | same | | identical to `aws` above |
+| `allowedHttpRequestDomains` / `allowedDomains` | same | | identical to `aws` above |
+
+---
+
+### Email
+
+Neither type has any top-level required field in the live runtime schema (v2.21.5) — unlike the
+GitHub source's own type-guard function, which treats `user`/`password`/`host`/`port`/`secure` as
+required on `imap`. The field map follows the live schema, per the established verification rule.
+
+#### SMTP (`smtp`)
+
+| n8n `param` | Infisical `secretKey` | Type | Conditional |
+| --- | --- | --- | --- |
+| `user` | `user` | string | |
+| `password` | `password` | string | |
+| `host` | `host` | string | |
+| `port` | `port` | number | defaults to 465 |
+| `secure` | `secure` | boolean | condition key: controls `disableStartTls`; defaults to `true` |
+| `disableStartTls` | `disableStartTls` | boolean | only when `secure: false` |
+| `hostName` | `hostName` | string | optional EHLO/HELO client identification |
+
+#### IMAP (`imap`)
+
+Flat schema, no `allOf` conditionals.
+
+| n8n `param` | Infisical `secretKey` | Type | Notes |
+| --- | --- | --- | --- |
+| `user` | `user` | string | |
+| `password` | `password` | string | |
+| `host` | `host` | string | |
+| `port` | `port` | number | defaults to 993 |
+| `secure` | `secure` | boolean | defaults to `true` |
+| `allowUnauthorizedCerts` | `allowUnauthorizedCerts` | boolean | |
 
 ---
 
