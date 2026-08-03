@@ -289,6 +289,11 @@ The **InfisicalSync** node provides bidirectional sync between n8n credentials a
 | **Sync from Infisical** | Infisical → n8n | Pull all secrets from a named Infisical folder and update an existing n8n credential by ID. |
 | **Auto Sync from Infisical** | Infisical → n8n | Discover all subfolders under a root Infisical path, read the `n8n_credential_type` metadata tag from each folder's secrets, then create or update the matching n8n credentials automatically. Uses the n8n REST API and validates credential data against each type's JSON Schema before saving. |
 
+Both Infisical → n8n operations expose an **If Credential Missing** option for when the target n8n credential can't be found (deleted since the last sync, or — for Auto Sync — never created):
+
+- **Create New Credential** (default) — recreate it using the `n8n_credential_type` metadata tag stored on the folder's secrets.
+- **Skip** — leave n8n untouched and report the item as skipped instead of creating or erroring.
+
 ### Supported Credential Types (Form Mode)
 
 Form mode supports **31 credential types**. JSON mode accepts any type registered in n8n.
