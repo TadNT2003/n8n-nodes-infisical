@@ -296,19 +296,35 @@ Both Infisical → n8n operations expose an **If Credential Missing** option for
 
 ### Supported Credential Types (Form Mode)
 
-Form mode supports **31 credential types**. JSON mode accepts any type registered in n8n.
+Form mode supports **75 credential types**. JSON mode accepts any type registered in n8n.
 
 #### AI / LLM
 
-`anthropicApi`, `openAiApi`, `groqApi`, `cohereApi`, `huggingFaceApi`, `mistralCloudApi`
+`anthropicApi`, `openAiApi`, `groqApi`, `cohereApi`, `huggingFaceApi`, `mistralCloudApi`, `googlePalmApi`
 
-#### Productivity / Project Management
+#### Productivity / Project Management / SaaS
 
-`jiraSoftwareCloudApi`
+`jiraSoftwareCloudApi`, `airtableTokenApi`, `notionApi`, `stripeApi`, `hubspotAppToken`, `sendGridApi`
 
-#### Messaging / Webhooks
+#### Messaging / Social
 
-`discordBotApi`, `discordWebhookApi`
+`discordBotApi`, `discordWebhookApi`, `slackApi`, `telegramApi`, `twilioApi`, `mattermostApi`, `matrixApi`, `rocketchatApi`, `whatsAppApi`, `facebookGraphApi`, `pushoverApi`
+
+#### Messaging / Social (OAuth2)
+
+`slackOAuth2Api`, `microsoftTeamsOAuth2Api`, `twitterOAuth2Api`, `twitterOAuth1Api`, `linkedInOAuth2Api`, `discordOAuth2Api`
+
+> **Note**: OAuth2 credentials sync only the app-registration fields (`clientId`/`clientSecret` and service-specific config). The `oauthTokenData` blob from the browser consent flow is **not** synced — a pulled credential must be re-authorised (one "Connect" click) in the target n8n.
+
+#### SaaS (OAuth2)
+
+`salesforceOAuth2Api`, `hubspotOAuth2Api`, `dropboxOAuth2Api`, `spotifyOAuth2Api`
+
+> **Note**: Same pattern as the Messaging/Social OAuth2 group above (`clientId`/`clientSecret` only, no `oauthTokenData`). `salesforceOAuth2Api` additionally syncs `environment` (production/sandbox); `dropboxOAuth2Api` additionally syncs `accessType` (app folder/full Dropbox). `hubspotOAuth2Api` and `spotifyOAuth2Api` have no extra user-editable fields beyond the standard OAuth2 app registration.
+
+#### Source Control
+
+`githubApi`, `githubOAuth2Api`, `gitlabApi`, `gitlabOAuth2Api`, `bitbucketApi`, `bitbucketAccessTokenApi`
 
 #### Google
 
@@ -316,7 +332,27 @@ Form mode supports **31 credential types**. JSON mode accepts any type registere
 
 #### Databases
 
-`mySql`, `postgres`, `mongoDb`, `microsoftSql`, `redis`
+`mySql`, `postgres`, `mongoDb`, `microsoftSql`, `redis`, `crateDb`, `questDb`, `timescaleDb`, `elasticsearchApi`, `supabaseApi`, `nocoDb`, `snowflake`
+
+> **Note**: `crateDb`/`questDb`/`timescaleDb` are Postgres wire-compatible and share its host/database/user/password/port/ssl shape. `snowflake` supports both password and key-pair authentication via its `authentication` field.
+
+#### SSH
+
+`sshPassword`, `sshPrivateKey`
+
+> **Note**: These are the standalone SSH credential types — distinct from the SSH-tunnel sub-fields already synced inside `mySql`/`postgres` for database connections routed through an SSH tunnel.
+
+#### Email
+
+`smtp`, `imap`
+
+> **Note**: `smtp` has a conditional `disableStartTls` field that only applies when `secure: false`. Neither type has any top-level required field in the live schema.
+
+#### Cloud / Infrastructure
+
+`aws`, `awsAssumeRole`
+
+> **Note**: `aws` and `awsAssumeRole` share the same `region` and custom-endpoint fields (7 VPC endpoint overrides gated by `customEndpoints`). `aws` supports temporary STS credentials via `temporaryCredentials`; `awsAssumeRole` assumes an IAM role via `roleArn`/`externalId` and can source its base credentials from n8n's own system credentials (`useSystemCredentialsForRole`) instead of static keys.
 
 #### Infrastructure
 
