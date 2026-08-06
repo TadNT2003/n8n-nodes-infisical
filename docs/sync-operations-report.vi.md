@@ -61,11 +61,16 @@ Khi khóa điều kiện `if` **vắng mặt trong `schema.properties`** — ngh
 ### 3.1 Các loại API key đơn giản
 
 **Loại**: `anthropicApi`, `openAiApi`, `groqApi`, `cohereApi`, `huggingFaceApi`,
-`mistralCloudApi`, `discordBotApi`, `discordWebhookApi`, `jiraSoftwareCloudApi`
+`mistralCloudApi`, `googlePalmApi`, `discordBotApi`, `discordWebhookApi`, `jiraSoftwareCloudApi`,
+`slackApi`, `telegramApi`, `mattermostApi`, `matrixApi`, `rocketchatApi`, `whatsAppApi`,
+`facebookGraphApi`, `pushoverApi`, `airtableTokenApi`, `notionApi`, `stripeApi`,
+`hubspotAppToken`, `sendGridApi`
 
-Các schema này có `properties` phẳng không có điều kiện `allOf`. Tất cả các trường nhạy cảm đều nằm trong `required`. Không cần giá trị mặc định khi tạo; chỉ cần truyền giá trị trường từ Infisical.
+Các schema này có `properties` phẳng không có điều kiện `allOf`. Tất cả các trường nhạy cảm đều nằm trong `required`. Không cần giá trị mặc định khi tạo; chỉ cần truyền giá trị trường từ Infisical. Một số loại có giá trị mặc định host/base-URL được ghi trong `CREDENTIAL_FIELD_DEFAULTS` (`googlePalmApi.host`, `telegramApi.baseUrl`, `matrixApi.homeserverUrl`).
 
 **Hành vi bộ kiểm tra**: đơn giản — các trường required phải có mặt, không có gì khác.
+
+Loại nhắn tin/mạng xã hội duy nhất **không** phẳng là `twilioApi`: nó có khóa điều kiện `authType` (`authToken` so với `apiKey`) chi phối `authToken` đối lập với `apiKeySid`/`apiKeySecret` — cùng mẫu `allOf` như `infisicalApi`.
 
 ---
 
@@ -181,6 +186,40 @@ Nhánh thứ hai giống hệt mẫu SSH tunnel của MySQL.
 
 ---
 
+### 3.5b Cơ sở dữ liệu Tier 3 (`crateDb`, `questDb`, `timescaleDb`, `elasticsearchApi`, `supabaseApi`, `nocoDb`, `snowflake`, `sshPassword`, `sshPrivateKey`)
+
+`crateDb` và `questDb` tương thích wire protocol với Postgres, có hình dạng phẳng
+`host`/`database`/`user`/`password`/`ssl`/`port` giống hệt nhau và **không** có điều kiện `allOf`
+— khác với `postgres`, cả hai đều không hỗ trợ SSH tunnel. `timescaleDb` cũng tương thích wire
+protocol với Postgres và giữ cặp `allowUnauthorizedCerts`/`ssl` giống `postgres` (một nhánh,
+`allowUnauthorizedCerts = false` kích hoạt theo mặc định), cũng không có trường SSH tunnel.
+
+`elasticsearchApi`, `supabaseApi`, và `nocoDb` là các schema phẳng (mỗi loại chỉ mang nhánh
+`allowedHttpRequestDomains`/`allowedDomains` tiêu chuẩn chung cho mọi loại credential có khả năng
+HTTP-request — không được đưa vào field map, nhất quán với các loại SaaS đơn giản khác trong
+package này).
+
+`snowflake` có mẫu loại trừ lẫn nhau hai nhánh giống hệt hình dạng của `jwtAuth`:
+
+| Điều kiện | Then requires | Else prohibits |
+| --- | --- | --- |
+| `authentication = 'password'` | `password` | `password` |
+| `authentication = 'keyPair'` | `privateKey` | `privateKey`, `passphrase` |
+
+**Ghi chú xác minh**: instance n8n cục bộ này (v2.21.5) không phơi bày thuộc tính `host` trên
+`snowflake` dù nó xuất hiện trong mã nguồn GitHub mới hơn — field map tuân theo schema thực tế
+đang chạy, theo đúng quy tắc xác minh đã thiết lập. `snowflakeOAuth2Api` trả về 404 từ endpoint
+schema trên instance này (được thêm vào n8n-nodes-base sau phiên bản 2.21.5) và bị loại khỏi đợt
+này vì lý do đó — không thể xác minh được với phiên bản n8n mục tiêu.
+
+`sshPassword` và `sshPrivateKey` là các credential SSH độc lập — khác với các trường con
+SSH-tunnel đã được đồng bộ bên trong `mySql`/`postgres` cho kết nối DB đi qua tunnel. Cả hai đều
+có `host` và `port` là các trường **required ở cấp cao nhất** (không bị chi phối bởi nhánh
+`allOf` nào), nên không cần `CREDENTIAL_FIELD_DEFAULTS` — giá trị mặc định của chính trường Form
+UI (`port: 22`) đã đáp ứng yêu cầu khi trường đó bị bỏ trống.
+
+---
+
 ### 3.6 Google OAuth2 (`googleOAuth2Api`)
 
 **Bốn nhánh, hai sử dụng vacuous-truth condKeys**:
@@ -257,6 +296,61 @@ Các trường required theo loại:
 
 ---
 
+### 3.9b AWS (`aws`, `awsAssumeRole`)
+
+Cả hai loại đều mang nhánh `allowedHttpRequestDomains` giống §3.8, cộng thêm một nhánh
+`customEndpoints` dùng chung (7 trường ghi đè VPC-endpoint — `rekognitionEndpoint`,
+`lambdaEndpoint`, `snsEndpoint`, `sesEndpoint`, `sqsEndpoint`, `s3Endpoint`, `ssmEndpoint` — đều bị
+chi phối bởi một khóa điều kiện boolean, đều bị prohibit khi khóa đó là `false`).
+
+`aws` có thêm một nhánh `temporaryCredentials` chi phối `sessionToken` (thông tin đăng nhập tạm
+thời từ STS). `awsAssumeRole` có thêm một nhánh `useSystemCredentialsForRole` chi phối ba trường
+`sts*`, và ba trường required ở cấp cao nhất (`roleArn`, `externalId`, `roleSessionName`) — loại
+AWS duy nhất trong đợt này có trường required ở cấp cao nhất.
+
+Không loại nào có trường `host`/`region`-tương tự nào là required được schema phơi bày (`region`
+là tùy chọn với mặc định UI `us-east-1`, không required) — phương thức `authenticate()` của
+credential mới thực sự thất bại tại thời điểm gửi request khi key sai, không phải do schema
+validate trước.
+
+**Giá trị mặc định được tạo (`aws`)**:
+```json
+{ "region": "", "temporaryCredentials": false, "customEndpoints": false, "allowedHttpRequestDomains": "all" }
+```
+
+---
+
+### 3.9c Email (`smtp`, `imap`)
+
+`imap` là schema phẳng — không có điều kiện `allOf` — dù hàm type-guard của mã nguồn GitHub coi
+`user`/`password`/`host`/`port`/`secure` là required; schema thực tế đang chạy (v2.21.5) không
+đánh dấu required trường nào trong số đó, và field map tuân theo schema thực tế theo đúng quy tắc
+xác minh đã thiết lập.
+
+`smtp` có **một nhánh điều kiện**:
+
+| Điều kiện | Then requires | Else prohibits |
+| --- | --- | --- |
+| `secure = false` | `disableStartTls` | `disableStartTls` |
+
+`secure` mặc định là `true`, nên nhánh này **không kích hoạt theo mặc định** — `disableStartTls`
+bị loại khỏi defaults và vắng mặt trong cấu hình SMTP tiêu chuẩn (mã hóa ngay từ khi kết nối), giống
+mẫu "mặc định đảo ngược" đã thấy ở cặp `allowUnauthorizedCerts`/`ssl` của `postgres` (§3.4), chỉ
+khác cực tính (ở đó điều kiện ngoại lệ kích hoạt theo mặc định; ở đây thì không).
+
+**Giá trị mặc định được tạo (`smtp`)**:
+```json
+{ "user": "", "password": "", "host": "", "port": 0, "secure": false, "hostName": "" }
+```
+
+Lưu ý thuật toán sinh default chung gán `secure: false` (fallback boolean) dù mặc định UI thực tế
+của n8n là `true` — đây là cùng loại khoảng trống "mặc định UI ẩn" như `googlePalmApi.host`, nhưng
+vì `secure` không required ở cấp cao nhất, không cần entry `CREDENTIAL_FIELD_DEFAULTS`; mặc định
+của chính trường Form UI (`true`) xử lý đúng phía push, và giá trị từ Infisical luôn ghi đè fallback
+này ở phía pull.
+
+---
+
 ### 3.10 OAuth1 API (`oAuth1Api`)
 
 **Một nhánh điều kiện**:
@@ -293,6 +387,44 @@ Các trường required: `accessTokenUrl`, `clientId`, `clientSecret`, `scope`. 
 ```json
 { "grantType": "authorizationCode", "authUrl": "", "authQueryParameters": "", "authentication": "header", "allowedHttpRequestDomains": "all" }
 ```
+
+---
+
+### 3.11b OAuth2 nhắn tin / mạng xã hội (`slackOAuth2Api`, `microsoftTeamsOAuth2Api`, `twitterOAuth2Api`, `twitterOAuth1Api`, `linkedInOAuth2Api`, `discordOAuth2Api`)
+
+Khác với `oAuth2Api` chung, các loại đặc thù theo dịch vụ này giữ `grantType`, `scope`, `authUrl`,
+`accessTokenUrl`, `authQueryParameters`, và `authentication` là các trường **`hidden`** với giá trị
+mặc định cố định/được tính toán — nên chỉ các trường app-registration người dùng chỉnh sửa được mới
+được đồng bộ (`clientId`/`clientSecret`, hoặc `consumerKey`/`consumerSecret` cho loại OAuth1 của
+Twitter/X), cùng cấu hình đặc thù theo dịch vụ: `signatureSecret` (Slack), `botToken` (Discord),
+`graphApiBaseUrl` + `authUrl`/`accessTokenUrl` chỉnh sửa được (Microsoft — theo tenant),
+`organizationSupport`/`legacy` (LinkedIn), và nhánh tùy chỉnh scope `customScopes` →
+`userScope`/`enabledScopes` (Slack, Teams, Discord).
+
+**`oauthTokenData` cố tình không được đồng bộ.** Blob JSON đó chứa token access/refresh được tạo từ
+luồng đồng ý trên trình duyệt; nó không nằm trong field map, nên credential được kéo về được tạo mà
+không có nó (giá trị mặc định `{}` của schema được áp dụng) và phải được cấp quyền lại trong n8n đích
+bằng một cú nhấp "Connect". Điều này khớp với mẫu OAuth2 hiện có (`googleOAuth2Api`,
+`githubOAuth2Api`, …) vốn cũng chỉ đồng bộ các trường app-registration.
+
+---
+
+### 3.11c SaaS OAuth2 (`salesforceOAuth2Api`, `hubspotOAuth2Api`, `dropboxOAuth2Api`, `spotifyOAuth2Api`)
+
+Cùng hình dạng và cùng việc không đồng bộ `oauthTokenData` như §3.11b — khác biệt duy nhất là các
+trường đặc thù theo dịch vụ nào tồn tại. `salesforceOAuth2Api` thêm `environment` (`'production'`
+hoặc `'sandbox'`, quyết định các trường `hidden` auth/token URL sẽ trỏ tới đâu); `dropboxOAuth2Api`
+thêm `accessType` (`'folder'` hoặc `'full'`, kiểm soát scope OAuth được yêu cầu). Cả hai đều là các
+trường enum phẳng, không phải khóa điều kiện `allOf` — schema không chi phối trạng thái
+required/prohibited của bất kỳ trường *nào khác* dựa trên giá trị của chúng, khác với
+`twilioApi.authType` hay `snowflake.authentication`. `hubspotOAuth2Api` và `spotifyOAuth2Api` không
+có trường nào người dùng chỉnh sửa được ngoài bộ ba `serverUrl`/`clientId`/`clientSecret` tiêu chuẩn.
+
+`salesforceOAuth2Api.environment` từng xung đột với tham số "Environment" cấp cao nhất của chính
+node (slug môi trường Infisical, hiển thị cho mọi loại credential) — push ở chế độ Form đã âm thầm
+đưa giá trị `'sandbox'`/`'production'` của credential vào lệnh gọi API Infisical thay vì slug thật.
+Đã khắc phục bằng cách đặt cho trường Form một tên nội bộ riêng biệt (`salesforceEnvironment`) trong
+khi vẫn giữ `secretKey: 'environment'`; xem [Hướng dẫn triển khai §4.5](sync-implementation-guide.vi.md#45-xung-đột-tên-tham-số-với-các-trường-cấp-cao-nhất-của-chính-node).
 
 ---
 
@@ -336,6 +468,8 @@ Nếu map tồn tại cho một loại, chỉ các trường được khai báo 
 | `microsoftSql` | `domain` | `domain` | Nhãn UI là "Windows Domain" nhưng thuộc tính schema là `domain` |
 | `mongoDb` | `tls` | `tls` | Phiên bản trước sử dụng sai `ssl`; schema MongoDB sử dụng `tls` |
 | `postgres` | `ssl` | `ssl` | Phiên bản trước sử dụng sai `sslMode`; schema sử dụng `ssl` |
+
+Các trường UI **Form** của `syncToInfisical` cũng đã được căn chỉnh khớp với các tên `param` này (trường form phải có tên đúng như `param`, nếu không giá trị của nó không bao giờ được đọc). Mọi loại có map giờ đều có đầy đủ trường Form — xem [Hướng dẫn triển khai §4.4](sync-implementation-guide.vi.md#44-đồng-bộ-trường-ở-chế-độ-form).
 
 ### 4.3 Ép kiểu (Type coercion)
 
@@ -560,10 +694,22 @@ defaults[key] = def.default
 | `anthropicApi` | phẳng | không | không | hoạt động |
 | `openAiApi` | phẳng | không | không | hoạt động |
 | `discordBotApi` / `discordWebhookApi` | phẳng | không | không | hoạt động |
+| `slackApi` / `telegramApi` / `mattermostApi` / `matrixApi` / `rocketchatApi` / `whatsAppApi` / `facebookGraphApi` / `pushoverApi` | phẳng | không | không | hoạt động |
+| `airtableTokenApi` / `notionApi` / `stripeApi` / `hubspotAppToken` / `sendGridApi` | phẳng | không | không | hoạt động |
+| `twilioApi` | 1 nhánh | `authToken` đối lập `apiKeySid`/`apiKeySecret` | không | hoạt động |
 | `jiraSoftwareCloudApi` | phẳng | không | không | hoạt động |
-| `groqApi` / `cohereApi` / `huggingFaceApi` / `mistralCloudApi` | phẳng | không | không | hoạt động |
+| `groqApi` / `cohereApi` / `huggingFaceApi` / `mistralCloudApi` / `googlePalmApi` | phẳng | không | không | hoạt động |
 | `microsoftSql` | phẳng | không | không | hoạt động |
 | `redis` | 1 nhánh | `disableTlsVerification` | không | hoạt động |
+| `crateDb` / `questDb` | phẳng | không | không | hoạt động |
+| `timescaleDb` | 1 nhánh | `allowUnauthorizedCerts` yêu cầu `ssl` | không | hoạt động |
+| `elasticsearchApi` / `supabaseApi` / `nocoDb` | phẳng | không | không | hoạt động |
+| `snowflake` | 1 nhánh (loại trừ lẫn nhau) | `password` đối lập `privateKey`/`passphrase` | không | hoạt động |
+| `sshPassword` / `sshPrivateKey` | phẳng | không | không | hoạt động (required cấp cao nhất `host`/`port`) |
+| `aws` | 3 nhánh | `temporaryCredentials`→`sessionToken`, `customEndpoints`→7 endpoint, `allowedHttpRequestDomains` | không | hoạt động |
+| `awsAssumeRole` | 3 nhánh | `useSystemCredentialsForRole`→3 trường `sts*`, `customEndpoints`→7 endpoint, `allowedHttpRequestDomains` | không | hoạt động (required cấp cao nhất `roleArn`/`externalId`/`roleSessionName`) |
+| `smtp` | 1 nhánh (không kích hoạt mặc định) | `secure = false`→`disableStartTls` | không | hoạt động |
+| `imap` | phẳng | không | không | hoạt động |
 | `googleApi` | 3 nhánh | `delegatedEmail`, `httpWarning`, `scopes`, `allowedDomains` | không | hoạt động |
 | `mySql` | 2 nhánh | 10 trường điều kiện | không | hoạt động |
 | `postgres` | 2 nhánh (đảo ngược mặc định) | `ssl` luôn + 7 trường SSH | không | hoạt động |
@@ -576,6 +722,11 @@ defaults[key] = def.default
 | `httpSslAuth` | phẳng | không | không | hoạt động |
 | `oAuth1Api` | 1 nhánh | `allowedDomains` | không | hoạt động |
 | `oAuth2Api` | 2 nhánh | `authUrl` (theo grantType), `allowedDomains` | không | hoạt động |
+| `slackOAuth2Api` / `microsoftTeamsOAuth2Api` / `discordOAuth2Api` | có nhánh | `customScopes` điều khiển `userScope`/`enabledScopes` | có | hoạt động (chỉ clientId/secret, không có `oauthTokenData`) |
+| `twitterOAuth2Api` / `linkedInOAuth2Api` | có nhánh | không đồng bộ | có | hoạt động (chỉ clientId/secret, không có `oauthTokenData`) |
+| `twitterOAuth1Api` | 1 nhánh | `allowedDomains` | không | hoạt động (chỉ consumerKey/secret, không có `oauthTokenData`) |
+| `salesforceOAuth2Api` / `dropboxOAuth2Api` | có nhánh | `allowedDomains`; `environment`/`accessType` là enum phẳng, không phải khóa điều kiện | có | hoạt động (chỉ clientId/secret, không có `oauthTokenData`) |
+| `hubspotOAuth2Api` / `spotifyOAuth2Api` | có nhánh | `allowedDomains` | có | hoạt động (chỉ clientId/secret, không có `oauthTokenData`) |
 | `jwtAuth` | 2 nhánh (loại trừ lẫn nhau) | `secret` XOR `privateKey`/`publicKey` | không | hoạt động |
 
 ---

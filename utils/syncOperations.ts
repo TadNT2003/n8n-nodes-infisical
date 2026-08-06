@@ -42,6 +42,261 @@ const CREDENTIAL_FIELD_MAPS: Record<string, Array<{ param: string; secretKey: st
 	],
 	discordBotApi: [{ param: 'botToken', secretKey: 'botToken' }],
 	discordWebhookApi: [{ param: 'webhookUri', secretKey: 'webhookUri' }],
+	// ── Messaging / social (static-token) ──────────────────────────────────────
+	slackApi: [
+		{ param: 'accessToken', secretKey: 'accessToken' },
+		{ param: 'signatureSecret', secretKey: 'signatureSecret' },
+	],
+	telegramApi: [
+		{ param: 'accessToken', secretKey: 'accessToken' },
+		{ param: 'baseUrl', secretKey: 'baseUrl' },
+	],
+	twilioApi: [
+		// condition-controlling field: authToken vs apiKey branches
+		{ param: 'authType', secretKey: 'authType' },
+		{ param: 'accountSid', secretKey: 'accountSid' },
+		{ param: 'authToken', secretKey: 'authToken' },
+		{ param: 'apiKeySid', secretKey: 'apiKeySid' },
+		{ param: 'apiKeySecret', secretKey: 'apiKeySecret' },
+	],
+	mattermostApi: [
+		{ param: 'accessToken', secretKey: 'accessToken' },
+		{ param: 'baseUrl', secretKey: 'baseUrl' },
+		{ param: 'allowUnauthorizedCerts', secretKey: 'allowUnauthorizedCerts' },
+	],
+	matrixApi: [
+		{ param: 'accessToken', secretKey: 'accessToken' },
+		{ param: 'homeserverUrl', secretKey: 'homeserverUrl' },
+	],
+	rocketchatApi: [
+		{ param: 'userId', secretKey: 'userId' },
+		{ param: 'authKey', secretKey: 'authKey' },
+		{ param: 'domain', secretKey: 'domain' },
+	],
+	whatsAppApi: [
+		{ param: 'accessToken', secretKey: 'accessToken' },
+		{ param: 'businessAccountId', secretKey: 'businessAccountId' },
+	],
+	facebookGraphApi: [{ param: 'accessToken', secretKey: 'accessToken' }],
+	pushoverApi: [{ param: 'apiKey', secretKey: 'apiKey' }],
+	// ── Messaging / social OAuth2 ──────────────────────────────────────────────
+	// Service-specific OAuth2 types: only the user-editable app-registration and
+	// scope-config fields are synced. grantType/authUrl/accessTokenUrl/scope/
+	// authQueryParameters/authentication are `hidden` (fixed/computed) on these types,
+	// and oauthTokenData (the browser-consent tokens) is intentionally NOT synced —
+	// a pulled credential must be re-authorised in the target n8n.
+	slackOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		{ param: 'signatureSecret', secretKey: 'signatureSecret' },
+		// condition-controlling: customScopes drives the userScope branch
+		{ param: 'customScopes', secretKey: 'customScopes' },
+		{ param: 'userScope', secretKey: 'userScope' },
+	],
+	microsoftTeamsOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		// authUrl/accessTokenUrl are user-editable on Microsoft (tenant-specific), not hidden
+		{ param: 'authUrl', secretKey: 'authUrl' },
+		{ param: 'accessTokenUrl', secretKey: 'accessTokenUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		{ param: 'graphApiBaseUrl', secretKey: 'graphApiBaseUrl' },
+		{ param: 'customScopes', secretKey: 'customScopes' },
+		{ param: 'enabledScopes', secretKey: 'enabledScopes' },
+	],
+	twitterOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+	],
+	twitterOAuth1Api: [
+		{ param: 'consumerKey', secretKey: 'consumerKey' },
+		{ param: 'consumerSecret', secretKey: 'consumerSecret' },
+	],
+	linkedInOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		{ param: 'organizationSupport', secretKey: 'organizationSupport' },
+		{ param: 'legacy', secretKey: 'legacy' },
+	],
+	discordOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		{ param: 'botToken', secretKey: 'botToken' },
+		// condition-controlling: customScopes drives the enabledScopes branch
+		{ param: 'customScopes', secretKey: 'customScopes' },
+		{ param: 'enabledScopes', secretKey: 'enabledScopes' },
+	],
+	salesforceOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		// param name deliberately differs from secretKey: the node's top-level
+		// "Environment" parameter (Infisical environment slug) already claims the
+		// name 'environment' across every operation — reusing it here would let
+		// this form field silently overwrite that unrelated parameter's value.
+		{ param: 'salesforceEnvironment', secretKey: 'environment' },
+	],
+	hubspotOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+	],
+	dropboxOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+		{ param: 'accessType', secretKey: 'accessType' },
+	],
+	spotifyOAuth2Api: [
+		{ param: 'serverUrl', secretKey: 'serverUrl' },
+		{ param: 'clientId', secretKey: 'clientId' },
+		{ param: 'clientSecret', secretKey: 'clientSecret' },
+	],
+	// ── Productivity / SaaS (static-token) ─────────────────────────────────────
+	airtableTokenApi: [{ param: 'accessToken', secretKey: 'accessToken' }],
+	notionApi: [{ param: 'apiKey', secretKey: 'apiKey' }],
+	stripeApi: [
+		{ param: 'secretKey', secretKey: 'secretKey' },
+		{ param: 'signatureSecret', secretKey: 'signatureSecret' },
+	],
+	hubspotAppToken: [{ param: 'appToken', secretKey: 'appToken' }],
+	sendGridApi: [{ param: 'apiKey', secretKey: 'apiKey' }],
+	// ── Databases (Tier 3) ──────────────────────────────────────────────────────
+	// crateDb/questDb/timescaleDb are Postgres wire-compatible and share its host/
+	// database/user/password/port/ssl shape; timescaleDb additionally exposes
+	// allowUnauthorizedCerts like postgres. Neither carries SSH-tunnel support.
+	crateDb: [
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'database', secretKey: 'database' },
+		{ param: 'user', secretKey: 'user' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'ssl', secretKey: 'ssl' },
+		{ param: 'port', secretKey: 'port' },
+	],
+	questDb: [
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'database', secretKey: 'database' },
+		{ param: 'user', secretKey: 'user' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'ssl', secretKey: 'ssl' },
+		{ param: 'port', secretKey: 'port' },
+	],
+	timescaleDb: [
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'database', secretKey: 'database' },
+		{ param: 'user', secretKey: 'user' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'allowUnauthorizedCerts', secretKey: 'allowUnauthorizedCerts' },
+		{ param: 'ssl', secretKey: 'ssl' },
+		{ param: 'port', secretKey: 'port' },
+	],
+	elasticsearchApi: [
+		{ param: 'username', secretKey: 'username' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'baseUrl', secretKey: 'baseUrl' },
+		{ param: 'ignoreSSLIssues', secretKey: 'ignoreSSLIssues' },
+	],
+	supabaseApi: [
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'serviceRole', secretKey: 'serviceRole' },
+	],
+	nocoDb: [
+		{ param: 'apiToken', secretKey: 'apiToken' },
+		{ param: 'host', secretKey: 'host' },
+	],
+	snowflake: [
+		{ param: 'account', secretKey: 'account' },
+		{ param: 'database', secretKey: 'database' },
+		{ param: 'warehouse', secretKey: 'warehouse' },
+		// condition-controlling: authentication drives password vs privateKey/passphrase
+		{ param: 'authentication', secretKey: 'authentication' },
+		{ param: 'username', secretKey: 'username' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'privateKey', secretKey: 'privateKey' },
+		{ param: 'passphrase', secretKey: 'passphrase' },
+		{ param: 'schema', secretKey: 'schema' },
+		{ param: 'role', secretKey: 'role' },
+		{ param: 'clientSessionKeepAlive', secretKey: 'clientSessionKeepAlive' },
+	],
+	// Standalone SSH credentials (separate from the SSH-tunnel sub-fields already
+	// synced inside mySql/postgres, which are a different, embedded use case).
+	sshPassword: [
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'port', secretKey: 'port' },
+		{ param: 'username', secretKey: 'username' },
+		{ param: 'password', secretKey: 'password' },
+	],
+	sshPrivateKey: [
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'port', secretKey: 'port' },
+		{ param: 'username', secretKey: 'username' },
+		{ param: 'privateKey', secretKey: 'privateKey' },
+		{ param: 'passphrase', secretKey: 'passphrase' },
+	],
+	// ── AWS ─────────────────────────────────────────────────────────────────────
+	aws: [
+		{ param: 'region', secretKey: 'region' },
+		{ param: 'accessKeyId', secretKey: 'accessKeyId' },
+		{ param: 'secretAccessKey', secretKey: 'secretAccessKey' },
+		// condition-controlling: temporaryCredentials drives sessionToken
+		{ param: 'temporaryCredentials', secretKey: 'temporaryCredentials' },
+		{ param: 'sessionToken', secretKey: 'sessionToken' },
+		// condition-controlling: customEndpoints drives the 7 endpoint fields
+		{ param: 'customEndpoints', secretKey: 'customEndpoints' },
+		{ param: 'rekognitionEndpoint', secretKey: 'rekognitionEndpoint' },
+		{ param: 'lambdaEndpoint', secretKey: 'lambdaEndpoint' },
+		{ param: 'snsEndpoint', secretKey: 'snsEndpoint' },
+		{ param: 'sesEndpoint', secretKey: 'sesEndpoint' },
+		{ param: 'sqsEndpoint', secretKey: 'sqsEndpoint' },
+		{ param: 's3Endpoint', secretKey: 's3Endpoint' },
+		{ param: 'ssmEndpoint', secretKey: 'ssmEndpoint' },
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
+	// ── Email ───────────────────────────────────────────────────────────────────
+	smtp: [
+		{ param: 'user', secretKey: 'user' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'port', secretKey: 'port' },
+		// condition-controlling: secure=false drives the disableStartTls branch
+		{ param: 'secure', secretKey: 'secure' },
+		{ param: 'disableStartTls', secretKey: 'disableStartTls' },
+		{ param: 'hostName', secretKey: 'hostName' },
+	],
+	imap: [
+		{ param: 'user', secretKey: 'user' },
+		{ param: 'password', secretKey: 'password' },
+		{ param: 'host', secretKey: 'host' },
+		{ param: 'port', secretKey: 'port' },
+		{ param: 'secure', secretKey: 'secure' },
+		{ param: 'allowUnauthorizedCerts', secretKey: 'allowUnauthorizedCerts' },
+	],
+	awsAssumeRole: [
+		{ param: 'region', secretKey: 'region' },
+		// condition-controlling: useSystemCredentialsForRole gates the sts* fields
+		{ param: 'useSystemCredentialsForRole', secretKey: 'useSystemCredentialsForRole' },
+		{ param: 'stsAccessKeyId', secretKey: 'stsAccessKeyId' },
+		{ param: 'stsSecretAccessKey', secretKey: 'stsSecretAccessKey' },
+		{ param: 'stsSessionToken', secretKey: 'stsSessionToken' },
+		{ param: 'roleArn', secretKey: 'roleArn' },
+		{ param: 'externalId', secretKey: 'externalId' },
+		{ param: 'roleSessionName', secretKey: 'roleSessionName' },
+		{ param: 'customEndpoints', secretKey: 'customEndpoints' },
+		{ param: 'rekognitionEndpoint', secretKey: 'rekognitionEndpoint' },
+		{ param: 'lambdaEndpoint', secretKey: 'lambdaEndpoint' },
+		{ param: 'snsEndpoint', secretKey: 'snsEndpoint' },
+		{ param: 'sesEndpoint', secretKey: 'sesEndpoint' },
+		{ param: 'sqsEndpoint', secretKey: 'sqsEndpoint' },
+		{ param: 's3Endpoint', secretKey: 's3Endpoint' },
+		{ param: 'ssmEndpoint', secretKey: 'ssmEndpoint' },
+		{ param: 'allowedHttpRequestDomains', secretKey: 'allowedHttpRequestDomains' },
+		{ param: 'allowedDomains', secretKey: 'allowedDomains' },
+	],
 	githubApi: [
 		{ param: 'server', secretKey: 'server' },
 		{ param: 'user', secretKey: 'user' },
@@ -258,6 +513,9 @@ const CREDENTIAL_FIELD_DEFAULTS: Record<string, Record<string, string>> = {
 	gitlabApi: { server: 'https://gitlab.com' },
 	gitlabOAuth2Api: { server: 'https://gitlab.com' },
 	deepseekApi: { baseUrl: 'https://api.deepseek.com' },
+	telegramApi: { baseUrl: 'https://api.telegram.org' },
+	matrixApi: { homeserverUrl: 'https://matrix-client.matrix.org' },
+	awsAssumeRole: { roleSessionName: 'n8n-session' },
 };
 
 // Lossless encoding: [A-Za-z0-9-] pass through, _ → __, everything else → _XX hex sequences.

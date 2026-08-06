@@ -418,6 +418,68 @@ Khi node sync gọi `http://localhost:5678/api/v1/credentials` từ bên trong c
 
 Credential `n8nApi` do đó phải sử dụng tên dịch vụ Docker cho `baseUrl`: `http://n8n-patch-enterprise:5678/api/v1` — mà proxy chuyển tiếp đúng cách đến dịch vụ n8n trên mạng Docker nội bộ.
 
+### 4.4 Đồng bộ trường ở chế độ Form
+
+Chế độ **Form** của `syncToInfisical` đọc mỗi trường qua `getNodeParameter(param, …)`, trong đó `param` là tên trong `CREDENTIAL_FIELD_MAPS`. Do đó một trường form chỉ được nối dây nếu thuộc tính `name` của nó **trùng khớp chính xác** với `param` đó. Một số trường có `name` khác với `param` trong map, nên chế độ Form âm thầm gửi giá trị rỗng cho chúng (field map, chế độ JSON, và auto-sync không bị ảnh hưởng). Chúng đã được sửa để `name` của thuộc tính form khớp với `param`:
+
+| Loại | `name` trường form cũ | `name` đã sửa (= `param`) |
+| --- | --- | --- |
+| `jiraSoftwareCloudApi` | `jiraDomain` | `domain` |
+| `microsoftSql` | `mssqlDomain` | `domain` |
+| `postgres` | `sslMode` | `ssl` (options `allow`/`disable`/`require`) |
+| `mongoDb` | `ssl` | `tls` |
+
+Ngoài ra, mỗi `param` trong map giờ đều có một trường Form tương ứng để **tất cả các loại credential được hỗ trợ đều chỉnh sửa được đầy đủ ở chế độ Form** (trước đây một số chỉ truy cập được qua chế độ JSON). Các trường được thêm để lấp đầy khoảng trống: `telegramApi.accessToken`; `password` cho `httpBasicAuth`/`httpDigestAuth`; `inpersonate`/`httpNode` của `googleApi`; `googleOAuth2Api.serverUrl`; `allowUnauthorizedCerts` của `postgres`; `sshAuthenticateWith`/`privateKey`/`passphrase` cho `mySql`/`postgres`; và `googlePalmApi` (`host` + `apiKey`, cũng được thêm vào dropdown Credential Type). Một bước kiểm tra độ phủ nay xác nhận 47/47 loại có map đều có đầy đủ trường Form.
+
+**Quy tắc về sau**: khi thêm một entry field-map, cũng phải thêm một thuộc tính Form có `name` bằng với `param`, nếu không giá trị không thể nhập được ở chế độ Form.
+
+### 4.5 Xung đột tên tham số với các trường cấp cao nhất của chính node
+
+**Vấn đề**
+
+`salesforceOAuth2Api` có một thuộc tính schema thực tế, đang chạy, tên đúng là `environment` (bộ
+chọn sandbox/production của OAuth). Tham số "Environment" cấp cao nhất của chính node
+`InfisicalSync` — slug môi trường Infisical (`dev`/`staging`/`prod`), hiển thị cho mọi loại
+credential của `syncToInfisical` bất kể loại nào được chọn — cũng có tên `environment`. Tham số
+node trong n8n dùng chung một không gian tên phẳng theo `name`; hai thuộc tính dùng chung `name`
+chỉ an toàn nếu `displayOptions.show` của chúng loại trừ lẫn nhau. Ở đây thì không: trường cấp cao
+nhất không có giới hạn `credentialType` nào cả, nên nó và trường riêng của Salesforce cùng "sống"
+đồng thời bất cứ khi nào `credentialType: salesforceOAuth2Api` được chọn ở chế độ Form.
+
+**Triệu chứng**
+
+Đẩy một credential Salesforce OAuth2 ở chế độ Form với chế độ sandbox được chọn khiến
+`ctx.getNodeParameter('environment', i)` — dùng cho **slug môi trường đích của Infisical** — đọc
+lại giá trị `'sandbox'` thay vì slug thật (ví dụ `'dev'`), sau đó thất bại khi gọi API Infisical với
+lỗi `Environment with slug 'sandbox' in project with ID '…' not found`. Luồng pull của
+`autoSyncFromInfisical` không bị ảnh hưởng — nó đọc giá trị trường từ đối tượng secrets đã lấy về từ
+Infisical (theo khóa `secretKey`), không phải từ `getNodeParameter`, nên xung đột này chỉ ảnh hưởng
+đến luồng push ở chế độ Form.
+
+**Khắc phục**
+
+Đổi tên tham số Form nội bộ thành `salesforceEnvironment`, giữ nguyên `secretKey: 'environment'`
+(khóa lưu trữ thực tế trên n8n/Infisical không bị ảnh hưởng):
+
+```typescript
+salesforceOAuth2Api: [
+  // ...
+  { param: 'salesforceEnvironment', secretKey: 'environment' },  // trước đây: 'environment'
+],
+```
+
+và `name` của trường Form được cập nhật để khớp. Đây là hình ảnh đối xứng của việc sửa `domain` ở
+§4.2 — ở đó, `param` trong map phải *đổi tên để khớp* với schema; ở đây, `param` trong map phải
+*cố tình khác* với `secretKey` của schema để tránh xung đột với một tham số node khác, luôn hiển
+thị, không liên quan.
+
+**Quy tắc về sau**: trước khi thêm một entry field-map có `param` trùng với một từ thông dụng, hãy
+kiểm tra nó với các tên tham số cấp cao nhất khác của node (không bị giới hạn bởi `credentialType`)
+— `projectId`, `environment`, `rootPath`, `credentialName`, `ifCredentialMissing`, `inputMode`,
+`credentialType`/`credentialTypeJson`, `credentialJson`, `n8nCredentialId`. Nếu xung đột, giữ
+`secretKey` khớp với thuộc tính schema thực tế nhưng chọn một tên `param` riêng biệt, có tiền tố
+theo loại, cho trường Form.
+
 ---
 
 ## 5. Xử Lý Bộ Kiểm Tra: Thuật Toán Đầy Đủ
@@ -518,21 +580,99 @@ Tất cả tên `param` đã được xác minh theo schema thực tế từ `GE
 | `cohereApi` | `apiKey` | `apiKey` | string | |
 | `huggingFaceApi` | `apiKey` | `apiKey` | string | |
 | `mistralCloudApi` | `apiKey` | `apiKey` | string | |
+| `googlePalmApi` | `host` | `host` | string | host Google PaLM / Gemini; mặc định `https://generativelanguage.googleapis.com` (trong `CREDENTIAL_FIELD_DEFAULTS`) |
+| `googlePalmApi` | `apiKey` | `apiKey` | string | required |
 
-### Năng suất / Quản lý dự án
+### Năng suất / Quản lý dự án / SaaS
 
 | Loại n8n | `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
 | --- | --- | --- | --- | --- |
 | `jiraSoftwareCloudApi` | `email` | `email` | string | |
 | `jiraSoftwareCloudApi` | `apiToken` | `apiToken` | string | |
 | `jiraSoftwareCloudApi` | `domain` | `domain` | string | thuộc tính schema là `domain`, không phải `jiraDomain` |
+| `airtableTokenApi` | `accessToken` | `accessToken` | string | personal access token |
+| `notionApi` | `apiKey` | `apiKey` | string | internal integration secret |
+| `stripeApi` | `secretKey` | `secretKey` | string | required |
+| `stripeApi` | `signatureSecret` | `signatureSecret` | string | webhook signing secret tùy chọn |
+| `hubspotAppToken` | `appToken` | `appToken` | string | required |
+| `sendGridApi` | `apiKey` | `apiKey` | string | |
 
-### Nhắn tin / Webhooks
+### Nhắn tin / Mạng xã hội
 
 | Loại n8n | `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
 | --- | --- | --- | --- | --- |
 | `discordBotApi` | `botToken` | `botToken` | string | |
 | `discordWebhookApi` | `webhookUri` | `webhookUri` | string | |
+| `slackApi` | `accessToken` | `accessToken` | string | token bot/user (required) |
+| `slackApi` | `signatureSecret` | `signatureSecret` | string | signing secret tùy chọn |
+| `telegramApi` | `accessToken` | `accessToken` | string | required |
+| `telegramApi` | `baseUrl` | `baseUrl` | string | mặc định `https://api.telegram.org` (trong `CREDENTIAL_FIELD_DEFAULTS`) |
+| `mattermostApi` | `accessToken` | `accessToken` | string | |
+| `mattermostApi` | `baseUrl` | `baseUrl` | string | URL cơ sở API server |
+| `mattermostApi` | `allowUnauthorizedCerts` | `allowUnauthorizedCerts` | boolean | |
+| `matrixApi` | `accessToken` | `accessToken` | string | |
+| `matrixApi` | `homeserverUrl` | `homeserverUrl` | string | mặc định `https://matrix-client.matrix.org` (trong `CREDENTIAL_FIELD_DEFAULTS`) |
+| `rocketchatApi` | `userId` | `userId` | string | |
+| `rocketchatApi` | `authKey` | `authKey` | string | |
+| `rocketchatApi` | `domain` | `domain` | string | URL server |
+| `whatsAppApi` | `accessToken` | `accessToken` | string | |
+| `whatsAppApi` | `businessAccountId` | `businessAccountId` | string | |
+| `facebookGraphApi` | `accessToken` | `accessToken` | string | |
+| `pushoverApi` | `apiKey` | `apiKey` | string | app token |
+
+`twilioApi` có điều kiện và được liệt kê riêng bên dưới.
+
+#### Twilio (`twilioApi`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `authType` | `authType` | string (enum) | khóa điều kiện: `'authToken'` hoặc `'apiKey'` |
+| `accountSid` | `accountSid` | string | |
+| `authToken` | `authToken` | string | chỉ khi `authType: 'authToken'` |
+| `apiKeySid` | `apiKeySid` | string | chỉ khi `authType: 'apiKey'` |
+| `apiKeySecret` | `apiKeySecret` | string | chỉ khi `authType: 'apiKey'` |
+
+### Nhắn tin / Mạng xã hội (OAuth2)
+
+Chỉ các trường app-registration và cấu hình scope mà người dùng chỉnh sửa được mới được đồng bộ.
+`grantType`, `scope`, `authQueryParameters`, và `authentication` là các trường `hidden`
+(cố định/được tính toán) trên các loại này và bị loại trừ. **`oauthTokenData`** (token
+access/refresh từ luồng đồng ý trên trình duyệt) cố tình **không** được đồng bộ — credential được
+kéo về phải được cấp quyền lại trong n8n đích. `authUrl` và `accessTokenUrl` bị ẩn trên hầu hết
+dịch vụ nhưng người dùng chỉnh sửa được (theo tenant) trên Microsoft, nên chỉ được đồng bộ cho
+`microsoftTeamsOAuth2Api`.
+
+| Loại n8n | `param` n8n | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `slackOAuth2Api` | `serverUrl`, `clientId`, `clientSecret`, `signatureSecret` | string | |
+| `slackOAuth2Api` | `customScopes` | boolean | khóa điều kiện: điều khiển `userScope` |
+| `slackOAuth2Api` | `userScope` | string | chỉ khi `customScopes: true` |
+| `microsoftTeamsOAuth2Api` | `serverUrl`, `authUrl`, `accessTokenUrl`, `clientId`, `clientSecret`, `graphApiBaseUrl` | string | `authUrl`/`accessTokenUrl` chỉnh sửa được (theo tenant) |
+| `microsoftTeamsOAuth2Api` | `customScopes` | boolean | khóa điều kiện: điều khiển `enabledScopes` |
+| `microsoftTeamsOAuth2Api` | `enabledScopes` | string | chỉ khi `customScopes: true` |
+| `twitterOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `twitterOAuth1Api` | `consumerKey`, `consumerSecret` | string | cả hai đều required |
+| `linkedInOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `linkedInOAuth2Api` | `organizationSupport`, `legacy` | boolean | |
+| `discordOAuth2Api` | `serverUrl`, `clientId`, `clientSecret`, `botToken` | string | |
+| `discordOAuth2Api` | `customScopes` | boolean | khóa điều kiện: điều khiển `enabledScopes` |
+| `discordOAuth2Api` | `enabledScopes` | string | chỉ khi `customScopes: true` |
+
+### SaaS (OAuth2)
+
+Cùng mẫu với nhóm OAuth2 nhắn tin/mạng xã hội ở trên: chỉ các trường app-registration và cấu hình
+đặc thù theo dịch vụ mà người dùng chỉnh sửa được mới được đồng bộ; `grantType`/`authUrl`/
+`accessTokenUrl`/`scope`/`authQueryParameters`/`authentication` là `hidden` trên cả bốn loại, và
+`oauthTokenData` cố tình không được đồng bộ.
+
+| Loại n8n | `param` n8n | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `salesforceOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `salesforceOAuth2Api` | `environment` | string (enum) | `'production'` hoặc `'sandbox'`; param Form nội bộ là `salesforceEnvironment` — xem §4.5 |
+| `hubspotOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | không có trường bổ sung nào người dùng chỉnh sửa được |
+| `dropboxOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | |
+| `dropboxOAuth2Api` | `accessType` | string (enum) | `'folder'` (App Folder) hoặc `'full'` (Full Dropbox) |
+| `spotifyOAuth2Api` | `serverUrl`, `clientId`, `clientSecret` | string | không có trường bổ sung nào người dùng chỉnh sửa được |
 
 ### Lưu trữ mã nguồn (Code Hosting)
 
@@ -576,6 +716,7 @@ Không cần entry trong `CREDENTIAL_FIELD_DEFAULTS`.
 | `googleApi` | `scopes` | `scopes` | string | chỉ khi `httpNode: true` |
 | `googleApi` | `inpersonate` | `inpersonate` | boolean | khóa điều kiện: kiểm soát nhánh delegatedEmail |
 | `googleApi` | `httpNode` | `httpNode` | boolean | khóa điều kiện: kiểm soát nhánh scopes |
+| `googleOAuth2Api` | `serverUrl` | `serverUrl` | string | kế thừa từ `oAuth2Api` |
 | `googleOAuth2Api` | `clientId` | `clientId` | string | |
 | `googleOAuth2Api` | `clientSecret` | `clientSecret` | string | |
 | `googleOAuth2Api` | `scope` | `scope` | string | |
@@ -656,6 +797,92 @@ Không cần entry trong `CREDENTIAL_FIELD_DEFAULTS`.
 | `database` | `database` | number | |
 | `ssl` | `ssl` | boolean | khóa điều kiện: kiểm soát `disableTlsVerification` |
 
+#### CrateDB / QuestDB (`crateDb`, `questDb`)
+
+Tương thích wire protocol với Postgres; cả hai schema đều phẳng, không có điều kiện `allOf` và
+không hỗ trợ SSH tunnel (khác với `mySql`/`postgres`).
+
+| `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `host` | `host` | string | mặc định `localhost` |
+| `database` | `database` | string | CrateDB mặc định `doc`, QuestDB mặc định `qdb` (mặc định UI n8n, không do schema ép buộc) |
+| `user` | `user` | string | CrateDB mặc định `crate`, QuestDB mặc định `admin` |
+| `password` | `password` | string | |
+| `ssl` | `ssl` | string (enum) | `allow`/`disable`/`require`, cùng hình dạng với `postgres` |
+| `port` | `port` | number | CrateDB 5432, QuestDB 8812 |
+
+#### TimescaleDB (`timescaleDb`)
+
+Tương thích wire protocol với Postgres, có cặp `ssl`/`allowUnauthorizedCerts` giống `postgres`
+nhưng không hỗ trợ SSH tunnel.
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `host` | `host` | string | |
+| `database` | `database` | string | mặc định `postgres` |
+| `user` | `user` | string | |
+| `password` | `password` | string | |
+| `allowUnauthorizedCerts` | `allowUnauthorizedCerts` | boolean | khóa điều kiện |
+| `ssl` | `ssl` | string (enum) | `allow`/`disable`/`require` |
+| `port` | `port` | number | |
+
+#### Elasticsearch (`elasticsearchApi`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `username` | `username` | string | |
+| `password` | `password` | string | |
+| `baseUrl` | `baseUrl` | string | |
+| `ignoreSSLIssues` | `ignoreSSLIssues` | boolean | |
+
+#### Supabase (`supabaseApi`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `host` | `host` | string | URL dự án, không có phần `/rest/v1` |
+| `serviceRole` | `serviceRole` | string | secret key của dự án |
+
+#### NocoDB (`nocoDb`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `apiToken` | `apiToken` | string | |
+| `host` | `host` | string | |
+
+#### Snowflake (`snowflake`)
+
+Schema n8n cục bộ (v2.21.5) không có thuộc tính `host` (có trong mã nguồn GitHub mới hơn) — field
+map tuân theo schema thực tế đang chạy, theo đúng quy tắc xác minh. `snowflakeOAuth2Api` trả về 404
+trên endpoint schema của instance này (được thêm vào n8n-nodes-base sau phiên bản 2.21.5) và **không**
+được hỗ trợ bởi package này vì lý do đó.
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `account` | `account` | string | |
+| `database` | `database` | string | |
+| `warehouse` | `warehouse` | string | |
+| `authentication` | `authentication` | string (enum) | khóa điều kiện: `'password'` hoặc `'keyPair'` |
+| `username` | `username` | string | |
+| `password` | `password` | string | chỉ khi `authentication: 'password'` |
+| `privateKey` | `privateKey` | string | chỉ khi `authentication: 'keyPair'` |
+| `passphrase` | `passphrase` | string | chỉ khi `authentication: 'keyPair'` |
+| `schema` | `schema` | string | |
+| `role` | `role` | string | |
+| `clientSessionKeepAlive` | `clientSessionKeepAlive` | boolean | |
+
+#### SSH (`sshPassword`, `sshPrivateKey`)
+
+Credential SSH độc lập — khác với các trường con SSH-tunnel đã được đồng bộ bên trong
+`mySql`/`postgres` (một trường hợp sử dụng khác, được nhúng vào cho kết nối DB đi qua tunnel).
+`host` và `port` là các trường required ở cấp cao nhất trên cả hai loại.
+
+| Loại n8n | `param` n8n | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `sshPassword` | `host`, `port` | string, number | required; `port` mặc định 22 |
+| `sshPassword` | `username`, `password` | string | |
+| `sshPrivateKey` | `host`, `port` | string, number | required; `port` mặc định 22 |
+| `sshPrivateKey` | `username`, `privateKey`, `passphrase` | string | |
+
 ---
 
 ### Google OAuth2 (Sheets / Drive / Docs)
@@ -687,6 +914,88 @@ Ba loại này có cấu trúc schema giống hệt nhau.
 | `infisicalApi` | `clientSecret` | `clientSecret` | string | chỉ khi `authType: 'universalAuth'` |
 | `infisicalApi` | `organizationSlug` | `organizationSlug` | string | tùy chọn, chỉ universalAuth |
 | `infisicalApi` | `apiKey` | `apiKey` | string | chỉ khi `authType: 'serviceToken'` |
+
+---
+
+### AWS
+
+`aws` và `awsAssumeRole` dùng chung trường `region` và 7 trường custom-endpoint (tất cả được chi
+phối bởi khóa điều kiện `customEndpoints`). Không loại nào có trường required ở cấp cao nhất trong
+schema thực tế đang chạy (v2.21.5) — phương thức `authenticate()` của credential sẽ thất bại tại
+thời điểm gửi request nếu key sai, thay vì schema ép buộc ngay từ đầu.
+
+#### AWS (IAM) (`aws`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `region` | `region` | string | mặc định `us-east-1` |
+| `accessKeyId` | `accessKeyId` | string | |
+| `secretAccessKey` | `secretAccessKey` | string | |
+| `temporaryCredentials` | `temporaryCredentials` | boolean | khóa điều kiện: kiểm soát `sessionToken` |
+| `sessionToken` | `sessionToken` | string | chỉ khi `temporaryCredentials: true` |
+| `customEndpoints` | `customEndpoints` | boolean | khóa điều kiện: kiểm soát 7 trường endpoint bên dưới |
+| `rekognitionEndpoint` | `rekognitionEndpoint` | string | chỉ khi `customEndpoints: true` |
+| `lambdaEndpoint` | `lambdaEndpoint` | string | chỉ khi `customEndpoints: true` |
+| `snsEndpoint` | `snsEndpoint` | string | chỉ khi `customEndpoints: true` |
+| `sesEndpoint` | `sesEndpoint` | string | chỉ khi `customEndpoints: true` |
+| `sqsEndpoint` | `sqsEndpoint` | string | chỉ khi `customEndpoints: true` |
+| `s3Endpoint` | `s3Endpoint` | string | chỉ khi `customEndpoints: true` |
+| `ssmEndpoint` | `ssmEndpoint` | string | chỉ khi `customEndpoints: true` |
+| `allowedHttpRequestDomains` | tương tự | string (enum) | khóa điều kiện: kiểm soát `allowedDomains` |
+| `allowedDomains` | tương tự | string | chỉ khi `allowedHttpRequestDomains: 'domains'` |
+
+#### AWS (Assume Role) (`awsAssumeRole`)
+
+`roleArn`, `externalId`, và `roleSessionName` là required ở cấp cao nhất. `roleSessionName` có
+giá trị mặc định thực tế trong UI n8n (`'n8n-session'`) không được schema phơi bày, nên nó nằm
+trong `CREDENTIAL_FIELD_DEFAULTS` như một fallback — cùng mẫu khoảng trống với
+`googlePalmApi.host`.
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `region` | `region` | string | |
+| `useSystemCredentialsForRole` | `useSystemCredentialsForRole` | boolean | khóa điều kiện: kiểm soát 3 trường `sts*` |
+| `stsAccessKeyId` | `stsAccessKeyId` | string | chỉ khi `useSystemCredentialsForRole: false` |
+| `stsSecretAccessKey` | `stsSecretAccessKey` | string | chỉ khi `useSystemCredentialsForRole: false` |
+| `stsSessionToken` | `stsSessionToken` | string | chỉ khi `useSystemCredentialsForRole: false` |
+| `roleArn` | `roleArn` | string | required |
+| `externalId` | `externalId` | string | required |
+| `roleSessionName` | `roleSessionName` | string | required; mặc định `'n8n-session'` |
+| `customEndpoints` + 7 trường endpoint | tương tự | | giống hệt `aws` ở trên |
+| `allowedHttpRequestDomains` / `allowedDomains` | tương tự | | giống hệt `aws` ở trên |
+
+---
+
+### Email
+
+Không loại nào có trường required ở cấp cao nhất trong schema thực tế đang chạy (v2.21.5) — khác
+với hàm type-guard của mã nguồn GitHub, vốn coi `user`/`password`/`host`/`port`/`secure` là
+required trên `imap`. Field map tuân theo schema thực tế, theo đúng quy tắc xác minh đã thiết lập.
+
+#### SMTP (`smtp`)
+
+| `param` n8n | `secretKey` Infisical | Loại | Điều kiện |
+| --- | --- | --- | --- |
+| `user` | `user` | string | |
+| `password` | `password` | string | |
+| `host` | `host` | string | |
+| `port` | `port` | number | mặc định 465 |
+| `secure` | `secure` | boolean | khóa điều kiện: kiểm soát `disableStartTls`; mặc định `true` |
+| `disableStartTls` | `disableStartTls` | boolean | chỉ khi `secure: false` |
+| `hostName` | `hostName` | string | tùy chọn, định danh client cho EHLO/HELO |
+
+#### IMAP (`imap`)
+
+Schema phẳng, không có điều kiện `allOf`.
+
+| `param` n8n | `secretKey` Infisical | Loại | Ghi chú |
+| --- | --- | --- | --- |
+| `user` | `user` | string | |
+| `password` | `password` | string | |
+| `host` | `host` | string | |
+| `port` | `port` | number | mặc định 993 |
+| `secure` | `secure` | boolean | mặc định `true` |
+| `allowUnauthorizedCerts` | `allowUnauthorizedCerts` | boolean | |
 
 ---
 
