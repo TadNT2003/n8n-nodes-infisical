@@ -241,6 +241,11 @@ Restores a previously soft-deleted environment.
 | **Get Secret Snapshots** | List secret snapshots for a project environment | `GET` | `/v1/projects/{id}/secret-snapshots` |
 | **Get User Memberships** | List all user memberships in a project | `GET` | `/v1/projects/{id}/memberships` |
 | **Get User by Username** | Fetch a project member by username | `POST` | `/v1/projects/{id}/memberships/details` |
+| **Add Identity Membership** | Add a machine identity to the project with one or more roles | `POST` | `/v1/projects/{id}/memberships/identities/{identityId}` |
+| **Get Identity Membership** | Fetch a machine identity's project membership by identity ID | `GET` | `/v1/projects/{id}/memberships/identities/{identityId}` |
+| **Get Identity Memberships** | List all machine identity memberships in a project | `GET` | `/v1/projects/{id}/memberships/identities` |
+| **Update Identity Membership** | Update the roles assigned to a machine identity in the project | `PATCH` | `/v1/projects/{id}/memberships/identities/{identityId}` |
+| **Remove Identity Membership** | Remove a machine identity from the project | `DELETE` | `/v1/projects/{id}/memberships/identities/{identityId}` |
 | **Update** | Update a project by ID | `PATCH` | `/v1/projects/{id}` |
 | **Delete** | Delete a project by ID | `DELETE` | `/v1/projects/{id}` |
 
@@ -296,6 +301,36 @@ Returns each membership as a separate output item.
 
 Required: **Project ID**, **Username**
 
+#### Add Identity Membership
+
+Required: **Project ID**, **Identity ID**, **Roles** (at least one).
+
+Each role is a built-in role slug (`admin`/`member`/`viewer`/`no-access`) or a custom project role slug, and can optionally be time-bound:
+
+| Field | Description |
+| --- | --- |
+| Role | Role slug to assign |
+| Is Temporary | Whether this role grant is time-limited |
+| Temporary Mode | How the temporary window is defined (`relative`) |
+| Temporary Range | Duration the grant remains valid for (e.g. `1h`, `2d`) |
+| Temporary Access Start Time | When the temporary window begins (defaults to now if blank) |
+
+#### Get Identity Membership
+
+Required: **Project ID**, **Identity ID**
+
+#### Get Identity Memberships
+
+Required: **Project ID**. Returns each membership as a separate output item.
+
+#### Update Identity Membership
+
+Required: **Project ID**, **Identity ID**, **Roles** (at least one — same shape as Add Identity Membership).
+
+#### Remove Identity Membership
+
+Required: **Project ID**, **Identity ID**
+
 #### Update Project
 
 Required: **Project ID**
@@ -317,6 +352,115 @@ Required: **Project ID**
 Required: **Project ID**
 
 > **Warning:** Deleting a project is irreversible and removes all associated data.
+
+---
+
+### Identity
+
+Identities are organization-scoped machine identities. Universal Auth is Infisical's recommended authentication method for them (see [Credentials](#credentials) above).
+
+| Operation | Description | Method | API endpoint |
+| --- | --- | --- | --- |
+| **Create** | Create a new machine identity in an organization | `POST` | `/v1/identities` |
+| **Get** | Fetch a machine identity by ID | `GET` | `/v1/identities/{id}` |
+| **Get Many** | List all machine identities in an organization | `GET` | `/v1/identities?orgId={orgId}` |
+| **Update** | Update a machine identity by ID | `PATCH` | `/v1/identities/{id}` |
+| **Delete** | Delete a machine identity by ID | `DELETE` | `/v1/identities/{id}` |
+| **Attach Universal Auth** | Attach Universal Auth to an identity | `POST` | `/v1/auth/universal-auth/identities/{id}` |
+| **Get Universal Auth** | Fetch an identity's Universal Auth configuration | `GET` | `/v1/auth/universal-auth/identities/{id}` |
+| **Update Universal Auth** | Update an identity's Universal Auth configuration | `PATCH` | `/v1/auth/universal-auth/identities/{id}` |
+| **Revoke Universal Auth** | Remove Universal Auth from an identity | `DELETE` | `/v1/auth/universal-auth/identities/{id}` |
+| **Create Client Secret** | Create a Universal Auth client secret for an identity | `POST` | `/v1/auth/universal-auth/identities/{id}/client-secrets` |
+| **List Client Secrets** | List Universal Auth client secrets for an identity | `GET` | `/v1/auth/universal-auth/identities/{id}/client-secrets` |
+| **Revoke Client Secret** | Revoke a Universal Auth client secret | `POST` | `/v1/auth/universal-auth/identities/{id}/client-secrets/{clientSecretId}/revoke` |
+
+> An identity created here has no project access until it's granted one — see **Project → Add Identity Membership** above.
+
+#### Create Identity
+
+Required: **Organization ID**, **Identity Name**.
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Role | Organization role slug to assign (e.g. `no-access`, `member`, `admin`, or a custom role slug). Defaults to `no-access`. |
+| Has Delete Protection | Prevent the identity from being deleted |
+
+**Identity Metadata (optional):** Add one or more key/value metadata tags to attach to the identity.
+
+#### Get Identity
+
+Required: **Identity ID**
+
+#### Get Many Identities
+
+Required: **Organization ID**. Returns each identity as a separate output item.
+
+#### Update Identity
+
+Required: **Identity ID**
+
+**Update Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Name | New name for the identity |
+| Role | New organization role slug |
+| Has Delete Protection | Prevent the identity from being deleted |
+
+**Identity Metadata (optional):** Add one or more key/value metadata tags to attach to the identity.
+
+#### Delete Identity
+
+Required: **Identity ID**
+
+#### Attach Universal Auth / Update Universal Auth
+
+Required: **Identity ID**.
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Access Token TTL (Seconds) | Lifetime for an access token before it must be renewed (default: 2592000) |
+| Access Token Max TTL (Seconds) | Maximum lifetime for an access token; `0` means it never expires (default: 2592000) |
+| Access Token Num Uses Limit | Maximum number of times an access token can be used; `0` means unlimited |
+| Access Token Period (Seconds) | Period for a periodic access token; `0` disables periodic tokens |
+
+**Client Secret Trusted IPs / Access Token Trusted IPs (optional):** IP addresses or CIDR ranges allowed to create client secrets / use the resulting access token. Defaults to `0.0.0.0/0`, `::/0` when left empty.
+
+#### Get Universal Auth
+
+Required: **Identity ID**
+
+#### Revoke Universal Auth
+
+Required: **Identity ID**
+
+#### Create Client Secret
+
+Required: **Identity ID**.
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Description | An optional description for the client secret |
+| Num Uses Limit | Maximum number of times the client secret can be used to log in; `0` means unlimited |
+| TTL (Seconds) | Lifetime of the client secret; `0` means it never expires |
+
+> The plain-text client secret is only ever returned in this operation's response — it cannot be retrieved again afterward.
+
+#### List Client Secrets
+
+Required: **Identity ID**. Returns each client secret as a separate output item (metadata only — not the plain-text secret).
+
+#### Revoke Client Secret
+
+Required: **Identity ID**, **Client Secret ID**.
+
+> **Infisical API quirk:** this endpoint returns a 500 error if no JSON body is sent at all, even though every field it accepts is optional. This node always sends `{}` defensively.
 
 ---
 
