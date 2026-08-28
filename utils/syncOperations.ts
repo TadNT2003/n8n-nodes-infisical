@@ -516,16 +516,6 @@ const CREDENTIAL_FIELD_DEFAULTS: Record<string, Record<string, string>> = {
 	telegramApi: { baseUrl: 'https://api.telegram.org' },
 	matrixApi: { homeserverUrl: 'https://matrix-client.matrix.org' },
 	awsAssumeRole: { roleSessionName: 'n8n-session' },
-	// These four share a base schema with a hidden `useDynamicClientRegistration` field that
-	// isn't exposed anywhere (see conditionFires' vacuous-truth handling above). When absent,
-	// both its allOf branches fire at once, requiring serverUrl AND sendAdditionalBodyProperties
-	// + additionalBodyProperties simultaneously. Form mode is unaffected (validateAgainstSchema
-	// skips fields outside availableFormFields), but JSON mode checks every field, so these
-	// defaults are needed there since a real exported credential never has them set.
-	googleOAuth2Api: { serverUrl: '', sendAdditionalBodyProperties: 'false', additionalBodyProperties: '{}' },
-	googleSheetsOAuth2Api: { serverUrl: '', sendAdditionalBodyProperties: 'false', additionalBodyProperties: '{}' },
-	googleDriveOAuth2Api: { serverUrl: '', sendAdditionalBodyProperties: 'false', additionalBodyProperties: '{}' },
-	googleDocsOAuth2Api: { serverUrl: '', sendAdditionalBodyProperties: 'false', additionalBodyProperties: '{}' },
 };
 
 // Lossless encoding: [A-Za-z0-9-] pass through, _ → __, everything else → _XX hex sequences.
@@ -1214,7 +1204,14 @@ export async function executeSyncOperation(
 		const validationData: Record<string, unknown> = {};
 		let availableFormFields: Set<string> | undefined;
 		if (inputMode === 'json') {
-			Object.assign(validationData, parsedJson);
+			// schemaInfo.defaults already derives safe values for fields hidden from every
+			// credential type's UI (e.g. useDynamicClientRegistration-gated OAuth2 internals) —
+			// the same computation the pull path relies on via mergeCredentialData. JSON mode
+			// has no per-type field map to fall back on, so it needs those defaults merged in
+			// too, or any such hidden-but-required field fails validation for every type that
+			// has one, not just the ones we happen to have hardcoded a CREDENTIAL_FIELD_DEFAULTS
+			// entry for. The user's actual values always take precedence.
+			Object.assign(validationData, schemaInfo.defaults, parsedJson);
 		} else {
 			const fieldMap = CREDENTIAL_FIELD_MAPS[credentialType];
 			if (fieldMap) {
