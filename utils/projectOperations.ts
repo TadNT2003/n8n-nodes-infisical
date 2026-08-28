@@ -102,6 +102,77 @@ export async function executeProjectOperation(
 		});
 
 		result.push({ json: (response as IDataObject).membership as IDataObject, pairedItem: { item: i } });
+
+	// ── create ────────────────────────────────────────────────────────────
+	} else if (operation === 'create') {
+		const projectName = ctx.getNodeParameter('projectName', i) as string;
+		const createOptions = ctx.getNodeParameter('createProjectOptions', i, {}) as IDataObject;
+
+		const body: IDataObject = { projectName };
+		if (createOptions.projectDescription) body.projectDescription = createOptions.projectDescription;
+		if (createOptions.slug) body.slug = createOptions.slug;
+		if (createOptions.kmsKeyId) body.kmsKeyId = createOptions.kmsKeyId;
+		if (createOptions.template) body.template = createOptions.template;
+		if (createOptions.type) body.type = createOptions.type;
+		if (createOptions.shouldCreateDefaultEnvs !== undefined) {
+			body.shouldCreateDefaultEnvs = createOptions.shouldCreateDefaultEnvs;
+		}
+		if (createOptions.hasDeleteProtection !== undefined) {
+			body.hasDeleteProtection = createOptions.hasDeleteProtection;
+		}
+
+		const response = await ctx.helpers.httpRequest({
+			method: 'POST',
+			url: `${apiUrl}/v1/projects`,
+			headers: baseHeaders,
+			body: JSON.stringify(body),
+		});
+
+		const project = ((response as IDataObject).project ?? response) as IDataObject;
+		result.push({ json: project, pairedItem: { item: i } });
+
+	// ── update ────────────────────────────────────────────────────────────
+	} else if (operation === 'update') {
+		const projectId = ctx.getNodeParameter('projectId', i) as string;
+		const updateOptions = ctx.getNodeParameter('updateProjectOptions', i, {}) as IDataObject;
+
+		const body: IDataObject = {};
+		if (updateOptions.name) body.name = updateOptions.name;
+		if (updateOptions.description !== undefined) body.description = updateOptions.description;
+		if (updateOptions.slug) body.slug = updateOptions.slug;
+		if (updateOptions.autoCapitalization !== undefined) {
+			body.autoCapitalization = updateOptions.autoCapitalization;
+		}
+		if (updateOptions.hasDeleteProtection !== undefined) {
+			body.hasDeleteProtection = updateOptions.hasDeleteProtection;
+		}
+		if (updateOptions.secretSharing !== undefined) body.secretSharing = updateOptions.secretSharing;
+		if (updateOptions.pitVersionLimit !== undefined && updateOptions.pitVersionLimit !== '') {
+			body.pitVersionLimit = updateOptions.pitVersionLimit;
+		}
+
+		const response = await ctx.helpers.httpRequest({
+			method: 'PATCH',
+			url: `${apiUrl}/v1/projects/${encodeURIComponent(projectId)}`,
+			headers: baseHeaders,
+			body: JSON.stringify(body),
+		});
+
+		const project = ((response as IDataObject).project ?? response) as IDataObject;
+		result.push({ json: project, pairedItem: { item: i } });
+
+	// ── delete ────────────────────────────────────────────────────────────
+	} else if (operation === 'delete') {
+		const projectId = ctx.getNodeParameter('projectId', i) as string;
+
+		const response = await ctx.helpers.httpRequest({
+			method: 'DELETE',
+			url: `${apiUrl}/v1/projects/${encodeURIComponent(projectId)}`,
+			headers: baseHeaders,
+		});
+
+		const project = ((response as IDataObject).project ?? response) as IDataObject;
+		result.push({ json: project, pairedItem: { item: i } });
 	}
 
 	return result;

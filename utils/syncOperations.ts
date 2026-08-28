@@ -640,6 +640,14 @@ function validateAgainstSchema(
 	return errors;
 }
 
+// Detect OAuth-based credential types by their n8n type name (e.g. oAuth2Api, oAuth1Api,
+// slackOAuth2Api, twitterOAuth1Api). Their access tokens come from an interactive browser
+// consent stored in `oauthTokenData`, which is not synced — so autoSync must handle them
+// specially to avoid wiping an already-connected credential's token.
+function isOAuthType(credentialType: string): boolean {
+	return /oauth\d?api$/i.test(credentialType);
+}
+
 // Extract the `n8n_credential_type` tag stored on secrets by syncToInfisical.
 function findCredentialType(secrets: IDataObject[]): string | undefined {
 	for (const secret of secrets) {
@@ -686,6 +694,7 @@ async function syncFromInfisical(
 	const credentialName = ctx.getNodeParameter('credentialName', i) as string;
 	const n8nCredentialId = ctx.getNodeParameter('n8nCredentialId', i) as string;
 	const ifCredentialMissing = ctx.getNodeParameter('ifCredentialMissing', i, 'create') as string;
+	const updateStrategy = ctx.getNodeParameter('updateStrategy', i, 'partialMerge') as string;
 
 	const n8nCreds = await ctx.getCredentials('n8nApi');
 	const n8nApiUrl = ((n8nCreds.baseUrl as string) || 'http://localhost:5678').replace(/\/$/, '').replace(/\/api\/v1$/, '');
@@ -717,13 +726,33 @@ async function syncFromInfisical(
 		credentialData[secret.secretKey as string] = secret.secretValue;
 	}
 
-	// 3. Update the n8n credential via its REST API
+	// Build a complete, schema-valid payload. n8n validates `data` against the full credential
+	// schema before applying it, so a partial payload is rejected regardless of isPartialData.
+	// (credentialType/schemaInfo/fullData are reused by the 404 create-fallback below.)
+	const credentialType = findCredentialType(secrets);
+	let schemaInfo: SchemaInfo | undefined;
+	if (credentialType) {
+		try {
+			schemaInfo = await fetchN8nSchema(n8nApiUrl, credentialType, n8nHeaders, ctx);
+		} catch {
+			// proceed without schema — no coercion or defaults applied
+		}
+	}
+	const fullData = mergeCredentialData(credentialType, credentialData, schemaInfo);
+
+	// 3. Update the n8n credential via its REST API.
+	// isPartialData merges the payload into the existing credential, preserving fields n8n manages
+	// but Infisical does not (e.g. OAuth tokens); Full Replace overwrites the whole data object.
+	const updateBody: IDataObject =
+		updateStrategy === 'fullReplace'
+			? { data: fullData }
+			: { data: fullData, isPartialData: true };
 	try {
 		const updated = await ctx.helpers.httpRequest({
 			method: 'PATCH',
 			url: `${n8nApiUrl}/api/v1/credentials/${n8nCredentialId}`,
 			headers: n8nHeaders,
-			body: { data: credentialData },
+			body: updateBody,
 		});
 
 		return [{ json: updated as IDataObject, pairedItem: { item: i } }];
@@ -744,7 +773,6 @@ async function syncFromInfisical(
 			}];
 		}
 
-		const credentialType = findCredentialType(secrets);
 		if (!credentialType) {
 			throw new NodeOperationError(
 				ctx.getNode(),
@@ -753,14 +781,7 @@ async function syncFromInfisical(
 			);
 		}
 
-		let schemaInfo: SchemaInfo | undefined;
-		try {
-			schemaInfo = await fetchN8nSchema(n8nApiUrl, credentialType, n8nHeaders, ctx);
-		} catch {
-			// proceed without schema — no coercion or defaults applied
-		}
-		const fullData = mergeCredentialData(credentialType, credentialData, schemaInfo);
-
+		// Reuse credentialType / fullData computed before the update attempt.
 		const created = await ctx.helpers.httpRequest({
 			method: 'POST',
 			url: `${n8nApiUrl}/api/v1/credentials`,
@@ -920,6 +941,8 @@ async function autoSyncFromInfisical(
 	const environment = ctx.getNodeParameter('environment', i) as string;
 	const rootPath = (ctx.getNodeParameter('rootPath', i, '/') as string) || '/';
 	const ifCredentialMissing = ctx.getNodeParameter('ifCredentialMissing', i, 'create') as string;
+	const oauthHandling = ctx.getNodeParameter('oauthHandling', i, 'createOnly') as string;
+	const updateStrategy = ctx.getNodeParameter('updateStrategy', i, 'partialMerge') as string;
 
 	const n8nCreds = await ctx.getCredentials('n8nApi');
 	const n8nApiUrl = ((n8nCreds.baseUrl as string) || 'http://localhost:5678').replace(/\/$/, '').replace(/\/api\/v1$/, '');
@@ -1030,17 +1053,49 @@ async function autoSyncFromInfisical(
 		const credentialName = fromFolderName(folderName);
 		const existing = credByName.get(credentialName);
 
+		// OAuth credentials carry an interactive-consent token (oauthTokenData) that is not synced.
+		// Honour the OAuth Handling mode so autoSync never silently wipes a connected credential's
+		// token by PATCHing over it with token-less data.
+		if (credentialType && isOAuthType(credentialType)) {
+			if (oauthHandling === 'skip') {
+				results.push({
+					json: { folderName, secretPath, action: 'skipped', reason: `OAuth credential type "${credentialType}" skipped (OAuth Handling = Skip)` },
+					pairedItem: { item: i },
+				});
+				continue;
+			}
+			if (oauthHandling === 'createOnly' && existing) {
+				results.push({
+					json: {
+						folderName,
+						secretPath,
+						action: 'skipped',
+						reason: `existing OAuth credential "${credentialName}" left untouched to preserve its authorization (OAuth Handling = Create Only)`,
+					},
+					pairedItem: { item: i },
+				});
+				continue;
+			}
+		}
+
 		if (existing) {
-			// Fix 7.2: apply the same fullData build logic as the create path so that condition-key
-			// changes (e.g. ssl:false→true) get their required fields filled and their prohibited
-			// fields removed, preventing spurious 422 errors on update.
+			// n8n's public API validates `data` against the full credential schema before applying it,
+			// so BOTH strategies must send a complete, valid payload (schema defaults + conditional
+			// handling, fix 7.2). The only difference is isPartialData:
+			//   Partial Merge (default) → n8n merges the payload into the existing credential, so
+			//     fields it manages but the sync does not (e.g. OAuth oauthTokenData) are preserved.
+			//   Full Replace → the entire data object is overwritten (OAuth tokens are wiped).
 			const fullData = mergeCredentialData(credentialType, credentialData, schemaInfo);
+			const updateBody: IDataObject =
+				updateStrategy === 'fullReplace'
+					? { data: fullData }
+					: { data: fullData, isPartialData: true };
 
 			const updated = await ctx.helpers.httpRequest({
 				method: 'PATCH',
 				url: `${n8nApiUrl}/api/v1/credentials/${existing.id}`,
 				headers: n8nHeaders,
-				body: { data: fullData },
+				body: updateBody,
 			}) as IDataObject;
 			results.push({
 				json: { ...updated, action: 'updated', secretPath, secretCount: secrets.length },
