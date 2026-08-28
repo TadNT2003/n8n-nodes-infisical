@@ -4,6 +4,23 @@ import {
 	INodeExecutionData,
 } from 'n8n-workflow';
 
+// Builds the `roles` array for add/update identity membership requests from the
+// "Roles" fixedCollection UI field.
+function buildMembershipRoles(ctx: IExecuteFunctions, i: number): IDataObject[] {
+	const param = ctx.getNodeParameter('membershipRoles', i, {}) as IDataObject;
+	const entries = (param.values as IDataObject[]) ?? [];
+	return entries.map((r) => {
+		const role: IDataObject = { role: r.role };
+		if (r.isTemporary) {
+			role.isTemporary = true;
+			if (r.temporaryMode) role.temporaryMode = r.temporaryMode;
+			if (r.temporaryRange) role.temporaryRange = r.temporaryRange;
+			if (r.temporaryAccessStartTime) role.temporaryAccessStartTime = r.temporaryAccessStartTime;
+		}
+		return role;
+	});
+}
+
 export async function executeProjectOperation(
 	ctx: IExecuteFunctions,
 	apiUrl: string,
@@ -173,6 +190,81 @@ export async function executeProjectOperation(
 
 		const project = ((response as IDataObject).project ?? response) as IDataObject;
 		result.push({ json: project, pairedItem: { item: i } });
+
+	// ── getIdentityMemberships (list) ────────────────────────────────────
+	} else if (operation === 'getIdentityMemberships') {
+		const projectId = ctx.getNodeParameter('projectId', i) as string;
+
+		const response = await ctx.helpers.httpRequest({
+			method: 'GET',
+			url: `${apiUrl}/v1/projects/${encodeURIComponent(projectId)}/memberships/identities`,
+			headers: baseHeaders,
+		});
+
+		const memberships = ((response as IDataObject).identityMemberships ?? []) as IDataObject[];
+		for (const membership of memberships) {
+			result.push({ json: membership, pairedItem: { item: i } });
+		}
+
+	// ── getIdentityMembership (by identity ID) ───────────────────────────
+	} else if (operation === 'getIdentityMembership') {
+		const projectId = ctx.getNodeParameter('projectId', i) as string;
+		const identityId = ctx.getNodeParameter('identityId', i) as string;
+
+		const response = await ctx.helpers.httpRequest({
+			method: 'GET',
+			url: `${apiUrl}/v1/projects/${encodeURIComponent(projectId)}/memberships/identities/${encodeURIComponent(identityId)}`,
+			headers: baseHeaders,
+		});
+
+		const membership = ((response as IDataObject).identityMembership ?? response) as IDataObject;
+		result.push({ json: membership, pairedItem: { item: i } });
+
+	// ── addIdentityMembership ─────────────────────────────────────────────
+	} else if (operation === 'addIdentityMembership') {
+		const projectId = ctx.getNodeParameter('projectId', i) as string;
+		const identityId = ctx.getNodeParameter('identityId', i) as string;
+		const roles = buildMembershipRoles(ctx, i);
+
+		const response = await ctx.helpers.httpRequest({
+			method: 'POST',
+			url: `${apiUrl}/v1/projects/${encodeURIComponent(projectId)}/memberships/identities/${encodeURIComponent(identityId)}`,
+			headers: baseHeaders,
+			body: JSON.stringify({ roles }),
+		});
+
+		const membership = ((response as IDataObject).identityMembership ?? response) as IDataObject;
+		result.push({ json: membership, pairedItem: { item: i } });
+
+	// ── updateIdentityMembership ──────────────────────────────────────────
+	} else if (operation === 'updateIdentityMembership') {
+		const projectId = ctx.getNodeParameter('projectId', i) as string;
+		const identityId = ctx.getNodeParameter('identityId', i) as string;
+		const roles = buildMembershipRoles(ctx, i);
+
+		const response = await ctx.helpers.httpRequest({
+			method: 'PATCH',
+			url: `${apiUrl}/v1/projects/${encodeURIComponent(projectId)}/memberships/identities/${encodeURIComponent(identityId)}`,
+			headers: baseHeaders,
+			body: JSON.stringify({ roles }),
+		});
+
+		const membership = ((response as IDataObject).identityMembership ?? response) as IDataObject;
+		result.push({ json: membership, pairedItem: { item: i } });
+
+	// ── removeIdentityMembership ──────────────────────────────────────────
+	} else if (operation === 'removeIdentityMembership') {
+		const projectId = ctx.getNodeParameter('projectId', i) as string;
+		const identityId = ctx.getNodeParameter('identityId', i) as string;
+
+		const response = await ctx.helpers.httpRequest({
+			method: 'DELETE',
+			url: `${apiUrl}/v1/projects/${encodeURIComponent(projectId)}/memberships/identities/${encodeURIComponent(identityId)}`,
+			headers: baseHeaders,
+		});
+
+		const membership = ((response as IDataObject).identityMembership ?? response) as IDataObject;
+		result.push({ json: membership, pairedItem: { item: i } });
 	}
 
 	return result;

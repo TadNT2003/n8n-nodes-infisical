@@ -549,6 +549,12 @@ export class Infisical implements INodeType {
 				displayOptions: { show: { resource: ['project'] } },
 				options: [
 					{
+						name: 'Add Identity Membership',
+						value: 'addIdentityMembership',
+						description: 'Add a machine identity to the project with one or more roles',
+						action: 'Add an identity membership',
+					},
+					{
 						name: 'Create',
 						value: 'create',
 						description: 'Create a new project',
@@ -571,6 +577,18 @@ export class Infisical implements INodeType {
 						value: 'getBySlug',
 						description: 'Get a project by slug',
 						action: 'Get a project by slug',
+					},
+					{
+						name: 'Get Identity Membership',
+						value: 'getIdentityMembership',
+						description: 'Get a machine identity\'s project membership by identity ID',
+						action: 'Get an identity membership',
+					},
+					{
+						name: 'Get Identity Memberships',
+						value: 'getIdentityMemberships',
+						description: 'List all machine identity memberships in a project',
+						action: 'Get identity memberships',
 					},
 					{
 						name: 'Get Many',
@@ -597,10 +615,22 @@ export class Infisical implements INodeType {
 						action: 'Get user memberships',
 					},
 					{
+						name: 'Remove Identity Membership',
+						value: 'removeIdentityMembership',
+						description: 'Remove a machine identity from the project',
+						action: 'Remove an identity membership',
+					},
+					{
 						name: 'Update',
 						value: 'update',
 						description: 'Update a project by ID',
 						action: 'Update a project',
+					},
+					{
+						name: 'Update Identity Membership',
+						value: 'updateIdentityMembership',
+						description: 'Update the roles assigned to a machine identity in the project',
+						action: 'Update an identity membership',
 					},
 				],
 				default: 'getAll',
@@ -615,7 +645,19 @@ export class Infisical implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['project'],
-						operation: ['get', 'getSecretSnapshots', 'getUserMemberships', 'getUserByUsername', 'update', 'delete'],
+						operation: [
+							'get',
+							'getSecretSnapshots',
+							'getUserMemberships',
+							'getUserByUsername',
+							'update',
+							'delete',
+							'getIdentityMemberships',
+							'getIdentityMembership',
+							'addIdentityMembership',
+							'updateIdentityMembership',
+							'removeIdentityMembership',
+						],
 					},
 				},
 				default: '',
@@ -662,6 +704,90 @@ export class Infisical implements INodeType {
 				},
 				default: '',
 				description: 'The username of the project member to retrieve',
+			},
+			{
+				displayName: 'Identity ID',
+				name: 'identityId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: [
+							'getIdentityMembership',
+							'addIdentityMembership',
+							'updateIdentityMembership',
+							'removeIdentityMembership',
+						],
+					},
+				},
+				default: '',
+				description: 'The ID of the machine identity',
+			},
+			{
+				displayName: 'Roles',
+				name: 'membershipRoles',
+				type: 'fixedCollection',
+				typeOptions: { multipleValues: true },
+				placeholder: 'Add Role',
+				required: true,
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['project'],
+						operation: ['addIdentityMembership', 'updateIdentityMembership'],
+					},
+				},
+				description: 'The role(s) to assign to the identity within the project',
+				options: [
+					{
+						displayName: 'Role',
+						name: 'values',
+						values: [
+							{
+								displayName: 'Role',
+								name: 'role',
+								type: 'string',
+								required: true,
+								default: 'member',
+								description: 'A built-in role slug (admin, member, viewer, no-access) or a custom project role slug',
+							},
+							{
+								displayName: 'Is Temporary',
+								name: 'isTemporary',
+								type: 'boolean',
+								default: false,
+								description: 'Whether this role grant is time-limited',
+							},
+							{
+								displayName: 'Temporary Mode',
+								name: 'temporaryMode',
+								type: 'options',
+								displayOptions: { show: { isTemporary: [true] } },
+								options: [{ name: 'Relative', value: 'relative' }],
+								default: 'relative',
+								description: 'How the temporary access window is defined',
+							},
+							{
+								displayName: 'Temporary Range',
+								name: 'temporaryRange',
+								type: 'string',
+								displayOptions: { show: { isTemporary: [true] } },
+								default: '1h',
+								placeholder: 'e.g. 1h, 2d',
+								description: 'Duration the temporary role grant remains valid for',
+							},
+							{
+								displayName: 'Temporary Access Start Time',
+								name: 'temporaryAccessStartTime',
+								type: 'dateTime',
+								displayOptions: { show: { isTemporary: [true] } },
+								default: '',
+								description: 'When the temporary access window begins (defaults to now if left blank)',
+							},
+						],
+					},
+				],
 			},
 			{
 				displayName: 'Project Name',
