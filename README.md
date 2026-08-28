@@ -167,16 +167,98 @@ Add secrets using the repeatable **Secrets** list. Each entry requires **Secret 
 
 ---
 
+### Environment
+
+All Environment operations require: **Project ID**.
+
+| Operation | Description | Method | API endpoint |
+| --- | --- | --- | --- |
+| **Create** | Create a new environment in a project | `POST` | `/v1/projects/{projectId}/environments` |
+| **Get** | Fetch an environment by its ID | `GET` | `/v1/projects/{projectId}/environments/{id}` |
+| **Get by Slug** | Fetch an environment by its slug¹ | `GET` | `/v1/projects/{projectId}/environments/slug/{envSlug}` |
+| **Update** | Update an environment by ID | `PATCH` | `/v1/projects/{projectId}/environments/{id}` |
+| **Delete** | Delete an environment by ID | `DELETE` | `/v1/projects/{projectId}/environments/{id}` |
+| **Restore** | Restore a soft-deleted environment by ID¹ | `POST` | `/v1/projects/{projectId}/environments/{id}/restore` |
+
+> ¹ **Get by Slug** and **Restore** (plus the **Hard Delete** toggle's soft-delete behavior) rely on newer Infisical API features. Older self-hosted instances only expose get-by-ID and treat every delete as permanent; on those instances these operations return an error. Use **Get** (by ID) if **Get by Slug** is unavailable.
+
+#### Create Environment
+
+Required: **Project ID**, **Environment Name** (1–255 characters), **Environment Slug** (1–64 characters).
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Position | Display position; the lowest number is shown first |
+
+#### Get Environment
+
+Required: **Project ID**, **Environment ID**
+
+#### Get Environment by Slug
+
+Required: **Project ID**, **Environment Slug**. Requires a newer Infisical version (see note above).
+
+#### Update Environment
+
+Required: **Project ID**, **Environment ID**
+
+**Update Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Name | The new display name (1–255 characters) |
+| Slug | The new slug (1–64 characters) |
+| Position | The new display position; the lowest number is shown first |
+
+#### Delete Environment
+
+Required: **Project ID**, **Environment ID**
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Hard Delete | Permanently delete the environment. If disabled, it is soft-deleted and can be restored. |
+
+#### Restore Environment
+
+Required: **Project ID**, **Environment ID**
+
+Restores a previously soft-deleted environment.
+
+---
+
 ### Project
 
 | Operation | Description | Method | API endpoint |
 | --- | --- | --- | --- |
+| **Create** | Create a new project | `POST` | `/v1/projects` |
 | **Get** | Fetch a project by ID | `GET` | `/v1/projects/{id}` |
 | **Get by Slug** | Fetch a project by slug | `GET` | `/v1/projects/slug/{slug}` |
 | **Get Many** | List all accessible projects | `GET` | `/v1/projects` |
 | **Get Secret Snapshots** | List secret snapshots for a project environment | `GET` | `/v1/projects/{id}/secret-snapshots` |
 | **Get User Memberships** | List all user memberships in a project | `GET` | `/v1/projects/{id}/memberships` |
 | **Get User by Username** | Fetch a project member by username | `POST` | `/v1/projects/{id}/memberships/details` |
+| **Update** | Update a project by ID | `PATCH` | `/v1/projects/{id}` |
+| **Delete** | Delete a project by ID | `DELETE` | `/v1/projects/{id}` |
+
+#### Create Project
+
+Required: **Project Name** (max 64 characters).
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Description | An optional description for the project (max 1024 characters) |
+| Slug | A URL-friendly slug for the project (5–64 characters) |
+| KMS Key ID | The ID of the KMS key to use for encryption |
+| Template | The name of the project template to apply (default: `default`) |
+| Type | Project type: Secret Manager (default), Cert Manager, KMS, SSH, Secret Scanning, PAM, or AI |
+| Create Default Environments | Create the default dev, staging, and prod environments (default: on) |
+| Delete Protection | Prevent the project from being deleted (default: off) |
 
 #### Get Project
 
@@ -213,6 +295,28 @@ Returns each membership as a separate output item.
 #### Get User by Username
 
 Required: **Project ID**, **Username**
+
+#### Update Project
+
+Required: **Project ID**
+
+**Update Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Name | A new name for the project (max 64 characters) |
+| Description | A new description for the project (max 1024 characters) |
+| Slug | A new slug (max 64 characters, unique within the organization) |
+| Auto Capitalization | Enable auto-capitalization of secret keys |
+| Delete Protection | Prevent the project from being deleted |
+| Secret Sharing | Allow secret sharing in the project |
+| PIT Version Limit | Number of point-in-time secret versions to retain (1–100) |
+
+#### Delete Project
+
+Required: **Project ID**
+
+> **Warning:** Deleting a project is irreversible and removes all associated data.
 
 ---
 
@@ -277,6 +381,91 @@ Required: **Project ID**, **Environment**, **Folder Path**, **Folder ID or Name*
 
 ---
 
+### Secret Import
+
+A secret import links secrets from a source environment/path into a destination environment/path. All Secret Import operations require: **Project ID**, **Environment** (destination), **Secret Path** (destination, default: `/`).
+
+| Operation | Description | Method | API endpoint |
+| --- | --- | --- | --- |
+| **Create** | Create a secret import | `POST` | `/v2/secret-imports` |
+| **List** | List secret imports at a path | `GET` | `/v2/secret-imports` |
+| **Update** | Update a secret import | `PATCH` | `/v2/secret-imports/{id}` |
+| **Delete** | Delete a secret import | `DELETE` | `/v2/secret-imports/{id}` |
+
+#### Create Secret Import
+
+Required: **Project ID**, **Environment**, **Import From Environment** (source), **Import From Path** (source).
+
+**Additional Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Source Project ID | Import from a different project (defaults to the destination project) |
+| Is Replication | Automatically sync new secrets from the source into the destination |
+
+#### List Secret Imports
+
+Required: **Project ID**, **Environment**, **Secret Path**. Returns each import as a separate output item.
+
+#### Update Secret Import
+
+Required: **Project ID**, **Environment**, **Secret Import ID**.
+
+**Update Fields (optional):**
+
+| Field | Description |
+| --- | --- |
+| Import From Environment | The new source environment slug |
+| Import From Path | The new source path |
+| Position | Display position; the lowest number is shown first |
+
+#### Delete Secret Import
+
+Required: **Project ID**, **Environment**, **Secret Import ID**.
+
+---
+
+### Secret Tag
+
+Tags are project-scoped labels that can be attached to secrets. All Secret Tag operations require: **Project ID**.
+
+> **Note:** Infisical's tag endpoints are workspace-scoped (`/v1/workspace/{projectId}/tags`) — this is the legacy path segment (`workspace` == `project`) and is the only documented tags API. It remains functional.
+
+| Operation | Description | Method | API endpoint |
+| --- | --- | --- | --- |
+| **Create** | Create a tag | `POST` | `/v1/workspace/{projectId}/tags` |
+| **Get** | Fetch a tag by ID | `GET` | `/v1/workspace/{projectId}/tags/{tagId}` |
+| **Get by Slug** | Fetch a tag by slug | `GET` | `/v1/workspace/{projectId}/tags/slug/{tagSlug}` |
+| **List** | List all tags in a project | `GET` | `/v1/workspace/{projectId}/tags` |
+| **Update** | Update a tag by ID | `PATCH` | `/v1/workspace/{projectId}/tags/{tagId}` |
+| **Delete** | Delete a tag by ID | `DELETE` | `/v1/workspace/{projectId}/tags/{tagId}` |
+
+#### Create Tag
+
+Required: **Project ID**, **Tag Slug** (1–64 characters), **Tag Color** (hex code, e.g. `#bec2c8`).
+
+#### Get Tag
+
+Required: **Project ID**, **Tag ID**.
+
+#### Get Tag by Slug
+
+Required: **Project ID**, **Tag Slug**.
+
+#### List Tags
+
+Required: **Project ID**. Returns each tag as a separate output item.
+
+#### Update Tag
+
+Required: **Project ID**, **Tag ID**, **Tag Slug**, **Tag Color**.
+
+#### Delete Tag
+
+Required: **Project ID**, **Tag ID**.
+
+---
+
 ## InfisicalSync
 
 The **InfisicalSync** node provides bidirectional sync between n8n credentials and Infisical secrets. It requires an **InfisicalApi** credential (to authenticate to Infisical) and optionally an **n8nApi** credential (to read and write n8n credentials via the REST API).
@@ -293,6 +482,25 @@ Both Infisical → n8n operations expose an **If Credential Missing** option for
 
 - **Create New Credential** (default) — recreate it using the `n8n_credential_type` metadata tag stored on the folder's secrets.
 - **Skip** — leave n8n untouched and report the item as skipped instead of creating or erroring.
+
+#### OAuth Credential Handling (Auto Sync only)
+
+OAuth1/OAuth2 credentials obtain their access token through an interactive browser consent, stored by n8n in an `oauthTokenData` field that **is not synced**. Because updating a credential replaces its stored data, blindly re-syncing an already-connected OAuth credential would wipe its token and force re-authorization. **Auto Sync from Infisical** therefore exposes an **OAuth Credential Handling** option:
+
+- **Create Only** (default) — create OAuth credentials that don't exist yet, but never update existing ones, so a connected credential's token is never overwritten. You still authorize each newly created OAuth credential once in n8n.
+- **Skip** — never create or update OAuth credentials; report them as skipped for manual handling.
+- **Update All** — treat OAuth credentials like any other. ⚠️ Under **Full Replace** update strategy, updating an already-connected OAuth credential clears its saved access token and requires re-authorization. Under **Partial Merge** (default), the token is preserved.
+
+Non-OAuth credentials are unaffected by this option and always create/update per **If Credential Missing**.
+
+#### Update Strategy (Sync from / Auto Sync)
+
+Controls how existing n8n credentials are updated when syncing Infisical → n8n:
+
+Both strategies send a complete, schema-valid payload (n8n validates `data` against the full credential schema before applying it, regardless of the flag). The difference is what happens to fields the sync doesn't track:
+
+- **Partial Merge** (default) — sets `isPartialData: true` so n8n **merges** the payload into the existing credential. Fields n8n manages but Infisical does not — notably **OAuth access tokens** (`oauthTokenData`) — are preserved instead of wiped. Requires a recent n8n version that supports partial credential updates.
+- **Full Replace** — overwrites the entire credential data object. Use for older n8n versions that don't support partial updates. ⚠️ Wipes fields not included in the sync, including **OAuth access tokens** (the credential must be re-authorized).
 
 ### Supported Credential Types (Form Mode)
 

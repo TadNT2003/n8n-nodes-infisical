@@ -14,6 +14,32 @@ npm run format         # Prettier format nodes/ and credentials/
 
 There are no automated tests. The node must be manually tested inside an n8n instance.
 
+## Documentation lookup
+
+For Infisical or n8n API/behavior questions (endpoint shapes, request/response schemas, changelog behavior), prefer the **Context7 MCP tool** (available via the Bifrost server: `resolve_library_id` then `query_docs`) over a plain web search. It pulls sourced snippets straight from the official docs/source repos:
+
+- Infisical: resolves to `/infisical/infisical` (main repo/backend routes), `/infisical/node-sdk-v2` (Node SDK), `/infisical/infisical-mcp-server`.
+- n8n: resolves to `/n8n-io/n8n-docs` (official docs) or `/n8n-io/n8n` (source repo).
+
+Only fall back to web search if Context7 has no relevant match.
+
+## Local live-testing workflow
+
+Local dev instances of n8n and Infisical run in Docker; connection details live in `.env.dev` at the repo root (`LOCAL_N8N_URL`, `LOCAL_N8N_API_KEY`, `LOCAL_INFISICAL_URL`, `LOCAL_INFISICAL_CLIENT_ID`/`CLIENT_SECRET` for Universal Auth).
+
+1. `npm run build` — required after any code change; n8n loads the compiled node from `dist/`, which is bind-mounted into the container via `N8N_CUSTOM_EXTENSIONS`.
+2. If changes still aren't reflected, restart the n8n container: `docker compose -f "D:\Self-host services\n8n\n8n-patch-latest\docker-compose.yml" restart`.
+3. Verify manually inside the n8n UI — there are no automated tests.
+
+Use the established workflows below rather than creating new ones:
+
+- **`Backup to Infisical - Using custom Infisical node`** (id `G3G2oVVv0SnOtwqr`) — live test for `syncToInfisical` (n8n → Infisical).
+- **`Testing auto sync all from Infisical`** (id `U2fC0N77uZpjdbNH`) — live test for `autoSyncFromInfisical` (Infisical → n8n credentials).
+
+Standard round-trip check for a credential type: create mock n8n credential(s), run `Backup to Infisical - Using custom Infisical node` (push), then run `Testing auto sync all from Infisical` (pull). This confirms n8n → Infisical → n8n compatibility.
+
+Use the `mcp__local-n8n__*` tools for this local instance (not `mcp__n8n__*`, which points at a different remote instance).
+
 ## Architecture
 
 This is an **n8n community node package** that provides two nodes for the Infisical secrets management platform.

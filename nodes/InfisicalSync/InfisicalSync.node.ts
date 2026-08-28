@@ -146,6 +146,64 @@ export class InfisicalSync implements INodeType {
 				displayOptions: { show: { operation: ['syncFromInfisical', 'autoSyncFromInfisical'] } },
 			},
 
+			// ── OAuth handling (autoSyncFromInfisical only) ───────────────────────
+			{
+				displayName: 'OAuth Credential Handling',
+				name: 'oauthHandling',
+				type: 'options',
+				noDataExpression: true,
+				default: 'createOnly',
+				options: [
+					{
+						name: 'Create Only',
+						value: 'createOnly',
+						description:
+							'Create missing OAuth credentials, but never update existing ones — avoids overwriting an OAuth credential that has already been connected (its access token would be wiped). The user still authorizes newly created OAuth credentials once.',
+					},
+					{
+						name: 'Skip',
+						value: 'skip',
+						description:
+							'Never create or update OAuth credentials — report them as skipped so they can be handled manually',
+					},
+					{
+						name: 'Update All',
+						value: 'updateAll',
+						description:
+							'Treat OAuth credentials like any other (create and update). Warning: updating an already-connected OAuth credential replaces its data and clears its saved access token, requiring re-authorization.',
+					},
+				],
+				description:
+					'How to handle OAuth-based credentials (OAuth1/OAuth2), whose access tokens require an interactive browser consent that cannot be synced',
+				displayOptions: { show: { operation: ['autoSyncFromInfisical'] } },
+			},
+
+			// ── Update strategy (Infisical → n8n) ─────────────────────────────────
+			{
+				displayName: 'Update Strategy',
+				name: 'updateStrategy',
+				type: 'options',
+				noDataExpression: true,
+				default: 'partialMerge',
+				options: [
+					{
+						name: 'Partial Merge',
+						value: 'partialMerge',
+						description:
+							'Merge the synced data into the existing credential (isPartialData). Fields n8n manages but the sync does not — notably OAuth access tokens (oauthTokenData) — are preserved instead of being wiped. Requires a recent n8n version that supports partial credential updates.',
+					},
+					{
+						name: 'Full Replace',
+						value: 'fullReplace',
+						description:
+							'Overwrite the entire credential data object. Use for older n8n versions that do not support partial updates. ⚠️ Wipes fields not included in the sync, including OAuth access tokens (the credential must be re-authorized).',
+					},
+				],
+				description:
+					'How existing n8n credentials are updated. Partial Merge preserves untouched fields (incl. OAuth tokens); Full Replace overwrites the whole data object.',
+				displayOptions: { show: { operation: ['syncFromInfisical', 'autoSyncFromInfisical'] } },
+			},
+
 			// ── Input mode (syncToInfisical only) ─────────────────────────────────
 			{
 				displayName: 'Input Mode',
