@@ -1,7 +1,7 @@
 import {
+	ensureError,
 	ICredentialTestFunctions,
 	ICredentialsDecrypted,
-	IDataObject,
 	IExecuteFunctions,
 	INodeCredentialTestResult,
 	INodeExecutionData,
@@ -10,9 +10,9 @@ import {
 	JsonObject,
 	NodeApiError,
 	NodeOperationError,
-	ensureError,
 } from 'n8n-workflow';
 import { getInfisicalToken } from '../../utils/auth';
+import { testInfisicalApiCredentials } from '../../utils/credentialTest';
 import { executeSyncOperation } from '../../utils/syncOperations';
 
 export class InfisicalSync implements INodeType {
@@ -158,7 +158,7 @@ export class InfisicalSync implements INodeType {
 						name: 'Create Only',
 						value: 'createOnly',
 						description:
-							'Create missing OAuth credentials, but never update existing ones — avoids overwriting an OAuth credential that has already been connected (its access token would be wiped). The user still authorizes newly created OAuth credentials once.',
+							'Create missing OAuth credentials, but never update existing ones — the safe default regardless of Update Strategy, since it never touches an already-connected credential. The user still authorizes newly created OAuth credentials once.',
 					},
 					{
 						name: 'Skip',
@@ -170,11 +170,11 @@ export class InfisicalSync implements INodeType {
 						name: 'Update All',
 						value: 'updateAll',
 						description:
-							'Treat OAuth credentials like any other (create and update). Warning: updating an already-connected OAuth credential replaces its data and clears its saved access token, requiring re-authorization.',
+							'Treat OAuth credentials like any other (create and update). Whether this is safe for an already-connected credential depends on Update Strategy: Partial Merge preserves its saved access token; Full Replace wipes it, requiring re-authorization.',
 					},
 				],
 				description:
-					'How to handle OAuth-based credentials (OAuth1/OAuth2), whose access tokens require an interactive browser consent that cannot be synced',
+					'How to handle OAuth-based credentials (OAuth1/OAuth2), whose access tokens require an interactive browser consent that cannot be synced. Combine with Update Strategy below to control whether an update can wipe an already-connected credential\'s access token.',
 				displayOptions: { show: { operation: ['autoSyncFromInfisical'] } },
 			},
 
@@ -2196,43 +2196,7 @@ export class InfisicalSync implements INodeType {
 				this: ICredentialTestFunctions,
 				credential: ICredentialsDecrypted,
 			): Promise<INodeCredentialTestResult> {
-				const creds = credential.data as IDataObject;
-				const apiUrl = (creds.apiUrl as string).replace(/\/$/, '');
-				const authType = (creds.authType as string) || 'serviceToken';
-
-				try {
-					let accessToken: string;
-
-					if (authType === 'universalAuth') {
-						const loginForm: IDataObject = {
-							clientId: creds.clientId,
-							clientSecret: creds.clientSecret,
-						};
-						if (creds.organizationSlug) {
-							loginForm.organizationSlug = creds.organizationSlug;
-						}
-						const tokenResponse = await this.helpers.request({
-							method: 'POST',
-							uri: `${apiUrl}/v1/auth/universal-auth/login`,
-							form: loginForm,
-							json: true,
-						});
-						accessToken = tokenResponse.accessToken as string;
-					} else {
-						accessToken = creds.apiKey as string;
-					}
-
-					await this.helpers.request({
-						method: 'GET',
-						uri: `${apiUrl}/v1/workspace`,
-						headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
-						json: true,
-					});
-
-					return { status: 'OK', message: 'Authentication successful' };
-				} catch (error) {
-					return { status: 'Error', message: ensureError(error).message };
-				}
+				return testInfisicalApiCredentials(this.helpers, credential);
 			},
 		},
 	};
