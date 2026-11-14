@@ -50,6 +50,9 @@ This is an **n8n community node package** that provides two nodes for the Infisi
 - **Secret**: get, getAll, create, createMany, update, updateMany, delete, deleteMany
 - **Project**: get, getBySlug, getAll, getSecretSnapshots, getUserMemberships, getUserByUsername
 - **Folder**: getFolderById, listFolders, createFolder, updateFolder, deleteFolder
+- Also **Environment**, **Secret Import**, **Secret Tag**, and **Identity**.
+
+The node file only holds the class shell, the Resource selector, `methods`, and `execute()`. Parameter definitions live in [nodes/descriptions/Infisical/](nodes/descriptions/Infisical/) (description folders live under `nodes/descriptions/`, one subfolder per node): one `<Resource>Description.ts` per resource, each exporting `<resource>Operations` (the Operation selector) and `<resource>Fields` (`INodeProperties[]`), re-exported from `nodes/descriptions/Infisical/index.ts` and spread into `properties`. Add new parameters to the matching description file, not the node file. Within a resource, array order is UI order.
 
 **`InfisicalSync`** ([nodes/InfisicalSync/InfisicalSync.node.ts](nodes/InfisicalSync/InfisicalSync.node.ts)) — Bidirectional sync between n8n credentials and Infisical secrets. Three operations:
 - `syncToInfisical`: Push a specific n8n credential as a folder of secrets. Each credential field becomes a secret; a `n8n_credential_type` metadata tag is attached to every secret to enable auto-discovery.
