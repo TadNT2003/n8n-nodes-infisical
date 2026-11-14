@@ -59,6 +59,8 @@ The node file only holds the class shell, the Resource selector, `methods`, and 
 - `syncFromInfisical`: Pull secrets from a named Infisical folder and PATCH an existing n8n credential by ID via the n8n REST API.
 - `autoSyncFromInfisical`: Discover all folders under a root path, read `n8n_credential_type` metadata, fetch the n8n credential schema (for type coercion and JSON Schema `allOf` conditional handling), then create or update matching n8n credentials automatically.
 
+Its parameter definitions live in [nodes/descriptions/InfisicalSync/](nodes/descriptions/InfisicalSync/), split by concern: `OperationDescription.ts`, `TargetDescription.ts` (project/environment/root path/credential name/ID), `PullOptionsDescription.ts` (Infisical → n8n behavior), `PushInputDescription.ts` (input mode, credential type, JSON input), and `credentialFields/` (form-mode per-type fields grouped by category, e.g. `DatabaseFields.ts`, `OAuthFields.ts`). There is no resource switch, so order matters across the whole list: for any credential type, its fields render in array order. Some fields are shared across categories (`accessToken`, `email`), so the spread order in `credentialFields/index.ts` matters; see the comment there.
+
 ### Credentials
 
 **`InfisicalApi`** ([credentials/InfisicalApi.credentials.ts](credentials/InfisicalApi.credentials.ts)) — Two auth methods:

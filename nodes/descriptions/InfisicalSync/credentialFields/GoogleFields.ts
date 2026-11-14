@@ -1,0 +1,230 @@
+import type { INodeProperties } from 'n8n-workflow';
+
+export const googleFields: INodeProperties[] = [
+	// ── Google Service Account ────────────────────────────────────────────
+	{
+		displayName: 'Private Key',
+		name: 'privateKey',
+		type: 'string',
+		typeOptions: { password: true },
+		default: '',
+		description: 'PEM-encoded private key from the service account JSON',
+		displayOptions: {
+			show: {
+				operation: ['syncToInfisical'],
+				inputMode: ['form'],
+				credentialType: ['googleApi', 'jwtAuth'],
+			},
+		},
+	},
+	{
+		displayName: 'Delegated Email',
+		name: 'delegatedEmail',
+		type: 'string',
+		default: '',
+		description: 'Optional email to impersonate via domain-wide delegation',
+		displayOptions: {
+			show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleApi'] },
+		},
+	},
+	{
+		displayName: 'Scopes',
+		name: 'scopes',
+		type: 'string',
+		default: '',
+		description: 'Comma-separated list of OAuth scopes',
+		displayOptions: {
+			show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleApi'] },
+		},
+	},
+	{
+		displayName: 'Impersonate a User',
+		name: 'inpersonate',
+		type: 'boolean',
+		default: false,
+		description: 'Whether to impersonate a user via domain-wide delegation',
+		displayOptions: {
+			show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleApi'] },
+		},
+	},
+	{
+		displayName: 'Set up for use in HTTP Request node',
+		name: 'httpNode',
+		type: 'boolean',
+		default: false,
+		displayOptions: {
+			show: { operation: ['syncToInfisical'], inputMode: ['form'], credentialType: ['googleApi'] },
+		},
+	},
+
+	// ── Google OAuth2 ─────────────────────────────────────────────────────
+	{
+		displayName: 'Server URL',
+		name: 'serverUrl',
+		type: 'string',
+		default: '',
+		description: 'OAuth2 server URL',
+		displayOptions: {
+			show: {
+				operation: ['syncToInfisical'],
+				inputMode: ['form'],
+				credentialType: [
+					'googleOAuth2Api',
+					'slackOAuth2Api',
+					'microsoftTeamsOAuth2Api',
+					'twitterOAuth2Api',
+					'linkedInOAuth2Api',
+					'discordOAuth2Api',
+					'salesforceOAuth2Api',
+					'hubspotOAuth2Api',
+					'dropboxOAuth2Api',
+					'spotifyOAuth2Api',
+				],
+			},
+		},
+	},
+	{
+		displayName: 'Client ID',
+		name: 'clientId',
+		type: 'string',
+		default: '',
+		displayOptions: {
+			show: {
+				operation: ['syncToInfisical'],
+				inputMode: ['form'],
+				credentialType: [
+					'googleOAuth2Api',
+					'googleSheetsOAuth2Api',
+					'googleDriveOAuth2Api',
+					'googleDocsOAuth2Api',
+					'infisicalApi',
+					'oAuth2Api',
+					'githubOAuth2Api',
+					'gitlabOAuth2Api',
+					'slackOAuth2Api',
+					'microsoftTeamsOAuth2Api',
+					'twitterOAuth2Api',
+					'linkedInOAuth2Api',
+					'discordOAuth2Api',
+					'salesforceOAuth2Api',
+					'hubspotOAuth2Api',
+					'dropboxOAuth2Api',
+					'spotifyOAuth2Api',
+				],
+			},
+		},
+	},
+	{
+		displayName: 'Client Secret',
+		name: 'clientSecret',
+		type: 'string',
+		typeOptions: { password: true },
+		default: '',
+		displayOptions: {
+			show: {
+				operation: ['syncToInfisical'],
+				inputMode: ['form'],
+				credentialType: [
+					'googleOAuth2Api',
+					'googleSheetsOAuth2Api',
+					'googleDriveOAuth2Api',
+					'googleDocsOAuth2Api',
+					'infisicalApi',
+					'oAuth2Api',
+					'githubOAuth2Api',
+					'gitlabOAuth2Api',
+					'slackOAuth2Api',
+					'microsoftTeamsOAuth2Api',
+					'twitterOAuth2Api',
+					'linkedInOAuth2Api',
+					'discordOAuth2Api',
+					'salesforceOAuth2Api',
+					'hubspotOAuth2Api',
+					'dropboxOAuth2Api',
+					'spotifyOAuth2Api',
+				],
+			},
+		},
+	},
+	{
+		displayName: 'Scope',
+		name: 'scope',
+		type: 'string',
+		default: '',
+		description: 'Space-separated list of OAuth scopes to request',
+		displayOptions: {
+			show: {
+				operation: ['syncToInfisical'],
+				inputMode: ['form'],
+				credentialType: ['googleOAuth2Api', 'oAuth2Api'],
+			},
+		},
+	},
+
+	// ── Google Service OAuth2 (Sheets / Drive / Docs) + n8n ─────────────
+	{
+		displayName: 'Allowed HTTP Request Domains',
+		name: 'allowedHttpRequestDomains',
+		type: 'options',
+		default: 'all',
+		options: [
+			{ name: 'All Domains', value: 'all' },
+			{ name: 'Specific Domains', value: 'domains' },
+			{ name: 'None', value: 'none' },
+		],
+		displayOptions: {
+			show: {
+				operation: ['syncToInfisical'],
+				inputMode: ['form'],
+				credentialType: [
+					'googleSheetsOAuth2Api',
+					'googleDriveOAuth2Api',
+					'googleDocsOAuth2Api',
+					'n8nApi',
+					'httpBearerAuth',
+					'httpBasicAuth',
+					'httpDigestAuth',
+					'httpHeaderAuth',
+					'httpQueryAuth',
+					'httpCustomAuth',
+					'oAuth1Api',
+					'oAuth2Api',
+					'aws',
+					'awsAssumeRole',
+				],
+			},
+		},
+	},
+	{
+		displayName: 'Allowed Domains',
+		name: 'allowedDomains',
+		type: 'string',
+		default: '',
+		placeholder: 'e.g. api.example.com,cdn.example.com',
+		description:
+			'Comma-separated list of domains; only used when Allowed HTTP Request Domains is set to Specific Domains',
+		displayOptions: {
+			show: {
+				operation: ['syncToInfisical'],
+				inputMode: ['form'],
+				credentialType: [
+					'googleSheetsOAuth2Api',
+					'googleDriveOAuth2Api',
+					'googleDocsOAuth2Api',
+					'n8nApi',
+					'httpBearerAuth',
+					'httpBasicAuth',
+					'httpDigestAuth',
+					'httpHeaderAuth',
+					'httpQueryAuth',
+					'httpCustomAuth',
+					'oAuth1Api',
+					'oAuth2Api',
+					'aws',
+					'awsAssumeRole',
+				],
+				allowedHttpRequestDomains: ['domains'],
+			},
+		},
+	},
+];
